@@ -1,0 +1,223 @@
+create extension if not exists pgcrypto;
+
+create table if not exists public.users (
+  id uuid primary key references auth.users (id) on delete cascade,
+  email text not null unique,
+  display_name text,
+  created_at timestamptz not null default now()
+);
+
+create table if not exists public.trips (
+  id uuid primary key default gen_random_uuid(),
+  owner_id uuid not null references public.users (id) on delete cascade,
+  title text not null,
+  description text,
+  start_date date not null,
+  end_date date not null,
+  timezone text not null default 'Europe/Paris',
+  share_slug text not null unique,
+  viewer_passcode_hash text,
+  privacy_mode text not null default 'private_link' check (privacy_mode in ('private_link', 'invite_only')),
+  location_privacy_mode text not null default 'exact' check (location_privacy_mode in ('exact', 'approximate', 'hide_current_day')),
+  cover_location_name text,
+  cover_latitude double precision,
+  cover_longitude double precision,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists public.trip_members (
+  id uuid primary key default gen_random_uuid(),
+  trip_id uuid not null references public.trips (id) on delete cascade,
+  user_id uuid references public.users (id) on delete cascade,
+  role text not null check (role in ('owner', 'viewer')),
+  email text,
+  created_at timestamptz not null default now()
+);
+
+create table if not exists public.moments (
+  id uuid primary key default gen_random_uuid(),
+  trip_id uuid not null references public.trips (id) on delete cascade,
+  author_id uuid not null references public.users (id) on delete cascade,
+  type text not null check (type in ('photo', 'thought')),
+  caption text,
+  thought_text text,
+  image_url text,
+  image_storage_path text,
+  latitude double precision,
+  longitude double precision,
+  place_name text,
+  location_source text not null check (location_source in ('exif', 'browser_gps', 'manual', 'none')),
+  accuracy_meters double precision,
+  taken_at timestamptz,
+  posted_at timestamptz not null default now(),
+  timezone text not null default 'Europe/Paris',
+  visibility text not null default 'visible' check (visibility in ('visible', 'hidden')),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create or replace function public.touch_updated_at()
+returns trigger
+language plpgsql
+as $$
+begin
+  new.updated_at = now();
+  return new;
+end;
+$$;
+
+drop trigger if exists touch_trips_updated_at on public.trips;
+create trigger touch_trips_updated_at
+before update on public.trips
+for each row
+execute function public.touch_updated_at();
+
+drop trigger if exists touch_moments_updated_at on public.moments;
+create trigger touch_moments_updated_at
+before update on public.moments
+for each row
+execute function public.touch_updated_at();
+
+create index if not exists trips_owner_id_idx on public.trips (owner_id);
+create index if not exists trips_share_slug_idx on public.trips (share_slug);
+create index if not exists moments_trip_id_idx on public.moments (trip_id);
+create index if not exists moments_trip_id_taken_at_idx on public.moments (trip_id, taken_at, posted_at);
+
+alter table public.users enable row level security;
+alter table public.trips enable row level security;
+alter table public.trip_members enable row level security;
+alter table public.moments enable row level security;
+
+drop policy if exists "Users can read themselves" on public.users;
+create policy "Users can read themselves"
+on public.users
+for select
+using (auth.uid() = id);
+
+drop policy if exists "Users can upsert themselves" on public.users;
+create policy "Users can upsert themselves"
+on public.users
+for insert
+with check (auth.uid() = id);
+
+drop policy if exists "Users can update themselves" on public.users;
+create policy "Users can update themselves"
+on public.users
+for update
+using (auth.uid() = id)
+with check (auth.uid() = id);
+
+drop policy if exists "Owners can manage their trips" on public.trips;
+create policy "Owners can manage their trips"
+on public.trips
+for all
+using (auth.uid() = owner_id)
+with check (auth.uid() = owner_id);
+
+drop policy if exists "Shared trips can be viewed" on public.trips;
+create policy "Shared trips can be viewed"
+on public.trips
+for select
+using (privacy_mode = 'private_link');
+
+drop policy if exists "Owners can manage trip members" on public.trip_members;
+create policy "Owners can manage trip members"
+on public.trip_members
+for all
+using (
+  exists (
+    select 1
+    from public.trips
+    where trips.id = trip_members.trip_id
+      and trips.owner_id = auth.uid()
+  )
+)
+with check (
+  exists (
+    select 1
+    from public.trips
+    where trips.id = trip_members.trip_id
+      and trips.owner_id = auth.uid()
+  )
+);
+
+drop policy if exists "Owners can manage moments" on public.moments;
+create policy "Owners can manage moments"
+on public.moments
+for all
+using (
+  exists (
+    select 1
+    from public.trips
+    where trips.id = moments.trip_id
+      and trips.owner_id = auth.uid()
+  )
+)
+with check (
+  exists (
+    select 1
+    from public.trips
+    where trips.id = moments.trip_id
+      and trips.owner_id = auth.uid()
+  )
+);
+
+drop policy if exists "Visible shared moments can be viewed" on public.moments;
+create policy "Visible shared moments can be viewed"
+on public.moments
+for select
+using (
+  visibility = 'visible'
+  and exists (
+    select 1
+    from public.trips
+    where trips.id = moments.trip_id
+      and trips.privacy_mode = 'private_link'
+  )
+);
+
+insert into storage.buckets (id, name, public)
+values ('trip-moments', 'trip-moments', true)
+on conflict (id) do nothing;
+
+drop policy if exists "Trip moments are publicly viewable" on storage.objects;
+create policy "Trip moments are publicly viewable"
+on storage.objects
+for select
+using (bucket_id = 'trip-moments');
+
+drop policy if exists "Owners can upload trip moments" on storage.objects;
+create policy "Owners can upload trip moments"
+on storage.objects
+for insert
+with check (
+  bucket_id = 'trip-moments'
+  and auth.role() = 'authenticated'
+  and (storage.foldername(name))[1] = auth.uid()::text
+);
+
+drop policy if exists "Owners can update trip moments" on storage.objects;
+create policy "Owners can update trip moments"
+on storage.objects
+for update
+using (
+  bucket_id = 'trip-moments'
+  and auth.role() = 'authenticated'
+  and (storage.foldername(name))[1] = auth.uid()::text
+)
+with check (
+  bucket_id = 'trip-moments'
+  and auth.role() = 'authenticated'
+  and (storage.foldername(name))[1] = auth.uid()::text
+);
+
+drop policy if exists "Owners can delete trip moments" on storage.objects;
+create policy "Owners can delete trip moments"
+on storage.objects
+for delete
+using (
+  bucket_id = 'trip-moments'
+  and auth.role() = 'authenticated'
+  and (storage.foldername(name))[1] = auth.uid()::text
+);

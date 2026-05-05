@@ -1,0 +1,161 @@
+insert into public.users (id, email, display_name)
+values (
+  '11111111-1111-1111-1111-111111111111',
+  'clara@example.com',
+  'Clara'
+)
+on conflict (id) do nothing;
+
+insert into public.trips (
+  id,
+  owner_id,
+  title,
+  description,
+  start_date,
+  end_date,
+  timezone,
+  share_slug,
+  privacy_mode,
+  location_privacy_mode,
+  cover_location_name,
+  cover_latitude,
+  cover_longitude
+)
+values (
+  '22222222-2222-2222-2222-222222222222',
+  '11111111-1111-1111-1111-111111111111',
+  'Paris Maymester',
+  'A quiet map of the moments that made the trip.',
+  current_date - 2,
+  current_date + 14,
+  'Europe/Paris',
+  'paris-maymester-private',
+  'private_link',
+  'exact',
+  'Paris, France',
+  48.8566,
+  2.3522
+)
+on conflict (id) do nothing;
+
+insert into public.moments (
+  id,
+  trip_id,
+  author_id,
+  type,
+  caption,
+  thought_text,
+  image_url,
+  latitude,
+  longitude,
+  place_name,
+  location_source,
+  accuracy_meters,
+  taken_at,
+  timezone,
+  visibility
+)
+values
+  (
+    '33333333-3333-3333-3333-333333333331',
+    '22222222-2222-2222-2222-222222222222',
+    '11111111-1111-1111-1111-111111111111',
+    'photo',
+    'Touched down and finally heard French all around me.',
+    null,
+    '/demo/cdg.svg',
+    49.0097,
+    2.5479,
+    'Charles de Gaulle Airport',
+    'manual',
+    18,
+    now() - interval '2 days' + interval '8 hours',
+    'Europe/Paris',
+    'visible'
+  ),
+  (
+    '33333333-3333-3333-3333-333333333332',
+    '22222222-2222-2222-2222-222222222222',
+    '11111111-1111-1111-1111-111111111111',
+    'thought',
+    'The stairs were brutal but the view felt like a reward.',
+    'Stopped for espresso below Sacre-Coeur and watched the neighborhood wake up.',
+    null,
+    48.8867,
+    2.3431,
+    'Montmartre',
+    'manual',
+    22,
+    now() - interval '2 days' + interval '12 hours',
+    'Europe/Paris',
+    'visible'
+  ),
+  (
+    '33333333-3333-3333-3333-333333333333',
+    '22222222-2222-2222-2222-222222222222',
+    '11111111-1111-1111-1111-111111111111',
+    'photo',
+    'The courtyard light was even better than the postcards.',
+    null,
+    '/demo/louvre.svg',
+    48.8606,
+    2.3376,
+    'Louvre',
+    'manual',
+    15,
+    now() - interval '1 day' + interval '10 hours',
+    'Europe/Paris',
+    'visible'
+  ),
+  (
+    '33333333-3333-3333-3333-333333333334',
+    '22222222-2222-2222-2222-222222222222',
+    '11111111-1111-1111-1111-111111111111',
+    'thought',
+    'The chairs were full of people doing absolutely nothing.',
+    'Sat beside the fountain and let the afternoon stretch for a while.',
+    null,
+    48.8462,
+    2.3371,
+    'Luxembourg Gardens',
+    'manual',
+    20,
+    now() - interval '1 day' + interval '15 hours',
+    'Europe/Paris',
+    'visible'
+  ),
+  (
+    '33333333-3333-3333-3333-333333333335',
+    '22222222-2222-2222-2222-222222222222',
+    '11111111-1111-1111-1111-111111111111',
+    'photo',
+    'Found a tiny bookstore and lost all sense of time.',
+    null,
+    '/demo/latin-quarter.svg',
+    48.8493,
+    2.3470,
+    'Latin Quarter',
+    'manual',
+    14,
+    now() + interval '11 hours',
+    'Europe/Paris',
+    'visible'
+  ),
+  (
+    '33333333-3333-3333-3333-333333333336',
+    '22222222-2222-2222-2222-222222222222',
+    '11111111-1111-1111-1111-111111111111',
+    'photo',
+    'Ended the day with the river glowing under the tower.',
+    null,
+    '/demo/eiffel.svg',
+    48.8584,
+    2.2945,
+    'Eiffel Tower',
+    'manual',
+    12,
+    now() + interval '20 hours',
+    'Europe/Paris',
+    'visible'
+  )
+on conflict (id) do nothing;

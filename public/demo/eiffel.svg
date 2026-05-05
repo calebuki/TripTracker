@@ -1,0 +1,11 @@
+<svg width="1200" height="900" viewBox="0 0 1200 900" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1200" height="900" rx="48" fill="#F4EFE4"/>
+  <rect x="84" y="112" width="1032" height="676" rx="36" fill="#FFFDF7"/>
+  <rect x="84" y="498" width="1032" height="290" rx="36" fill="#DDE7F0"/>
+  <path d="M600 214L702 646H498L600 214Z" fill="#81694A"/>
+  <path d="M536 408H664L698 516H502L536 408Z" fill="#6D583D"/>
+  <path d="M460 648H740L690 718H510L460 648Z" fill="#6D583D"/>
+  <circle cx="292" cy="602" r="26" fill="#F7C56A"/>
+  <circle cx="914" cy="562" r="18" fill="#F7C56A"/>
+  <text x="168" y="772" fill="#1D2736" font-family="Georgia, serif" font-size="78">Evening at the Eiffel Tower</text>
+</svg>

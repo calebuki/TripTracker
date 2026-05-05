@@ -1,0 +1,10 @@
+<svg width="1200" height="900" viewBox="0 0 1200 900" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1200" height="900" rx="48" fill="#F2E8D7"/>
+  <rect x="72" y="94" width="1056" height="712" rx="38" fill="#F8F3EA"/>
+  <rect x="136" y="518" width="928" height="172" rx="28" fill="#E4D0A6"/>
+  <path d="M216 498H998L914 328H310L216 498Z" fill="#C6D2E0"/>
+  <path d="M308 328H912L822 228H394L308 328Z" fill="#B2C2D5"/>
+  <circle cx="342" cy="636" r="42" fill="#6D7F8F"/>
+  <circle cx="874" cy="636" r="42" fill="#6D7F8F"/>
+  <text x="136" y="770" fill="#1D2736" font-family="Georgia, serif" font-size="70">Charles de Gaulle</text>
+</svg>
