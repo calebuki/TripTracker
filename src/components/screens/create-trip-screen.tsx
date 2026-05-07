@@ -29,6 +29,8 @@ import type { TripLocationPrivacyMode, TripPrivacyMode } from "@/types/triptrace
 
 type SetupStatus = "idle" | "locating" | "ready" | "error";
 
+const createTripLocationTimeoutMs = 2_500;
+
 interface TripSetupLocation {
   coverLocationName: string | null;
   coverLatitude: number | null;
@@ -130,6 +132,29 @@ export function CreateTripScreen() {
     return () => window.clearTimeout(timeout);
   }, [resolveTripSetupLocation]);
 
+  async function resolveTripSetupLocationForCreate() {
+    const fallbackLocation = setupLocation;
+
+    const fallbackPromise = new Promise<{
+      location: TripSetupLocation;
+      timedOut: boolean;
+    }>((resolve) => {
+      window.setTimeout(() => {
+        resolve({
+          location: fallbackLocation,
+          timedOut: true,
+        });
+      }, createTripLocationTimeoutMs);
+    });
+
+    const resolvedPromise = resolveTripSetupLocation().then((location) => ({
+      location,
+      timedOut: false,
+    }));
+
+    return Promise.race([resolvedPromise, fallbackPromise]);
+  }
+
   async function handleCreateTrip() {
     if (!title.trim()) {
       toast.error("Give the trip a name first.");
@@ -140,7 +165,10 @@ export function CreateTripScreen() {
 
     try {
       const currentTimezone = timezone || getBrowserTimeZone();
-      const resolvedLocation = await resolveTripSetupLocation();
+      const {
+        location: resolvedLocation,
+        timedOut: locationTimedOut,
+      } = await resolveTripSetupLocationForCreate();
       const startDate =
         DateTime.now().setZone(currentTimezone).toISODate() ??
         new Date().toISOString().slice(0, 10);
@@ -160,7 +188,9 @@ export function CreateTripScreen() {
         publishDelayHours: delayHours,
       });
 
-      if (
+      if (locationTimedOut) {
+        toast.success("Trip created. We can fill in the current location later.");
+      } else if (
         resolvedLocation.coverLatitude === null ||
         resolvedLocation.coverLongitude === null
       ) {

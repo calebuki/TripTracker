@@ -16,7 +16,8 @@ import { resolveSiteUrl } from "@/lib/utils";
 
 export function AuthScreen() {
   const router = useRouter();
-  const { user, isDemoMode } = useTripTraceAuth();
+  const { user, loading: authLoading, isDemoMode, processingCallback, error } =
+    useTripTraceAuth();
   const travelerHome = useTravelerHomeTarget();
   const [email, setEmail] = useState("");
   const [sending, setSending] = useState(false);
@@ -86,23 +87,31 @@ export function AuthScreen() {
             Magic link sign-in
           </div>
           <CardTitle className="text-4xl">
-            {user ? "Opening your trip" : "Traveler sign-in"}
+            {user || processingCallback || authLoading
+              ? "Opening your trip"
+              : "Traveler sign-in"}
           </CardTitle>
           <CardDescription>
-            {user
+            {user || processingCallback || authLoading
               ? "TripTrace is jumping back into your traveler flow."
               : "Use a simple email magic link so the traveler can add moments quickly from a phone."}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {user ? (
+          {user || processingCallback || authLoading ? (
             <div className="flex items-center gap-3 rounded-[24px] bg-[var(--paper)] px-4 py-4 text-sm text-slate-600">
               <LoaderCircle className="h-4 w-4 animate-spin text-[var(--ink)]" />
-              {travelerHome.error ??
+              {error ??
+                travelerHome.error ??
                 "Loading your current trip and preparing the camera-first view."}
             </div>
           ) : (
             <>
+              {error ? (
+                <div className="rounded-[24px] border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                  {error}
+                </div>
+              ) : null}
               <Input
                 onChange={(event) => setEmail(event.target.value)}
                 placeholder="traveler@example.com"

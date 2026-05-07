@@ -26,6 +26,8 @@ const initialState: TravelerHomeTargetState = {
   targetPath: null,
 };
 
+const dashboardLookupTimeoutMs = 5_000;
+
 export function useTravelerHomeTarget() {
   const { user, loading: authLoading, isDemoMode } = useTripTraceAuth();
   const [state, setState] = useState<LoadedTravelerHomeTargetState | null>(null);
@@ -36,18 +38,39 @@ export function useTravelerHomeTarget() {
     }
 
     let cancelled = false;
+    let settled = false;
+
+    const finish = (nextState: LoadedTravelerHomeTargetState) => {
+      if (cancelled || settled) {
+        return;
+      }
+
+      settled = true;
+      setState(nextState);
+    };
+
+    const timeout = window.setTimeout(() => {
+      finish({
+        userId: user.id,
+        error: "TripTrace took too long to load your trip. Opening the app home instead.",
+        trip: null,
+        status: "new",
+        targetPath: "/trips/new",
+      });
+    }, dashboardLookupTimeoutMs);
 
     void (async () => {
       try {
         const repository = getTripRepository();
         const activeTrip = await repository.getActiveTripForCurrentUser();
 
-        if (cancelled) {
+        if (cancelled || settled) {
           return;
         }
 
         if (activeTrip) {
-          setState({
+          window.clearTimeout(timeout);
+          finish({
             userId: user.id,
             error: null,
             trip: activeTrip,
@@ -59,11 +82,12 @@ export function useTravelerHomeTarget() {
 
         const latestTrip = await repository.getLatestOwnedTripForCurrentUser();
 
-        if (cancelled) {
+        if (cancelled || settled) {
           return;
         }
 
-        setState({
+        window.clearTimeout(timeout);
+        finish({
           userId: user.id,
           error: null,
           trip: latestTrip,
@@ -71,11 +95,12 @@ export function useTravelerHomeTarget() {
           targetPath: latestTrip ? "/profile" : "/trips/new",
         });
       } catch (error) {
-        if (cancelled) {
+        if (cancelled || settled) {
           return;
         }
 
-        setState({
+        window.clearTimeout(timeout);
+        finish({
           userId: user.id,
           error:
             error instanceof Error
@@ -90,6 +115,7 @@ export function useTravelerHomeTarget() {
 
     return () => {
       cancelled = true;
+      window.clearTimeout(timeout);
     };
   }, [authLoading, user]);
 
