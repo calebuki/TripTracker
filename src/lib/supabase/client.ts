@@ -8,14 +8,14 @@ let browserClient:
   | null = null;
 
 export function getSupabaseBrowserClient() {
-  if (!publicEnv.supabaseUrl || !publicEnv.supabaseAnonKey) {
+  if (!publicEnv.supabaseUrl || !publicEnv.supabasePublishableKey) {
     throw new Error("Supabase is not configured.");
   }
 
   if (!browserClient) {
     browserClient = createClient<Database>(
       publicEnv.supabaseUrl,
-      publicEnv.supabaseAnonKey,
+      publicEnv.supabasePublishableKey,
       {
         auth: {
           persistSession: true,

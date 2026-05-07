@@ -2,20 +2,22 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { Map, Share2, SlidersHorizontal } from "lucide-react";
+import { ChevronLeft, Map, Share2, SlidersHorizontal, User } from "lucide-react";
 import { toast } from "sonner";
 
 import { AddMomentButton } from "@/components/add-moment-button";
 import { AddMomentDialog } from "@/components/add-moment-dialog";
 import { DaySelector } from "@/components/day-selector";
+import { EditMomentDetailsDialog } from "@/components/edit-moment-details-dialog";
 import { EmptyDayState } from "@/components/empty-day-state";
 import { MomentBottomSheet } from "@/components/moment-bottom-sheet";
 import { ShareTripDialog } from "@/components/share-trip-dialog";
 import { TripMap } from "@/components/trip-map";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { getTripRepository } from "@/lib/repositories";
+import { useTravelerHomeTarget } from "@/hooks/use-traveler-home-target";
 import { applyLocationPrivacy, hasCoordinates } from "@/lib/map";
+import { getTripRepository } from "@/lib/repositories";
 import {
   filterMomentsByDay,
   formatLastUpdated,
@@ -31,6 +33,7 @@ interface TripExperienceProps {
   role: RouteRole;
   isDemoMode: boolean;
   onRefresh: () => Promise<void> | void;
+  autoOpenCapture?: boolean;
 }
 
 export function TripExperience({
@@ -38,15 +41,13 @@ export function TripExperience({
   role,
   isDemoMode,
   onRefresh,
+  autoOpenCapture = false,
 }: TripExperienceProps) {
-  const [dayFilter, setDayFilter] = useState<DayFilter>(() =>
-    resolveInitialDayFilter(record.trip, record.moments),
-  );
-  const [selectedMomentId, setSelectedMomentId] = useState<string | null>(null);
-  const [shareOpen, setShareOpen] = useState(false);
-  const [addMomentOpen, setAddMomentOpen] = useState(false);
-  const [manualFitCount, setManualFitCount] = useState(0);
-
+  const travelerHome = useTravelerHomeTarget();
+  const shouldAutoOpenCapture =
+    autoOpenCapture &&
+    role === "owner" &&
+    !record.trip.endDate;
   const visibleMoments = record.moments.filter(
     (moment) => moment.visibility === "visible",
   );
@@ -58,6 +59,14 @@ export function TripExperience({
           record.trip.locationPrivacyMode,
         )
       : visibleMoments;
+  const [dayFilter, setDayFilter] = useState<DayFilter>(() =>
+    resolveInitialDayFilter(record.trip, displayMoments),
+  );
+  const [selectedMomentId, setSelectedMomentId] = useState<string | null>(null);
+  const [editingMomentId, setEditingMomentId] = useState<string | null>(null);
+  const [shareOpen, setShareOpen] = useState(false);
+  const [addMomentOpen, setAddMomentOpen] = useState(shouldAutoOpenCapture);
+  const [manualFitCount, setManualFitCount] = useState(0);
   const filteredMoments = filterMomentsByDay(
     displayMoments,
     record.trip.timezone,
@@ -65,24 +74,41 @@ export function TripExperience({
   );
   const mapMoments = filteredMoments.filter(hasCoordinates);
   const offMapMoments = filteredMoments.filter((moment) => !hasCoordinates(moment));
-  const activeSelectedMomentId = filteredMoments.some(
-    (moment) => moment.id === selectedMomentId,
-  )
-    ? selectedMomentId
-    : filteredMoments[0]?.id ?? null;
+  const activeSelectedMomentId =
+    selectedMomentId &&
+    filteredMoments.some((moment) => moment.id === selectedMomentId)
+      ? selectedMomentId
+      : null;
   const selectedMoment =
     filteredMoments.find((moment) => moment.id === activeSelectedMomentId) ?? null;
-  const dayOptions = getDayOptions(record.trip, visibleMoments);
-  const latestUpdatedAt = getLatestUpdatedAt(record.trip, visibleMoments);
+  const editingMoment =
+    record.moments.find((moment) => moment.id === editingMomentId) ?? null;
+  const dayOptions = getDayOptions(record.trip, displayMoments);
+  const latestUpdatedAt = getLatestUpdatedAt(
+    record.trip,
+    role === "owner" ? record.moments : displayMoments,
+  );
   const fitKey = `${dayFilter.kind}:${dayFilter.value ?? "none"}:${manualFitCount}`;
+  const activeOwnerTrip =
+    role === "owner" && travelerHome.status === "active"
+      ? travelerHome.trip
+      : null;
+  const postingLockedToActiveTrip =
+    role === "owner" &&
+    Boolean(record.trip.endDate) &&
+    Boolean(activeOwnerTrip && activeOwnerTrip.id !== record.trip.id);
+  const canAddMoments =
+    role === "owner" &&
+    (!record.trip.endDate ||
+      (!travelerHome.loading && !postingLockedToActiveTrip));
 
   const dayHeadline =
     dayFilter.kind === "all"
       ? "All recorded days"
       : dayFilter.kind === "today"
-        ? "Today’s trail"
+        ? "Today's trail"
         : dayFilter.kind === "yesterday"
-          ? "Yesterday’s trail"
+          ? "Yesterday's trail"
           : dayFilter.value
             ? formatTripDayLabel(dayFilter.value, record.trip.timezone)
             : "Trip map";
@@ -133,19 +159,35 @@ export function TripExperience({
           <div className="pointer-events-none absolute inset-0">
             <div className="pointer-events-auto absolute inset-x-0 top-0 flex flex-col gap-3 p-3 sm:p-4">
               <div className="flex items-start justify-between gap-4">
-                <div className="max-w-xl rounded-[28px] border border-black/5 bg-white/92 px-4 py-3 shadow-[0_14px_40px_rgba(15,23,42,0.12)] backdrop-blur-sm">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <h1 className="font-serif text-[1.9rem] tracking-tight text-[var(--ink)] sm:text-[2.2rem]">
-                      {record.trip.title}
-                    </h1>
-                    {isDemoMode ? <Badge variant="accent">Demo mode</Badge> : null}
+                <div className="flex max-w-xl items-start gap-3">
+                  <Link
+                    aria-label="Back to TripTrace home"
+                    className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-black/5 bg-white/92 text-[var(--ink)] shadow-[0_14px_40px_rgba(15,23,42,0.12)] backdrop-blur-sm transition hover:bg-white"
+                    href="/"
+                    title="Back to TripTrace home"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </Link>
+                  <div className="rounded-[28px] border border-black/5 bg-white/92 px-4 py-3 shadow-[0_14px_40px_rgba(15,23,42,0.12)] backdrop-blur-sm">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h1 className="font-serif text-[1.9rem] tracking-tight text-[var(--ink)] sm:text-[2.2rem]">
+                        {record.trip.title}
+                      </h1>
+                      {isDemoMode ? <Badge variant="accent">Demo mode</Badge> : null}
+                    </div>
+                    <p className="mt-1 text-sm leading-6 text-slate-600">
+                      {dayHeadline}
+                    </p>
+                    {postingLockedToActiveTrip ? (
+                      <p className="mt-2 text-sm leading-6 text-slate-600">
+                        This past trip is view-only for new moments while{" "}
+                        {activeOwnerTrip?.title ?? "your active trip"} is running.
+                      </p>
+                    ) : null}
+                    <p className="mt-2 text-xs uppercase tracking-[0.18em] text-slate-500">
+                      Last updated {formatLastUpdated(latestUpdatedAt)}
+                    </p>
                   </div>
-                  <p className="mt-1 text-sm leading-6 text-slate-600">
-                    {dayHeadline}
-                  </p>
-                  <p className="mt-2 text-xs uppercase tracking-[0.18em] text-slate-500">
-                    Last updated {formatLastUpdated(latestUpdatedAt)}
-                  </p>
                 </div>
 
                 <div className="flex items-center gap-2">
@@ -160,6 +202,12 @@ export function TripExperience({
                   </Button>
                   {role === "owner" ? (
                     <>
+                      <Button asChild size="icon" variant="secondary">
+                        <Link href="/profile">
+                          <User className="h-4 w-4" />
+                          <span className="sr-only">Open profile</span>
+                        </Link>
+                      </Button>
                       <Button
                         size="sm"
                         variant="secondary"
@@ -182,7 +230,7 @@ export function TripExperience({
             </div>
 
             {filteredMoments.length === 0 ? (
-              <div className="absolute inset-x-4 top-1/2 -translate-y-1/2">
+              <div className="pointer-events-auto absolute inset-x-4 top-1/2 -translate-y-1/2">
                 <EmptyDayState
                   label={
                     dayFilter.kind === "all"
@@ -191,7 +239,7 @@ export function TripExperience({
                         ? formatTripDayLabel(dayFilter.value, record.trip.timezone)
                         : dayFilter.kind
                   }
-                  canAdd={role === "owner"}
+                  canAdd={canAddMoments}
                   onAdd={() => setAddMomentOpen(true)}
                 />
               </div>
@@ -235,7 +283,7 @@ export function TripExperience({
               />
             </div>
 
-            {role === "owner" ? (
+            {canAddMoments ? (
               <AddMomentButton onClick={() => setAddMomentOpen(true)} />
             ) : null}
 
@@ -245,6 +293,7 @@ export function TripExperience({
               open={Boolean(activeSelectedMomentId)}
               canManage={role === "owner"}
               onClose={() => setSelectedMomentId(null)}
+              onEdit={(moment) => setEditingMomentId(moment.id)}
               onHide={hideMoment}
               onDelete={deleteMoment}
             />
@@ -264,10 +313,24 @@ export function TripExperience({
           />
           <AddMomentDialog
             trip={record.trip}
-            open={addMomentOpen}
+            open={canAddMoments && addMomentOpen}
             onOpenChange={setAddMomentOpen}
             onSaved={onRefresh}
+            cameraFirst={autoOpenCapture}
           />
+          {editingMoment ? (
+            <EditMomentDetailsDialog
+              key={editingMoment.id}
+              moment={editingMoment}
+              open
+              onOpenChange={(open) => {
+                if (!open) {
+                  setEditingMomentId(null);
+                }
+              }}
+              onSaved={onRefresh}
+            />
+          ) : null}
         </>
       ) : null}
     </div>

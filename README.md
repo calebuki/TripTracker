@@ -55,14 +55,14 @@ If you leave Supabase env vars blank, TripTrace runs in demo mode with a seeded 
 `NEXT_PUBLIC_SUPABASE_URL`
 Public Supabase project URL.
 
-`NEXT_PUBLIC_SUPABASE_ANON_KEY`
-Public Supabase browser key.
+`NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
+Public Supabase browser key. This app also still accepts the legacy `NEXT_PUBLIC_SUPABASE_ANON_KEY` name for backward compatibility.
 
 `NEXT_PUBLIC_TRIPTRACE_STORAGE_BUCKET`
 Storage bucket for uploaded photo moments. Defaults to `trip-moments`.
 
 `NEXT_PUBLIC_MAP_STYLE_URL`
-MapLibre style URL. Defaults to `https://demotiles.maplibre.org/style.json`.
+MapLibre style URL. Defaults to `https://tiles.openfreemap.org/styles/positron`, a free, no-API-key vector style with proper street-level detail. Swap in Mapbox, MapTiler, Stadia, or a self-hosted style if you prefer.
 
 `NEXT_PUBLIC_TRIPTRACE_SITE_URL`
 Canonical app URL for generating auth redirects and shared links in local or deployed environments.

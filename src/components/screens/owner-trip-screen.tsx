@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 
+import { LoadingShell } from "@/components/loading-shell";
 import { TripExperience } from "@/components/trip-experience";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,16 +10,20 @@ import { useTripRecord } from "@/hooks/use-trip-record";
 
 interface OwnerTripScreenProps {
   tripId: string;
+  autoOpenCapture?: boolean;
 }
 
-export function OwnerTripScreen({ tripId }: OwnerTripScreenProps) {
+export function OwnerTripScreen({
+  tripId,
+  autoOpenCapture = false,
+}: OwnerTripScreenProps) {
   const { record, loading, error, refresh, isDemoMode } = useTripRecord({
     role: "owner",
     tripId,
   });
 
   if (loading) {
-    return null;
+    return <LoadingShell />;
   }
 
   if (!record) {
@@ -47,6 +52,7 @@ export function OwnerTripScreen({ tripId }: OwnerTripScreenProps) {
       role="owner"
       isDemoMode={isDemoMode}
       onRefresh={refresh}
+      autoOpenCapture={autoOpenCapture}
     />
   );
 }

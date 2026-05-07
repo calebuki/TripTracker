@@ -29,12 +29,14 @@ export interface Database {
           title: string;
           description: string | null;
           start_date: string;
-          end_date: string;
+          end_date: string | null;
           timezone: string;
           share_slug: string;
+          share_code: string;
           viewer_passcode_hash: string | null;
           privacy_mode: "private_link" | "invite_only";
-          location_privacy_mode: "exact" | "approximate" | "hide_current_day";
+          location_privacy_mode: "exact" | "delayed";
+          publish_delay_hours: number;
           cover_location_name: string | null;
           cover_latitude: number | null;
           cover_longitude: number | null;
@@ -47,15 +49,14 @@ export interface Database {
           title: string;
           description?: string | null;
           start_date: string;
-          end_date: string;
+          end_date?: string | null;
           timezone?: string;
           share_slug: string;
+          share_code: string;
           viewer_passcode_hash?: string | null;
           privacy_mode?: "private_link" | "invite_only";
-          location_privacy_mode?:
-            | "exact"
-            | "approximate"
-            | "hide_current_day";
+          location_privacy_mode?: "exact" | "delayed";
+          publish_delay_hours?: number;
           cover_location_name?: string | null;
           cover_latitude?: number | null;
           cover_longitude?: number | null;
@@ -68,15 +69,14 @@ export interface Database {
           title?: string;
           description?: string | null;
           start_date?: string;
-          end_date?: string;
+          end_date?: string | null;
           timezone?: string;
           share_slug?: string;
+          share_code?: string;
           viewer_passcode_hash?: string | null;
           privacy_mode?: "private_link" | "invite_only";
-          location_privacy_mode?:
-            | "exact"
-            | "approximate"
-            | "hide_current_day";
+          location_privacy_mode?: "exact" | "delayed";
+          publish_delay_hours?: number;
           cover_location_name?: string | null;
           cover_latitude?: number | null;
           cover_longitude?: number | null;

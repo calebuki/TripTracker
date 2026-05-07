@@ -15,8 +15,10 @@ insert into public.trips (
   end_date,
   timezone,
   share_slug,
+  share_code,
   privacy_mode,
   location_privacy_mode,
+  publish_delay_hours,
   cover_location_name,
   cover_latitude,
   cover_longitude
@@ -30,8 +32,10 @@ values (
   current_date + 14,
   'Europe/Paris',
   'paris-maymester-private',
+  'PARIS',
   'private_link',
   'exact',
+  6,
   'Paris, France',
   48.8566,
   2.3522

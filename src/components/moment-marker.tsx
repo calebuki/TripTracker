@@ -7,12 +7,14 @@ import type { Moment } from "@/types/triptrace";
 
 interface MomentMarkerProps {
   moment: Moment;
+  order: number;
   selected?: boolean;
   onClick?: () => void;
 }
 
 export function MomentMarker({
   moment,
+  order,
   selected = false,
   onClick,
 }: MomentMarkerProps) {
@@ -51,6 +53,9 @@ export function MomentMarker({
           <MessageSquareText className="h-4 w-4" />
         </div>
       )}
+      <span className="pointer-events-none absolute -right-1 -top-1 inline-flex min-h-6 min-w-6 items-center justify-center rounded-full border border-white/90 bg-[var(--accent)] px-1 text-[11px] font-semibold leading-none text-[var(--ink)] shadow-[0_8px_20px_rgba(15,23,42,0.18)]">
+        {order}
+      </span>
     </button>
   );
 }

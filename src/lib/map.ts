@@ -2,7 +2,7 @@ import type { FeatureCollection, LineString } from "geojson";
 import { DateTime } from "luxon";
 
 import type { Moment, Trip, TripLocationPrivacyMode } from "@/types/triptrace";
-import { getMomentTimestamp, getTripDayKey, sortMomentsChronologically } from "@/lib/time";
+import { sortMomentsChronologically } from "@/lib/time";
 
 const defaultParisCenter = {
   latitude: 48.8566,
@@ -95,33 +95,6 @@ export function buildTrailGeoJson(
   };
 }
 
-function stringToSeed(value: string) {
-  let hash = 0;
-
-  for (let index = 0; index < value.length; index += 1) {
-    hash = (hash * 31 + value.charCodeAt(index)) >>> 0;
-  }
-
-  return hash;
-}
-
-function jitterCoordinate(momentId: string, latitude: number, longitude: number) {
-  const seed = stringToSeed(momentId);
-  const meters = 120;
-  const angle = (seed % 360) * (Math.PI / 180);
-  const distance = 30 + (seed % 90);
-  const latOffset = (distance * Math.cos(angle)) / 111_111;
-  const lngOffset =
-    (distance * Math.sin(angle)) /
-    (111_111 * Math.cos((latitude * Math.PI) / 180));
-
-  return {
-    latitude: latitude + latOffset,
-    longitude: longitude + lngOffset,
-    meters,
-  };
-}
-
 export function applyLocationPrivacy(
   trip: Trip,
   moments: Moment[],
@@ -131,39 +104,11 @@ export function applyLocationPrivacy(
     return moments;
   }
 
-  const today = DateTime.now().setZone(trip.timezone).toISODate();
+  const publishCutoff = DateTime.now()
+    .minus({ hours: trip.publishDelayHours })
+    .toMillis();
 
-  return moments.map((moment) => {
-    if (!hasCoordinates(moment)) {
-      return moment;
-    }
-
-    if (
-      mode === "hide_current_day" &&
-      today &&
-      getTripDayKey(getMomentTimestamp(moment), trip.timezone) === today
-    ) {
-      return {
-        ...moment,
-        latitude: null,
-        longitude: null,
-      };
-    }
-
-    if (mode === "approximate") {
-      const jittered = jitterCoordinate(
-        moment.id,
-        moment.latitude as number,
-        moment.longitude as number,
-      );
-
-      return {
-        ...moment,
-        latitude: jittered.latitude,
-        longitude: jittered.longitude,
-      };
-    }
-
-    return moment;
+  return moments.filter((moment) => {
+    return DateTime.fromISO(moment.postedAt, { setZone: true }).toMillis() <= publishCutoff;
   });
 }

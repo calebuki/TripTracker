@@ -1,5 +1,6 @@
 import { DateTime } from "luxon";
 
+import { DEFAULT_PUBLISH_DELAY_HOURS } from "@/lib/trip-sharing";
 import type { Moment, Trip, TripRecord, TripTraceUser } from "@/types/triptrace";
 
 export interface DemoDatabase {
@@ -15,13 +16,23 @@ export const demoOwner: TripTraceUser = {
   createdAt: "2026-05-01T09:00:00.000Z",
 };
 
+export const demoTripId = "demo-paris-maymester";
+export const demoSeedMomentIds = new Set([
+  "moment-cdg",
+  "moment-montmartre",
+  "moment-louvre",
+  "moment-luxembourg",
+  "moment-latin-quarter",
+  "moment-eiffel",
+]);
+
 export function createDemoDatabase(): DemoDatabase {
   const tripTimezone = "Europe/Paris";
   const today = DateTime.now().setZone(tripTimezone).startOf("day");
   const dayOne = today.minus({ days: 2 });
   const dayTwo = today.minus({ days: 1 });
   const dayThree = today;
-  const tripId = "demo-paris-maymester";
+  const tripId = demoTripId;
 
   const trip: Trip = {
     id: tripId,
@@ -29,12 +40,14 @@ export function createDemoDatabase(): DemoDatabase {
     title: "Paris Maymester",
     description: "A quiet map of a month in Paris.",
     startDate: dayOne.toISODate() ?? "2026-05-02",
-    endDate: dayThree.plus({ days: 14 }).toISODate() ?? "2026-05-18",
+    endDate: null,
     timezone: tripTimezone,
     shareSlug: "paris-maymester-private",
+    shareCode: "PARIS",
     viewerPasscodeHash: null,
     privacyMode: "private_link",
     locationPrivacyMode: "exact",
+    publishDelayHours: DEFAULT_PUBLISH_DELAY_HOURS,
     coverLocationName: "Paris, France",
     coverLatitude: 48.8566,
     coverLongitude: 2.3522,

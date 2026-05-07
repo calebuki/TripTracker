@@ -1,8 +1,5 @@
 export type TripPrivacyMode = "private_link" | "invite_only";
-export type TripLocationPrivacyMode =
-  | "exact"
-  | "approximate"
-  | "hide_current_day";
+export type TripLocationPrivacyMode = "exact" | "delayed";
 export type MomentType = "photo" | "thought";
 export type MomentVisibility = "visible" | "hidden";
 export type LocationSource = "exif" | "browser_gps" | "manual" | "none";
@@ -21,12 +18,14 @@ export interface Trip {
   title: string;
   description: string | null;
   startDate: string;
-  endDate: string;
+  endDate: string | null;
   timezone: string;
   shareSlug: string;
+  shareCode: string;
   viewerPasscodeHash: string | null;
   privacyMode: TripPrivacyMode;
   locationPrivacyMode: TripLocationPrivacyMode;
+  publishDelayHours: number;
   coverLocationName: string | null;
   coverLatitude: number | null;
   coverLongitude: number | null;
@@ -65,24 +64,28 @@ export interface CreateTripInput {
   title: string;
   description?: string | null;
   startDate: string;
-  endDate: string;
+  endDate?: string | null;
   timezone: string;
   coverLocationName?: string | null;
+  coverLatitude?: number | null;
+  coverLongitude?: number | null;
   privacyMode: TripPrivacyMode;
   passcode?: string | null;
   locationPrivacyMode: TripLocationPrivacyMode;
+  publishDelayHours: number;
 }
 
 export interface UpdateTripSettingsInput {
   title?: string;
   description?: string | null;
   startDate?: string;
-  endDate?: string;
+  endDate?: string | null;
   timezone?: string;
   coverLocationName?: string | null;
   privacyMode?: TripPrivacyMode;
   passcode?: string | null;
   locationPrivacyMode?: TripLocationPrivacyMode;
+  publishDelayHours?: number;
 }
 
 export interface CreateMomentInput {
@@ -99,6 +102,17 @@ export interface CreateMomentInput {
   accuracyMeters?: number | null;
   takenAt?: string | null;
   timezone: string;
+}
+
+export interface UpdateMomentInput {
+  caption?: string | null;
+  thoughtText?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  placeName?: string | null;
+  locationSource?: LocationSource;
+  accuracyMeters?: number | null;
+  takenAt?: string | null;
 }
 
 export interface LocationDraft {

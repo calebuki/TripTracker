@@ -17,6 +17,7 @@ interface AddMomentDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSaved: () => Promise<void> | void;
+  cameraFirst?: boolean;
 }
 
 export function AddMomentDialog({
@@ -24,37 +25,54 @@ export function AddMomentDialog({
   open,
   onOpenChange,
   onSaved,
+  cameraFirst = false,
 }: AddMomentDialogProps) {
+  const libraryOnly = Boolean(trip.endDate);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-3xl">
         <DialogHeader>
-          <DialogTitle>Add a moment</DialogTitle>
+          <DialogTitle>{libraryOnly ? "Add a past moment" : "Add a moment"}</DialogTitle>
           <DialogDescription>
-            Keep it fast: drop in a photo or jot a quick thought, and TripTrace
-            places it on the map.
+            {libraryOnly
+              ? "Past trips stay editable, but new additions come through the camera roll so the timeline stays grounded in real photos."
+              : "Keep it fast: drop in a photo or jot a quick thought, and TripTrace places it on the map."}
           </DialogDescription>
         </DialogHeader>
-        <Tabs defaultValue="photo">
-          <TabsList>
-            <TabsTrigger value="photo">Upload Photo</TabsTrigger>
-            <TabsTrigger value="thought">Write Thought</TabsTrigger>
-          </TabsList>
-          <TabsContent value="photo">
-            <PhotoUploader
-              trip={trip}
-              onSaved={onSaved}
-              onClose={() => onOpenChange(false)}
-            />
-          </TabsContent>
-          <TabsContent value="thought">
-            <ThoughtComposer
-              trip={trip}
-              onSaved={onSaved}
-              onClose={() => onOpenChange(false)}
-            />
-          </TabsContent>
-        </Tabs>
+        {libraryOnly ? (
+          <PhotoUploader
+            active={open}
+            cameraFirst={false}
+            libraryOnly
+            trip={trip}
+            onSaved={onSaved}
+            onClose={() => onOpenChange(false)}
+          />
+        ) : (
+          <Tabs defaultValue="photo" key={open ? "open" : "closed"}>
+            <TabsList>
+              <TabsTrigger value="photo">Camera</TabsTrigger>
+              <TabsTrigger value="thought">Write Thought</TabsTrigger>
+            </TabsList>
+            <TabsContent value="photo">
+              <PhotoUploader
+                active={open}
+                cameraFirst={cameraFirst}
+                trip={trip}
+                onSaved={onSaved}
+                onClose={() => onOpenChange(false)}
+              />
+            </TabsContent>
+            <TabsContent value="thought">
+              <ThoughtComposer
+                trip={trip}
+                onSaved={onSaved}
+                onClose={() => onOpenChange(false)}
+              />
+            </TabsContent>
+          </Tabs>
+        )}
       </DialogContent>
     </Dialog>
   );

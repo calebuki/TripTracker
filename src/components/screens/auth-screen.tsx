@@ -2,13 +2,14 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
-import { Mail, WandSparkles } from "lucide-react";
+import { useEffect, useState } from "react";
+import { LoaderCircle, Mail } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { useTravelerHomeTarget } from "@/hooks/use-traveler-home-target";
 import { useTripTraceAuth } from "@/hooks/use-triptrace-auth";
 import { getTripRepository } from "@/lib/repositories";
 import { resolveSiteUrl } from "@/lib/utils";
@@ -16,8 +17,17 @@ import { resolveSiteUrl } from "@/lib/utils";
 export function AuthScreen() {
   const router = useRouter();
   const { user, isDemoMode } = useTripTraceAuth();
+  const travelerHome = useTravelerHomeTarget();
   const [email, setEmail] = useState("");
   const [sending, setSending] = useState(false);
+
+  useEffect(() => {
+    if (!user || travelerHome.loading || !travelerHome.targetPath) {
+      return;
+    }
+
+    router.replace(travelerHome.targetPath);
+  }, [router, travelerHome.loading, travelerHome.targetPath, user]);
 
   async function handleSendLink() {
     if (!email.trim()) {
@@ -76,21 +86,20 @@ export function AuthScreen() {
             Magic link sign-in
           </div>
           <CardTitle className="text-4xl">
-            {user ? "You’re signed in" : "Traveler sign-in"}
+            {user ? "Opening your trip" : "Traveler sign-in"}
           </CardTitle>
           <CardDescription>
             {user
-              ? "Keep building your trip or head straight to the dashboard."
+              ? "TripTrace is jumping back into your traveler flow."
               : "Use a simple email magic link so the traveler can add moments quickly from a phone."}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {user ? (
-            <div className="flex flex-wrap gap-3">
-              <Button onClick={() => router.push("/trips/new")}>
-                <WandSparkles className="h-4 w-4" />
-                Create a trip
-              </Button>
+            <div className="flex items-center gap-3 rounded-[24px] bg-[var(--paper)] px-4 py-4 text-sm text-slate-600">
+              <LoaderCircle className="h-4 w-4 animate-spin text-[var(--ink)]" />
+              {travelerHome.error ??
+                "Loading your current trip and preparing the camera-first view."}
             </div>
           ) : (
             <>
@@ -101,7 +110,7 @@ export function AuthScreen() {
                 value={email}
               />
               <Button disabled={sending} onClick={() => void handleSendLink()}>
-                {sending ? "Sending magic link…" : "Send magic link"}
+                {sending ? "Sending magic link..." : "Send magic link"}
               </Button>
             </>
           )}

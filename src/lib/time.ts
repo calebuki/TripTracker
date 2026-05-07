@@ -2,21 +2,25 @@ import { DateTime } from "luxon";
 
 import type { DayFilter, DayOption, Moment, Trip } from "@/types/triptrace";
 
+function parseTimestamp(timestamp: string) {
+  return DateTime.fromISO(timestamp, {
+    setZone: true,
+  });
+}
+
 export function getMomentTimestamp(moment: Moment) {
   return moment.takenAt ?? moment.postedAt;
 }
 
 export function sortMomentsChronologically(moments: Moment[]) {
   return [...moments].sort((left, right) => {
-    return (
-      DateTime.fromISO(getMomentTimestamp(left)).toMillis() -
-      DateTime.fromISO(getMomentTimestamp(right)).toMillis()
-    );
+    return parseTimestamp(getMomentTimestamp(left)).toMillis() -
+      parseTimestamp(getMomentTimestamp(right)).toMillis();
   });
 }
 
 export function getTripDayKey(timestamp: string, timezone: string) {
-  return DateTime.fromISO(timestamp, { setZone: true })
+  return parseTimestamp(timestamp)
     .setZone(timezone)
     .toISODate();
 }
@@ -100,35 +104,46 @@ export function filterMomentsByDay(
 }
 
 export function formatMomentTimes(moment: Moment, tripTimezone: string) {
-  const eventTime = DateTime.fromISO(getMomentTimestamp(moment), {
-    setZone: true,
-  });
+  const eventTime = parseTimestamp(getMomentTimestamp(moment));
   const viewerTimezone =
     typeof window === "undefined"
       ? "America/Los_Angeles"
       : Intl.DateTimeFormat().resolvedOptions().timeZone;
   const tripLocal = eventTime.setZone(tripTimezone);
   const viewerLocal = eventTime.setZone(viewerTimezone);
+  const tripDay = tripLocal.toISODate();
+  const viewerDay = viewerLocal.toISODate();
+  const tripSuffix =
+    tripDay && viewerDay && tripDay > viewerDay ? "+" : "";
+  const viewerSuffix =
+    tripDay && viewerDay && viewerDay > tripDay ? "+" : "";
 
   return {
-    tripLabel: tripLocal.toFormat("ccc, LLL d 'at' h:mm a"),
+    tripLabel: `${tripLocal.toFormat("h:mm a")}${tripSuffix}`,
     viewerLabel:
       viewerTimezone === tripTimezone
         ? null
-        : viewerLocal.toFormat("ccc, LLL d 'at' h:mm a"),
+        : `${viewerLocal.toFormat("h:mm a")}${viewerSuffix}`,
     viewerTimezone,
   };
 }
 
 export function formatLastUpdated(timestamp: string) {
-  return (
-    DateTime.fromISO(timestamp, { setZone: true }).toRelative({
-      style: "short",
-    }) ?? "just now"
-  );
+  const updatedAt = parseTimestamp(timestamp);
+
+  if (!updatedAt.isValid || updatedAt.toMillis() > DateTime.now().toMillis()) {
+    return "just now";
+  }
+
+  return updatedAt.toRelative({
+    style: "short",
+  }) ?? "just now";
 }
 
 export function getLatestUpdatedAt(trip: Trip, moments: Moment[]) {
-  const latestMoment = sortMomentsChronologically(moments).at(-1);
-  return latestMoment?.updatedAt ?? trip.updatedAt;
+  const timestamps = [trip.updatedAt, ...moments.map((moment) => moment.updatedAt)];
+
+  return timestamps.sort((left, right) => {
+    return parseTimestamp(right).toMillis() - parseTimestamp(left).toMillis();
+  })[0] ?? trip.updatedAt;
 }

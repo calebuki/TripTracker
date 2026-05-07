@@ -2,10 +2,10 @@
 
 import { useEffect, useRef } from "react";
 import Map, {
+  Layer,
   Marker,
   NavigationControl,
   Source,
-  Layer,
   type MapRef,
 } from "react-map-gl/maplibre";
 import maplibregl from "maplibre-gl";
@@ -46,6 +46,26 @@ const routeLineLayer = {
     "line-color": "#273244",
     "line-width": 4,
     "line-opacity": 0.88,
+  },
+} as const;
+
+const routeDirectionLayer = {
+  id: "triptrace-route-direction",
+  type: "symbol",
+  layout: {
+    "symbol-placement": "line",
+    "symbol-spacing": 120,
+    "text-field": ">",
+    "text-size": 15,
+    "text-keep-upright": false,
+    "text-allow-overlap": true,
+    "text-ignore-placement": true,
+  },
+  paint: {
+    "text-color": "#fff8ea",
+    "text-halo-color": "#273244",
+    "text-halo-width": 1.2,
+    "text-opacity": 0.95,
   },
 } as const;
 
@@ -135,16 +155,16 @@ export function TripMap({
     >
       <Map
         ref={mapRef}
-        mapLib={maplibregl}
+        attributionControl={false}
+        cursor={allowPick ? "crosshair" : "grab"}
         initialViewState={{
           longitude: center.longitude,
           latitude: center.latitude,
           zoom: 11.5,
         }}
+        mapLib={maplibregl}
         mapStyle={publicEnv.mapStyleUrl}
         reuseMaps
-        attributionControl={false}
-        cursor={allowPick ? "crosshair" : "grab"}
         onClick={(event) => {
           if (!allowPick || !onPickLocation) {
             return;
@@ -157,31 +177,33 @@ export function TripMap({
           });
         }}
       >
-        <Source id="triptrace-route-source" type="geojson" data={trail}>
+        <Source data={trail} id="triptrace-route-source" type="geojson">
           <Layer {...routeGlowLayer} />
           <Layer {...routeLineLayer} />
+          <Layer {...routeDirectionLayer} />
         </Source>
 
-        {moments.filter(hasCoordinates).map((moment) => (
+        {moments.filter(hasCoordinates).map((moment, index) => (
           <Marker
             key={moment.id}
+            anchor="bottom"
             latitude={moment.latitude as number}
             longitude={moment.longitude as number}
-            anchor="bottom"
           >
             <MomentMarker
               moment={moment}
-              selected={selectedMomentId === moment.id}
               onClick={() => onSelectMoment?.(moment.id)}
+              order={index + 1}
+              selected={selectedMomentId === moment.id}
             />
           </Marker>
         ))}
 
         {draftLocation ? (
           <Marker
+            anchor="bottom"
             latitude={draftLocation.latitude}
             longitude={draftLocation.longitude}
-            anchor="bottom"
           >
             <div className="flex h-12 w-12 items-center justify-center rounded-full border-4 border-white bg-[var(--accent)] shadow-[0_18px_45px_rgba(15,23,42,0.16)]">
               <div className="h-4 w-4 rounded-full bg-[var(--ink)]" />

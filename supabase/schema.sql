@@ -13,18 +13,44 @@ create table if not exists public.trips (
   title text not null,
   description text,
   start_date date not null,
-  end_date date not null,
+  end_date date,
   timezone text not null default 'Europe/Paris',
   share_slug text not null unique,
+  share_code text not null unique,
   viewer_passcode_hash text,
   privacy_mode text not null default 'private_link' check (privacy_mode in ('private_link', 'invite_only')),
-  location_privacy_mode text not null default 'exact' check (location_privacy_mode in ('exact', 'approximate', 'hide_current_day')),
+  location_privacy_mode text not null default 'exact' check (location_privacy_mode in ('exact', 'delayed')),
+  publish_delay_hours integer not null default 6 check (publish_delay_hours >= 1 and publish_delay_hours <= 168),
   cover_location_name text,
   cover_latitude double precision,
   cover_longitude double precision,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+alter table if exists public.trips
+  alter column end_date drop not null;
+
+alter table if exists public.trips
+  add column if not exists publish_delay_hours integer not null default 6;
+
+update public.trips
+set location_privacy_mode = 'delayed'
+where location_privacy_mode in ('approximate', 'hide_current_day');
+
+alter table if exists public.trips
+  drop constraint if exists trips_location_privacy_mode_check;
+
+alter table if exists public.trips
+  add constraint trips_location_privacy_mode_check
+  check (location_privacy_mode in ('exact', 'delayed'));
+
+alter table if exists public.trips
+  drop constraint if exists trips_publish_delay_hours_check;
+
+alter table if exists public.trips
+  add constraint trips_publish_delay_hours_check
+  check (publish_delay_hours >= 1 and publish_delay_hours <= 168);
 
 create table if not exists public.trip_members (
   id uuid primary key default gen_random_uuid(),
@@ -67,6 +93,19 @@ begin
 end;
 $$;
 
+create or replace function public.touch_parent_trip_updated_at()
+returns trigger
+language plpgsql
+as $$
+begin
+  update public.trips
+  set updated_at = now()
+  where id = coalesce(new.trip_id, old.trip_id);
+
+  return coalesce(new, old);
+end;
+$$;
+
 drop trigger if exists touch_trips_updated_at on public.trips;
 create trigger touch_trips_updated_at
 before update on public.trips
@@ -79,8 +118,18 @@ before update on public.moments
 for each row
 execute function public.touch_updated_at();
 
+drop trigger if exists touch_parent_trip_from_moments on public.moments;
+create trigger touch_parent_trip_from_moments
+after insert or update or delete on public.moments
+for each row
+execute function public.touch_parent_trip_updated_at();
+
 create index if not exists trips_owner_id_idx on public.trips (owner_id);
+create unique index if not exists trips_one_active_trip_per_owner_idx
+  on public.trips (owner_id)
+  where end_date is null;
 create index if not exists trips_share_slug_idx on public.trips (share_slug);
+create index if not exists trips_share_code_idx on public.trips (share_code);
 create index if not exists moments_trip_id_idx on public.moments (trip_id);
 create index if not exists moments_trip_id_taken_at_idx on public.moments (trip_id, taken_at, posted_at);
 

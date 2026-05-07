@@ -5,6 +5,7 @@ import { useState } from "react";
 import { Lock } from "lucide-react";
 import { toast } from "sonner";
 
+import { LoadingShell } from "@/components/loading-shell";
 import { TripExperience } from "@/components/trip-experience";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -25,7 +26,7 @@ export function ViewerTripScreen({ shareSlug }: ViewerTripScreenProps) {
   const [verifiedOverride, setVerifiedOverride] = useState(false);
 
   if (loading) {
-    return null;
+    return <LoadingShell label="Opening the shared trip…" />;
   }
 
   if (!record) {

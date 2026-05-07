@@ -20,6 +20,7 @@ interface MomentBottomSheetProps {
   open: boolean;
   canManage?: boolean;
   onClose: () => void;
+  onEdit?: (moment: Moment) => void;
   onHide?: (moment: Moment) => void;
   onDelete?: (moment: Moment) => void;
 }
@@ -30,10 +31,15 @@ export function MomentBottomSheet({
   open,
   canManage = false,
   onClose,
+  onEdit,
   onHide,
   onDelete,
 }: MomentBottomSheetProps) {
   const times = moment ? formatMomentTimes(moment, trip.timezone) : null;
+  const tripTimeLabel =
+    trip.coverLocationName?.split(",")[0]?.trim() ||
+    trip.timezone.split("/").at(-1)?.replace(/_/g, " ") ||
+    "Trip";
 
   return (
     <div
@@ -62,7 +68,7 @@ export function MomentBottomSheet({
                       "Trip moment"}
                   </p>
                   <div className="mt-2 space-y-1 text-sm text-slate-600">
-                    <p>Paris time: {times?.tripLabel}</p>
+                    <p>{tripTimeLabel} time: {times?.tripLabel}</p>
                     {times?.viewerLabel ? (
                       <p>Your time: {times.viewerLabel}</p>
                     ) : null}
@@ -79,6 +85,11 @@ export function MomentBottomSheet({
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
+                      {onEdit ? (
+                        <DropdownMenuItem onClick={() => onEdit(moment)}>
+                          Edit details
+                        </DropdownMenuItem>
+                      ) : null}
                       <DropdownMenuItem onClick={() => onHide(moment)}>
                         <EyeOff className="mr-2 h-4 w-4" />
                         Hide from viewers
@@ -101,13 +112,20 @@ export function MomentBottomSheet({
             </div>
 
             {moment.type === "photo" && moment.imageUrl ? (
-              <div className="overflow-hidden rounded-[26px] bg-[var(--paper)]">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  alt={moment.caption ?? moment.placeName ?? "Trip photo"}
-                  className="h-64 w-full object-cover sm:h-80"
-                  src={moment.imageUrl}
-                />
+              <div className="space-y-3">
+                <div className="overflow-hidden rounded-[26px] bg-[var(--paper)]">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    alt={moment.caption ?? moment.placeName ?? "Trip photo"}
+                    className="h-64 w-full object-cover sm:h-80"
+                    src={moment.imageUrl}
+                  />
+                </div>
+                {moment.thoughtText ? (
+                  <div className="rounded-[24px] bg-[var(--paper)] p-4 text-sm leading-7 text-[var(--ink)]">
+                    {moment.thoughtText}
+                  </div>
+                ) : null}
               </div>
             ) : (
               <div className="rounded-[26px] bg-[var(--paper)] p-5 text-base leading-7 text-[var(--ink)]">

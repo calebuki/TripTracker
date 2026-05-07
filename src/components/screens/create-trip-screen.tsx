@@ -2,9 +2,9 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { DateTime } from "luxon";
-import { LoaderCircle } from "lucide-react";
+import { LoaderCircle, LocateFixed, User } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -12,29 +12,123 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { useTravelerHomeTarget } from "@/hooks/use-traveler-home-target";
+import {
+  requestCurrentCoordinates,
+  reverseGeocodeCoordinates,
+} from "@/lib/location";
 import { useTripTraceAuth } from "@/hooks/use-triptrace-auth";
 import { getTripRepository } from "@/lib/repositories";
+import {
+  clampPublishDelayHours,
+  DEFAULT_PUBLISH_DELAY_HOURS,
+  locationPrivacyChoices,
+} from "@/lib/trip-sharing";
+import { getBrowserTimeZone } from "@/lib/utils";
 import type { TripLocationPrivacyMode, TripPrivacyMode } from "@/types/triptrace";
+
+type SetupStatus = "idle" | "locating" | "ready" | "error";
+
+interface TripSetupLocation {
+  coverLocationName: string | null;
+  coverLatitude: number | null;
+  coverLongitude: number | null;
+}
 
 export function CreateTripScreen() {
   const router = useRouter();
   const { user, loading, isDemoMode } = useTripTraceAuth();
-  const parisToday = DateTime.now().setZone("Europe/Paris").toISODate() ?? "";
-  const parisEnd =
-    DateTime.now().setZone("Europe/Paris").plus({ days: 28 }).toISODate() ?? "";
+  const travelerHome = useTravelerHomeTarget();
   const [title, setTitle] = useState("Paris Maymester");
   const [description, setDescription] = useState(
     "A quiet map of the moments that made the trip.",
   );
-  const [startDate, setStartDate] = useState(parisToday);
-  const [endDate, setEndDate] = useState(parisEnd);
-  const [timezone, setTimezone] = useState("Europe/Paris");
-  const [coverLocationName, setCoverLocationName] = useState("Paris, France");
+  const [timezone, setTimezone] = useState(() => getBrowserTimeZone());
   const [privacyMode, setPrivacyMode] = useState<TripPrivacyMode>("private_link");
   const [locationPrivacyMode, setLocationPrivacyMode] =
     useState<TripLocationPrivacyMode>("exact");
+  const [publishDelayHours, setPublishDelayHours] = useState(
+    DEFAULT_PUBLISH_DELAY_HOURS,
+  );
   const [passcode, setPasscode] = useState("");
+  const [setupLocation, setSetupLocation] = useState<TripSetupLocation>({
+    coverLocationName: null,
+    coverLatitude: null,
+    coverLongitude: null,
+  });
+  const [setupStatus, setSetupStatus] = useState<SetupStatus>("idle");
+  const [setupMessage, setSetupMessage] = useState(
+    "We'll grab your current location when you create the trip.",
+  );
   const [creating, setCreating] = useState(false);
+
+  useEffect(() => {
+    if (travelerHome.status !== "active" || !travelerHome.targetPath) {
+      return;
+    }
+
+    router.replace(travelerHome.targetPath);
+  }, [router, travelerHome.status, travelerHome.targetPath]);
+
+  const resolveTripSetupLocation = useCallback(async (force = false) => {
+    const alreadyResolved =
+      setupLocation.coverLatitude !== null && setupLocation.coverLongitude !== null;
+
+    if (alreadyResolved && !force) {
+      return setupLocation;
+    }
+
+    setSetupStatus("locating");
+    setSetupMessage("Looking up your current location.");
+
+    try {
+      const coordinates = await requestCurrentCoordinates();
+      let coverLocationName: string | null = null;
+
+      try {
+        coverLocationName = await reverseGeocodeCoordinates(
+          coordinates.latitude,
+          coordinates.longitude,
+        );
+      } catch {
+        coverLocationName = null;
+      }
+
+      const nextLocation = {
+        coverLocationName,
+        coverLatitude: coordinates.latitude,
+        coverLongitude: coordinates.longitude,
+      };
+
+      setSetupLocation(nextLocation);
+      setSetupStatus("ready");
+      setSetupMessage(
+        coverLocationName
+          ? `Using ${coverLocationName}.`
+          : "Using your current map position.",
+      );
+
+      return nextLocation;
+    } catch (error) {
+      setSetupStatus("error");
+      setSetupMessage(
+        error instanceof Error
+          ? error.message
+          : "We couldn't read your current location yet.",
+      );
+
+      return setupLocation;
+    }
+  }, [setupLocation]);
+
+  useEffect(() => {
+    const timeout = window.setTimeout(() => {
+      setTimezone(getBrowserTimeZone());
+      void resolveTripSetupLocation();
+    }, 0);
+
+    return () => window.clearTimeout(timeout);
+  }, [resolveTripSetupLocation]);
 
   async function handleCreateTrip() {
     if (!title.trim()) {
@@ -45,18 +139,36 @@ export function CreateTripScreen() {
     setCreating(true);
 
     try {
+      const currentTimezone = timezone || getBrowserTimeZone();
+      const resolvedLocation = await resolveTripSetupLocation();
+      const startDate =
+        DateTime.now().setZone(currentTimezone).toISODate() ??
+        new Date().toISOString().slice(0, 10);
+      const delayHours = clampPublishDelayHours(publishDelayHours);
       const trip = await getTripRepository().createTrip({
         title: title.trim(),
         description: description.trim() || null,
         startDate,
-        endDate,
-        timezone,
-        coverLocationName: coverLocationName.trim() || null,
+        endDate: null,
+        timezone: currentTimezone,
+        coverLocationName: resolvedLocation.coverLocationName,
+        coverLatitude: resolvedLocation.coverLatitude,
+        coverLongitude: resolvedLocation.coverLongitude,
         privacyMode,
         passcode: passcode.trim() || null,
         locationPrivacyMode,
+        publishDelayHours: delayHours,
       });
-      toast.success("Trip created.");
+
+      if (
+        resolvedLocation.coverLatitude === null ||
+        resolvedLocation.coverLongitude === null
+      ) {
+        toast.success("Trip created. Current location can be added later.");
+      } else {
+        toast.success("Trip created.");
+      }
+
       router.push(`/trips/${trip.id}`);
     } catch (error) {
       toast.error(
@@ -90,16 +202,59 @@ export function CreateTripScreen() {
 
   return (
     <main className="min-h-screen bg-[var(--paper)] px-4 py-6 sm:px-6">
-      <div className="mx-auto max-w-4xl">
+      <div className="mx-auto max-w-4xl space-y-4">
+        <div className="flex justify-end">
+          <Button asChild size="icon" variant="secondary">
+            <Link href="/profile">
+              <User className="h-4 w-4" />
+              <span className="sr-only">Open profile</span>
+            </Link>
+          </Button>
+        </div>
         <Card className="rounded-[36px]">
           <CardHeader className="p-8 sm:p-10">
             <CardTitle className="text-5xl">Create a trip</CardTitle>
             <CardDescription className="max-w-2xl text-base">
-              Keep the setup calm. The map stays front and center once the trip
-              exists.
+              Built for quick posting on your phone. We&apos;ll use the trip creation
+              moment as the start date and keep the rest of the setup light.
             </CardDescription>
           </CardHeader>
           <CardContent className="grid gap-8 p-8 pt-0 sm:p-10 sm:pt-0">
+            {travelerHome.status === "active" ? (
+              <div className="rounded-[28px] border border-black/5 bg-[var(--paper)] p-5">
+                <div className="flex items-center gap-3 text-sm text-slate-600">
+                  <LoaderCircle className="h-4 w-4 animate-spin text-[var(--ink)]" />
+                  You already have an active trip, so TripTrace is taking you back there.
+                </div>
+              </div>
+            ) : null}
+
+            {travelerHome.status === "latest" && travelerHome.trip?.endDate ? (
+              <div className="rounded-[28px] border border-black/5 bg-[var(--paper)] p-5">
+                <div className="flex flex-wrap items-start justify-between gap-4">
+                  <div className="space-y-2">
+                    <p className="text-sm font-medium text-[var(--ink)]">
+                      Most recent trip
+                    </p>
+                    <p className="text-base text-[var(--ink)]">
+                      {travelerHome.trip.title}
+                    </p>
+                    <p className="text-sm leading-6 text-slate-600">
+                      You can reopen this trip from its settings page if you want to
+                      keep posting there instead of starting a brand-new one.
+                    </p>
+                  </div>
+                  <Button
+                    onClick={() => router.push(`/trips/${travelerHome.trip?.id}`)}
+                    type="button"
+                    variant="secondary"
+                  >
+                    Open recent trip
+                  </Button>
+                </div>
+              </div>
+            ) : null}
+
             <div className="grid gap-6 sm:grid-cols-2">
               <div className="space-y-2 sm:col-span-2">
                 <Label htmlFor="trip-title">Trip name</Label>
@@ -117,39 +272,47 @@ export function CreateTripScreen() {
                   value={description}
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="start-date">Start date</Label>
-                <Input
-                  id="start-date"
-                  onChange={(event) => setStartDate(event.target.value)}
-                  type="date"
-                  value={startDate}
-                />
+            </div>
+
+            <div className="rounded-[28px] border border-black/5 bg-[var(--paper)] p-5">
+              <div className="flex items-start justify-between gap-3">
+                <div className="space-y-2">
+                  <p className="text-sm font-medium text-[var(--ink)]">
+                    Automatic setup
+                  </p>
+                  <p className="text-sm leading-6 text-slate-600">
+                    Start date is set the moment you create the trip. Timezone comes
+                    from your device, and the map starts from your current location.
+                  </p>
+                </div>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => void resolveTripSetupLocation(true)}
+                  type="button"
+                >
+                  <LocateFixed className="h-4 w-4" />
+                  Refresh
+                </Button>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="end-date">End date</Label>
-                <Input
-                  id="end-date"
-                  onChange={(event) => setEndDate(event.target.value)}
-                  type="date"
-                  value={endDate}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="timezone">Primary timezone</Label>
-                <Input
-                  id="timezone"
-                  onChange={(event) => setTimezone(event.target.value)}
-                  value={timezone}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="cover-location">Cover location</Label>
-                <Input
-                  id="cover-location"
-                  onChange={(event) => setCoverLocationName(event.target.value)}
-                  value={coverLocationName}
-                />
+              <div className="mt-4 grid gap-4 text-sm sm:grid-cols-2">
+                <div className="rounded-[22px] bg-white px-4 py-3">
+                  <p className="text-xs uppercase tracking-[0.16em] text-slate-500">
+                    Timezone
+                  </p>
+                  <p className="mt-1 font-medium text-[var(--ink)]">{timezone}</p>
+                </div>
+                <div className="rounded-[22px] bg-white px-4 py-3">
+                  <p className="text-xs uppercase tracking-[0.16em] text-slate-500">
+                    Location
+                  </p>
+                  <p className="mt-1 font-medium text-[var(--ink)]">
+                    {setupLocation.coverLocationName ?? "Current position"}
+                  </p>
+                  <p className="mt-1 text-slate-600">
+                    {setupStatus === "locating" ? "Looking up location..." : setupMessage}
+                  </p>
+                </div>
               </div>
             </div>
 
@@ -178,34 +341,50 @@ export function CreateTripScreen() {
             </div>
 
             <div className="space-y-3">
-              <Label>Location precision</Label>
-              <div className="grid gap-3 sm:grid-cols-3">
-                {[
-                  ["exact", "Exact", "Show locations as-is."],
-                  ["approximate", "Approximate", "Soften locations slightly."],
-                  [
-                    "hide_current_day",
-                    "Hide today",
-                    "Keep the current day off the viewer map.",
-                  ],
-                ].map(([value, label, description]) => (
+              <Label>Viewer publishing</Label>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {locationPrivacyChoices.map((choice) => (
                   <button
-                    key={value}
+                    key={choice.value}
                     className={`rounded-[26px] border p-4 text-left transition ${
-                      locationPrivacyMode === value
+                      locationPrivacyMode === choice.value
                         ? "border-transparent bg-[var(--accent-soft)] shadow-[0_12px_28px_rgba(15,23,42,0.06)]"
                         : "border-black/6 bg-white hover:bg-[var(--paper)]"
                     }`}
-                    onClick={() =>
-                      setLocationPrivacyMode(value as TripLocationPrivacyMode)
-                    }
+                    onClick={() => setLocationPrivacyMode(choice.value)}
                     type="button"
                   >
-                    <p className="font-medium text-[var(--ink)]">{label}</p>
-                    <p className="mt-1 text-sm text-slate-600">{description}</p>
+                    <p className="font-medium text-[var(--ink)]">{choice.label}</p>
+                    <p className="mt-1 text-sm text-slate-600">
+                      {choice.description}
+                    </p>
                   </button>
                 ))}
               </div>
+
+              {locationPrivacyMode === "delayed" ? (
+                <div className="rounded-[24px] border border-black/5 bg-white p-4">
+                  <Label htmlFor="publish-delay-hours">Publish new moments after</Label>
+                  <div className="mt-2 flex items-center gap-3">
+                    <Input
+                      id="publish-delay-hours"
+                      min={1}
+                      onChange={(event) =>
+                        setPublishDelayHours(
+                          clampPublishDelayHours(Number(event.target.value) || 0),
+                        )
+                      }
+                      type="number"
+                      value={publishDelayHours}
+                    />
+                    <span className="text-sm text-slate-600">hours</span>
+                  </div>
+                  <p className="mt-2 text-sm text-slate-600">
+                    Viewers on desktop will only see fresh moments after this delay,
+                    and they&apos;ll appear at the exact saved location once published.
+                  </p>
+                </div>
+              ) : null}
             </div>
 
             <div className="flex flex-wrap justify-end gap-3">
@@ -216,7 +395,7 @@ export function CreateTripScreen() {
                 {creating ? (
                   <>
                     <LoaderCircle className="h-4 w-4 animate-spin" />
-                    Creating trip…
+                    Creating trip...
                   </>
                 ) : (
                   "Create trip"

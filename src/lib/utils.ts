@@ -1,6 +1,8 @@
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 
+import { getConfiguredSiteUrl } from "@/lib/site-url";
+
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
@@ -14,7 +16,7 @@ export function resolveSiteUrl() {
     return window.location.origin;
   }
 
-  return "";
+  return getConfiguredSiteUrl() ?? "";
 }
 
 export function getBrowserTimeZone() {

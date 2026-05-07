@@ -1,8 +1,9 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Manrope, Newsreader } from "next/font/google";
 import "maplibre-gl/dist/maplibre-gl.css";
 
 import { AppProviders } from "@/components/providers/app-providers";
+import { getConfiguredSiteOrigin } from "@/lib/site-url";
 import "./globals.css";
 
 const manrope = Manrope({
@@ -16,9 +17,45 @@ const newsreader = Newsreader({
   style: ["normal", "italic"],
 });
 
+const siteOrigin = getConfiguredSiteOrigin();
+const siteDescription = "A private map of the moments that made the trip.";
+
 export const metadata: Metadata = {
-  title: "TripTrace",
-  description: "A private map of the moments that made the trip.",
+  metadataBase: siteOrigin ?? undefined,
+  title: {
+    default: "TripTrace",
+    template: "%s | TripTrace",
+  },
+  description: siteDescription,
+  applicationName: "TripTrace",
+  alternates: {
+    canonical: "/",
+  },
+  openGraph: {
+    title: "TripTrace",
+    description: siteDescription,
+    siteName: "TripTrace",
+    type: "website",
+    url: siteOrigin?.toString(),
+  },
+  twitter: {
+    card: "summary",
+    title: "TripTrace",
+    description: siteDescription,
+  },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "TripTrace",
+  },
+  formatDetection: {
+    telephone: false,
+  },
+  category: "travel",
+};
+
+export const viewport: Viewport = {
+  themeColor: "#f6f1e8",
 };
 
 export default function RootLayout({
@@ -30,8 +67,12 @@ export default function RootLayout({
     <html
       lang="en"
       className={`${manrope.variable} ${newsreader.variable} h-full antialiased`}
+      suppressHydrationWarning
     >
-      <body className="min-h-full flex flex-col bg-[var(--paper)] text-[var(--ink)]">
+      <body
+        className="min-h-full flex flex-col bg-[var(--paper)] text-[var(--ink)]"
+        suppressHydrationWarning
+      >
         {children}
         <AppProviders />
       </body>
