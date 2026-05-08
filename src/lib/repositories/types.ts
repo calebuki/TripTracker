@@ -4,14 +4,14 @@ import type {
   Moment,
   Trip,
   TripRecord,
-  TripTraceUser,
+  CrumbsUser,
   UpdateMomentInput,
   UpdateTripSettingsInput,
-} from "@/types/triptrace";
+} from "@/types/crumbs";
 
 export interface TripRepository {
   mode: "demo" | "supabase";
-  getSessionUser(): Promise<TripTraceUser | null>;
+  getSessionUser(): Promise<CrumbsUser | null>;
   signInWithEmail(email: string, redirectTo: string): Promise<void>;
   signOut(): Promise<void>;
   createTrip(input: CreateTripInput): Promise<Trip>;

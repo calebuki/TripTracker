@@ -21,7 +21,7 @@ import {
   locationPrivacyChoices,
 } from "@/lib/trip-sharing";
 import { resolveSiteUrl } from "@/lib/utils";
-import type { Trip, TripLocationPrivacyMode } from "@/types/triptrace";
+import type { Trip, TripLocationPrivacyMode } from "@/types/crumbs";
 
 interface ShareTripDialogProps {
   trip: Trip;
@@ -85,7 +85,7 @@ function ShareTripDialogBody({
       toast.error(
         error instanceof Error
           ? error.message
-          : "TripTrace could not update sharing.",
+          : "Crumbs could not update sharing.",
       );
     } finally {
       setSaving(false);
@@ -95,7 +95,7 @@ function ShareTripDialogBody({
   return (
     <>
       <DialogHeader>
-        <DialogTitle>Share Trip</DialogTitle>
+        <DialogTitle>Share crumbs</DialogTitle>
         <DialogDescription>
           Anyone with this link can view the trip. Keep the experience simple
           and private.
@@ -119,7 +119,7 @@ function ShareTripDialogBody({
                   await navigator.clipboard.writeText(shareUrl);
                   toast.success("Share link copied.");
                 } catch {
-                  toast.error("TripTrace couldn't copy the link.");
+                  toast.error("Crumbs couldn't copy the link.");
                 }
               }}
               type="button"
@@ -133,12 +133,12 @@ function ShareTripDialogBody({
         <div className="rounded-[28px] border border-black/5 bg-white p-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <p className="text-sm font-medium text-[var(--ink)]">Trip code</p>
+              <p className="text-sm font-medium text-[var(--ink)]">Crumb code</p>
               <p className="mt-1 font-mono text-2xl tracking-[0.32em] text-[var(--ink)]">
                 {trip.shareCode}
               </p>
               <p className="mt-1 text-sm text-slate-600">
-                A short code anyone can type on the TripTrace home page.
+                A short code anyone can type on the Crumbs home page.
               </p>
             </div>
             <Button
@@ -147,9 +147,9 @@ function ShareTripDialogBody({
               onClick={async () => {
                 try {
                   await navigator.clipboard.writeText(trip.shareCode);
-                  toast.success("Trip code copied.");
+                  toast.success("Crumb code copied.");
                 } catch {
-                  toast.error("TripTrace couldn't copy the code.");
+                  toast.error("Crumbs couldn't copy the code.");
                 }
               }}
               type="button"

@@ -41,7 +41,7 @@ export async function extractPhotoMetadata(
       longitude: null,
       takenAt: null,
       metadataError:
-        "TripTrace could not read location metadata from this photo.",
+        "Crumbs could not read location metadata from this photo.",
     };
   }
 }

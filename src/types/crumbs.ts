@@ -5,7 +5,7 @@ export type MomentVisibility = "visible" | "hidden";
 export type LocationSource = "exif" | "browser_gps" | "manual" | "none";
 export type RouteRole = "owner" | "viewer";
 
-export interface TripTraceUser {
+export interface CrumbsUser {
   id: string;
   email: string;
   displayName: string | null;

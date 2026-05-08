@@ -18,35 +18,35 @@ const newsreader = Newsreader({
 });
 
 const siteOrigin = getConfiguredSiteOrigin();
-const siteDescription = "A private map of the moments that made the trip.";
+const siteDescription = "Follow a private trail of crumbs from the moments that made the trip.";
 
 export const metadata: Metadata = {
   metadataBase: siteOrigin ?? undefined,
   title: {
-    default: "TripTrace",
-    template: "%s | TripTrace",
+    default: "Crumbs",
+    template: "%s | Crumbs",
   },
   description: siteDescription,
-  applicationName: "TripTrace",
+  applicationName: "Crumbs",
   alternates: {
     canonical: "/",
   },
   openGraph: {
-    title: "TripTrace",
+    title: "Crumbs",
     description: siteDescription,
-    siteName: "TripTrace",
+    siteName: "Crumbs",
     type: "website",
     url: siteOrigin?.toString(),
   },
   twitter: {
     card: "summary",
-    title: "TripTrace",
+    title: "Crumbs",
     description: siteDescription,
   },
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "TripTrace",
+    title: "Crumbs",
   },
   formatDetection: {
     telephone: false,

@@ -9,7 +9,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PhotoUploader } from "@/components/photo-uploader";
 import { ThoughtComposer } from "@/components/thought-composer";
-import type { Trip } from "@/types/triptrace";
+import type { Trip } from "@/types/crumbs";
 
 interface AddMomentDialogProps {
   trip: Trip;

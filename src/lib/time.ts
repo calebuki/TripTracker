@@ -1,6 +1,6 @@
 import { DateTime } from "luxon";
 
-import type { DayFilter, DayOption, Moment, Trip } from "@/types/triptrace";
+import type { DayFilter, DayOption, Moment, Trip } from "@/types/crumbs";
 
 function parseTimestamp(timestamp: string) {
   return DateTime.fromISO(timestamp, {

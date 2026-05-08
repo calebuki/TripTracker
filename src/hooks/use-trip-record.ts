@@ -3,8 +3,8 @@
 import { useCallback, useEffect, useState } from "react";
 
 import { getTripRepository } from "@/lib/repositories";
-import { useTripTraceAuth } from "@/hooks/use-triptrace-auth";
-import type { RouteRole, TripRecord } from "@/types/triptrace";
+import { useCrumbsAuth } from "@/hooks/use-crumbs-auth";
+import type { RouteRole, TripRecord } from "@/types/crumbs";
 
 interface UseTripRecordOptions {
   role: RouteRole;
@@ -19,7 +19,7 @@ export function useTripRecord({
   tripId,
   shareSlug,
 }: UseTripRecordOptions) {
-  const { user, loading: authLoading, isDemoMode } = useTripTraceAuth();
+  const { user, loading: authLoading, isDemoMode } = useCrumbsAuth();
   const [record, setRecord] = useState<TripRecord | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -39,7 +39,7 @@ export function useTripRecord({
           new Promise<never>((_, reject) => {
             timeoutId = window.setTimeout(() => {
               reject(
-                new Error("TripTrace took too long to load this trip. Please try again."),
+                new Error("Crumbs took too long to load this trip. Please try again."),
               );
             }, tripRecordTimeoutMs);
           }),
@@ -63,7 +63,7 @@ export function useTripRecord({
       setError(
         loadError instanceof Error
           ? loadError.message
-          : "TripTrace could not load this trip.",
+          : "Crumbs could not load this trip.",
       );
       setRecord(null);
     } finally {

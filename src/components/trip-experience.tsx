@@ -13,7 +13,7 @@ import { MomentBottomSheet } from "@/components/moment-bottom-sheet";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useTravelerHomeTarget } from "@/hooks/use-traveler-home-target";
-import { useTripTraceAuth } from "@/hooks/use-triptrace-auth";
+import { useCrumbsAuth } from "@/hooks/use-crumbs-auth";
 import {
   applyLocationPrivacy,
   hasCoordinates,
@@ -26,7 +26,7 @@ import {
   getDayOptions,
   resolveInitialDayFilter,
 } from "@/lib/time";
-import type { DayFilter, Moment, RouteRole, TripRecord } from "@/types/triptrace";
+import type { DayFilter, Moment, RouteRole, TripRecord } from "@/types/crumbs";
 
 const AddMomentDialog = dynamic(
   () =>
@@ -77,7 +77,7 @@ export function TripExperience({
   autoOpenCapture = false,
 }: TripExperienceProps) {
   const { user, loading: authLoading, isDemoMode: authIsDemoMode } =
-    useTripTraceAuth();
+    useCrumbsAuth();
   const travelerHome = useTravelerHomeTarget({
     user,
     authLoading,
@@ -172,7 +172,7 @@ export function TripExperience({
       await onRefresh();
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : "TripTrace could not hide this moment.",
+        error instanceof Error ? error.message : "Crumbs could not hide this moment.",
       );
     }
   }
@@ -189,7 +189,7 @@ export function TripExperience({
       await onRefresh();
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : "TripTrace could not delete this moment.",
+        error instanceof Error ? error.message : "Crumbs could not delete this moment.",
       );
     }
   }
@@ -211,10 +211,10 @@ export function TripExperience({
             <div className="pointer-events-auto absolute inset-x-0 top-0 p-3 sm:p-4">
               <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-2 sm:gap-3">
                 <Link
-                  aria-label="Back to TripTrace home"
+                  aria-label="Back to Crumbs home"
                   className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-black/5 bg-white/92 text-[var(--ink)] shadow-[0_14px_40px_rgba(15,23,42,0.12)] backdrop-blur-sm transition hover:bg-white"
                   href="/"
-                  title="Back to TripTrace home"
+                  title="Back to Crumbs home"
                 >
                   <ChevronLeft className="h-4 w-4" />
                 </Link>
@@ -234,7 +234,7 @@ export function TripExperience({
                       className="font-mono uppercase tracking-[0.12em]"
                       variant="subtle"
                     >
-                      Code {record.trip.shareCode}
+                      Crumb {record.trip.shareCode}
                     </Badge>
                   </div>
                   {postingLockedToActiveTrip ? (

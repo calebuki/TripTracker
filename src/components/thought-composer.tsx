@@ -8,7 +8,7 @@ import { TripMap } from "@/components/trip-map";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { getTripRepository } from "@/lib/repositories";
-import type { LocationDraft, Trip } from "@/types/triptrace";
+import type { LocationDraft, Trip } from "@/types/crumbs";
 
 interface ThoughtComposerProps {
   trip: Trip;
@@ -64,7 +64,7 @@ export function ThoughtComposer({
         setLocationError(
           error instanceof Error
             ? error.message
-            : "TripTrace could not access your location.",
+            : "Crumbs could not access your location.",
         );
       })
       .finally(() => setLocating(false));
@@ -96,7 +96,7 @@ export function ThoughtComposer({
       onClose();
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : "TripTrace could not save this thought.",
+        error instanceof Error ? error.message : "Crumbs could not save this thought.",
       );
     } finally {
       setSaving(false);
@@ -140,7 +140,7 @@ export function ThoughtComposer({
                     setLocationError(
                       error instanceof Error
                         ? error.message
-                        : "TripTrace could not access your location.",
+                        : "Crumbs could not access your location.",
                     );
                   })
                   .finally(() => setLocating(false));

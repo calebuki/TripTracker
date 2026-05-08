@@ -39,7 +39,7 @@ export async function GET(request: Request) {
       {
         cache: "no-store",
         headers: {
-          "User-Agent": "TripTrace/1.0 (trip setup)",
+          "User-Agent": "Crumbs/1.0 (trip setup)",
         },
       },
     );

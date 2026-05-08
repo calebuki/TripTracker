@@ -41,7 +41,7 @@ export function ViewerTripScreen({ shareSlug }: ViewerTripScreenProps) {
           </CardHeader>
           <CardContent>
             <Button asChild variant="secondary">
-              <Link href="/">Back to TripTrace</Link>
+              <Link href="/">Back to Crumbs</Link>
             </Button>
           </CardContent>
         </Card>
@@ -52,7 +52,7 @@ export function ViewerTripScreen({ shareSlug }: ViewerTripScreenProps) {
   const storedVerification =
     typeof window !== "undefined" && record.trip.viewerPasscodeHash
       ? window.sessionStorage.getItem(
-          `triptrace-passcode:${record.trip.shareSlug}`,
+          `crumbs-passcode:${record.trip.shareSlug}`,
         ) === record.trip.viewerPasscodeHash
       : false;
   const verified =
@@ -84,7 +84,7 @@ export function ViewerTripScreen({ shareSlug }: ViewerTripScreenProps) {
                 const hashed = await hashPasscode(record.trip.shareSlug, passcode);
 
                 if (hashed === record.trip.viewerPasscodeHash) {
-                  const key = `triptrace-passcode:${record.trip.shareSlug}`;
+                  const key = `crumbs-passcode:${record.trip.shareSlug}`;
                   window.sessionStorage.setItem(key, hashed ?? "");
                   setVerifiedOverride(true);
                   return;

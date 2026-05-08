@@ -20,10 +20,10 @@ import {
   type MomentMarkerGroup,
 } from "@/lib/map";
 import { cn } from "@/lib/utils";
-import type { LocationDraft, Moment, Trip } from "@/types/triptrace";
+import type { LocationDraft, Moment, Trip } from "@/types/crumbs";
 
 const routeGlowLayer = {
-  id: "triptrace-route-glow",
+  id: "crumbs-route-glow",
   type: "line",
   layout: {
     "line-join": "round",
@@ -37,7 +37,7 @@ const routeGlowLayer = {
 } as const;
 
 const routeLineLayer = {
-  id: "triptrace-route",
+  id: "crumbs-route",
   type: "line",
   layout: {
     "line-join": "round",
@@ -51,7 +51,7 @@ const routeLineLayer = {
 } as const;
 
 const routeDirectionLayer = {
-  id: "triptrace-route-direction",
+  id: "crumbs-route-direction",
   type: "symbol",
   layout: {
     "symbol-placement": "line",
@@ -246,7 +246,7 @@ export function TripMap({
           recomputeMomentGroups();
         }}
       >
-        <Source data={trail} id="triptrace-route-source" type="geojson">
+        <Source data={trail} id="crumbs-route-source" type="geojson">
           <Layer {...routeGlowLayer} />
           <Layer {...routeLineLayer} />
           <Layer {...routeDirectionLayer} />

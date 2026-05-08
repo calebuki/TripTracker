@@ -16,7 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { getTripRepository } from "@/lib/repositories";
-import type { Moment } from "@/types/triptrace";
+import type { Moment } from "@/types/crumbs";
 
 interface EditMomentDetailsDialogProps {
   moment: Moment | null;
@@ -66,7 +66,7 @@ export function EditMomentDetailsDialog({
       toast.error(
         error instanceof Error
           ? error.message
-          : "TripTrace could not save these changes.",
+          : "Crumbs could not save these changes.",
       );
     } finally {
       setSaving(false);

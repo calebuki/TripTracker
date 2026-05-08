@@ -22,7 +22,7 @@ import { Button } from "@/components/ui/button";
 import { isMomentVideo } from "@/lib/media";
 import { formatMomentTimes } from "@/lib/time";
 import { cn } from "@/lib/utils";
-import type { Moment, Trip } from "@/types/triptrace";
+import type { Moment, Trip } from "@/types/crumbs";
 
 interface MomentBottomSheetProps {
   trip: Trip;

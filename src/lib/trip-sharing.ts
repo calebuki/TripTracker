@@ -1,4 +1,4 @@
-import type { TripLocationPrivacyMode } from "@/types/triptrace";
+import type { TripLocationPrivacyMode } from "@/types/crumbs";
 
 export const DEFAULT_PUBLISH_DELAY_HOURS = 6;
 export const MIN_PUBLISH_DELAY_HOURS = 1;

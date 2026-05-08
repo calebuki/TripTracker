@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 
 import { getTripRepository } from "@/lib/repositories";
-import type { Trip, TripTraceUser } from "@/types/triptrace";
+import type { Trip, CrumbsUser } from "@/types/crumbs";
 
 type TravelerHomeStatus = "active" | "latest" | "new";
 
@@ -30,7 +30,7 @@ const dashboardLookupTimeoutMs = 5_000;
 interface UseTravelerHomeTargetOptions {
   authLoading: boolean;
   isDemoMode: boolean;
-  user: TripTraceUser | null;
+  user: CrumbsUser | null;
 }
 
 export function useTravelerHomeTarget({
@@ -60,7 +60,7 @@ export function useTravelerHomeTarget({
     const timeout = window.setTimeout(() => {
       finish({
         userId: user.id,
-        error: "TripTrace took too long to load your trip. Opening the app home instead.",
+        error: "Crumbs took too long to load your trip. Opening the app home instead.",
         trip: null,
         status: "new",
         targetPath: "/trips/new",
@@ -113,7 +113,7 @@ export function useTravelerHomeTarget({
           error:
             error instanceof Error
               ? error.message
-              : "TripTrace could not load your traveler dashboard.",
+              : "Crumbs could not load your traveler dashboard.",
           trip: null,
           status: "new",
           targetPath: "/trips/new",

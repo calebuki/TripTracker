@@ -1,8 +1,8 @@
-# TripTrace
+# Crumbs
 
-TripTrace is a private, map-first travel journal built with Next.js, TypeScript, Tailwind CSS, shadcn-style UI primitives, MapLibre, EXIF photo parsing, and Supabase-ready data/storage plumbing.
+Crumbs is a private, map-first travel journal for followmycrumbs.com, built with Next.js, TypeScript, Tailwind CSS, shadcn-style UI primitives, MapLibre, EXIF photo parsing, and Supabase-ready data/storage plumbing.
 
-The app is designed around one core experience: open a private link, see where the traveler went, and tap into the moments that happened there.
+The app is designed around one core experience: open a private link or crumb code, follow the traveler's trail, and tap into the moments they left behind.
 
 ## What ships in this MVP
 
@@ -48,7 +48,7 @@ npm run dev
 
 4. Open [http://localhost:3000](http://localhost:3000)
 
-If you leave Supabase env vars blank, TripTrace runs in demo mode with a seeded Paris trip at `/t/paris-maymester-private`.
+If you leave Supabase env vars blank, Crumbs runs in demo mode with a seeded Paris trip at `/t/paris-maymester-private`.
 
 ## Environment variables
 
@@ -58,20 +58,20 @@ Public Supabase project URL.
 `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
 Public Supabase browser key. This app also still accepts the legacy `NEXT_PUBLIC_SUPABASE_ANON_KEY` name for backward compatibility.
 
-`NEXT_PUBLIC_TRIPTRACE_STORAGE_BUCKET`
+`NEXT_PUBLIC_CRUMBS_STORAGE_BUCKET`
 Storage bucket for uploaded photo moments. Defaults to `trip-moments`.
 
 `NEXT_PUBLIC_MAP_STYLE_URL`
 MapLibre style URL. Defaults to `https://tiles.openfreemap.org/styles/positron`, a free, no-API-key vector style with proper street-level detail. Swap in Mapbox, MapTiler, Stadia, or a self-hosted style if you prefer.
 
-`NEXT_PUBLIC_TRIPTRACE_SITE_URL`
-Canonical app URL for generating auth redirects and shared links in local or deployed environments.
+`NEXT_PUBLIC_CRUMBS_SITE_URL`
+Canonical app URL for generating auth redirects and shared links in local or deployed environments. Production should use `https://followmycrumbs.com`.
 
 ## Supabase setup
 
 1. Create a Supabase project.
-2. Open the SQL editor and run [supabase/schema.sql](/C:/Users/caleb/Code/TripTracker/supabase/schema.sql).
-3. Optionally run [supabase/seed.sql](/C:/Users/caleb/Code/TripTracker/supabase/seed.sql) to load sample Paris data into Supabase too.
+2. Open the SQL editor and run `supabase/schema.sql`.
+3. Optionally run `supabase/seed.sql` to load sample Paris data into Supabase too.
 4. In Authentication, enable email magic links.
 5. In Authentication URL settings, add your local site URL such as `http://localhost:3000`.
 6. Create the `.env.local` values from your Supabase project settings.
@@ -84,7 +84,7 @@ Canonical app URL for generating auth redirects and shared links in local or dep
 
 ## Demo mode
 
-Without Supabase, TripTrace stores new demo trips and moments in browser `localStorage`.
+Without Supabase, Crumbs stores new demo trips and moments in browser `localStorage`.
 
 - The Paris demo trip is always available.
 - New demo uploads are compressed to data URLs for local preview and persistence.

@@ -3,9 +3,9 @@ import type { MetadataRoute } from "next";
 export default function manifest(): MetadataRoute.Manifest {
   return {
     id: "/",
-    name: "TripTrace",
-    short_name: "TripTrace",
-    description: "A private map of the moments that made the trip.",
+    name: "Crumbs",
+    short_name: "Crumbs",
+    description: "Follow a private trail of crumbs from the moments that made the trip.",
     start_url: "/",
     scope: "/",
     display: "standalone",

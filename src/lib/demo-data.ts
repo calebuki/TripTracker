@@ -1,17 +1,17 @@
 import { DateTime } from "luxon";
 
 import { DEFAULT_PUBLISH_DELAY_HOURS } from "@/lib/trip-sharing";
-import type { Moment, Trip, TripRecord, TripTraceUser } from "@/types/triptrace";
+import type { Moment, Trip, TripRecord, CrumbsUser } from "@/types/crumbs";
 
 export interface DemoDatabase {
-  users: TripTraceUser[];
+  users: CrumbsUser[];
   trips: Trip[];
   moments: Moment[];
 }
 
-export const demoOwner: TripTraceUser = {
+export const demoOwner: CrumbsUser = {
   id: "demo-owner",
-  email: "clara@triptrace.local",
+  email: "clara@crumbs.local",
   displayName: "Clara",
   createdAt: "2026-05-01T09:00:00.000Z",
 };

@@ -20,9 +20,9 @@ import type {
   TripRecord,
   UpdateMomentInput,
   UpdateTripSettingsInput,
-} from "@/types/triptrace";
+} from "@/types/crumbs";
 
-const storageKey = "triptrace-demo-db-v2";
+const storageKey = "crumbs-demo-db-v2";
 
 function normalizeDatabase(database: DemoDatabase): DemoDatabase {
   return {

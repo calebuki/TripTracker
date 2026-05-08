@@ -13,10 +13,10 @@ import type {
   CreateTripInput,
   Moment,
   Trip,
-  TripTraceUser,
+  CrumbsUser,
   UpdateMomentInput,
   UpdateTripSettingsInput,
-} from "@/types/triptrace";
+} from "@/types/crumbs";
 
 type TripRow = Database["public"]["Tables"]["trips"]["Row"];
 type MomentRow = Database["public"]["Tables"]["moments"]["Row"];
@@ -24,21 +24,21 @@ type MomentRow = Database["public"]["Tables"]["moments"]["Row"];
 const authRequestTimeoutMs = 8_000;
 const queryRequestTimeoutMs = 8_000;
 const requestTimeoutMessage =
-  "TripTrace took too long to reach Supabase. Please try again.";
+  "Crumbs took too long to reach Supabase. Please try again.";
 
 function formatSupabaseError(error: { code?: string; message?: string } | null) {
   if (
     error?.code === "PGRST205" &&
     error.message?.includes("schema cache")
   ) {
-    return "TripTrace's Supabase schema has not been applied to this project yet.";
+    return "Crumbs' Supabase schema has not been applied to this project yet.";
   }
 
   if (
     error?.code === "23503" &&
     error.message?.includes("owner_id")
   ) {
-    return "TripTrace couldn't finish setting up your traveler profile yet. Please refresh and try again.";
+    return "Crumbs couldn't finish setting up your traveler profile yet. Please refresh and try again.";
   }
 
   if (
@@ -48,7 +48,7 @@ function formatSupabaseError(error: { code?: string; message?: string } | null) 
     return requestTimeoutMessage;
   }
 
-  return error?.message ?? "TripTrace could not reach Supabase.";
+  return error?.message ?? "Crumbs could not reach Supabase.";
 }
 
 function mapUser(user: {
@@ -56,7 +56,7 @@ function mapUser(user: {
   email?: string | null;
   user_metadata?: { display_name?: string };
   created_at?: string;
-}): TripTraceUser {
+}): CrumbsUser {
   return {
     id: user.id,
     email: user.email ?? "",
@@ -176,7 +176,7 @@ function createClientUuid() {
   }
 
   if (!browserCrypto) {
-    throw new Error("TripTrace could not access secure random values.");
+    throw new Error("Crumbs could not access secure random values.");
   }
 
   const bytes = browserCrypto.getRandomValues(new Uint8Array(16));
@@ -201,7 +201,7 @@ async function getAuthenticatedUser() {
   const { data, error } = await withTimeout(
     () => supabase.auth.getUser(),
     authRequestTimeoutMs,
-    "TripTrace took too long to verify your sign-in. Please refresh and try again.",
+    "Crumbs took too long to verify your sign-in. Please refresh and try again.",
   );
 
   if (error || !data.user) {
@@ -341,7 +341,7 @@ export function createSupabaseRepository(): TripRepository {
       const { data, error } = await withTimeout(
         () => getSupabaseBrowserClient().auth.getUser(),
         authRequestTimeoutMs,
-        "TripTrace took too long to verify your sign-in. Please refresh and try again.",
+        "Crumbs took too long to verify your sign-in. Please refresh and try again.",
       );
 
       if (error || !data.user) {
@@ -409,7 +409,7 @@ export function createSupabaseRepository(): TripRepository {
             .select("*")
             .abortSignal(signal)
             .single(),
-          "TripTrace took too long to create your trip. Please try again.",
+          "Crumbs took too long to create your trip. Please try again.",
         );
 
         if (!error && data) {
@@ -429,7 +429,7 @@ export function createSupabaseRepository(): TripRepository {
         }
       }
 
-      throw new Error("Could not generate a unique trip code. Please try again.");
+      throw new Error("Could not generate a unique crumb code. Please try again.");
     },
     async getActiveTripForCurrentUser() {
       const user = await requireUser();
@@ -454,7 +454,7 @@ export function createSupabaseRepository(): TripRepository {
           .eq("owner_id", user.id)
           .abortSignal(signal)
           .single(),
-        "TripTrace took too long to load this trip. Please try again.",
+        "Crumbs took too long to load this trip. Please try again.",
       );
 
       if (error || !data) {

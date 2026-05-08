@@ -4,7 +4,7 @@ import { Film, MessageSquareText } from "lucide-react";
 
 import { isMomentVideo } from "@/lib/media";
 import { cn } from "@/lib/utils";
-import type { Moment } from "@/types/triptrace";
+import type { Moment } from "@/types/crumbs";
 
 interface MomentMarkerProps {
   moment: Moment;

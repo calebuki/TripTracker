@@ -1,4 +1,4 @@
-import type { LocationDraft } from "@/types/triptrace";
+import type { LocationDraft } from "@/types/crumbs";
 
 export function requestCurrentCoordinates() {
   return new Promise<{ latitude: number; longitude: number; accuracyMeters: number }>(

@@ -10,7 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useTravelerHomeTarget } from "@/hooks/use-traveler-home-target";
-import { useTripTraceAuth } from "@/hooks/use-triptrace-auth";
+import { useCrumbsAuth } from "@/hooks/use-crumbs-auth";
 import { getTripRepository } from "@/lib/repositories";
 import {
   TRIP_CODE_LENGTH,
@@ -20,7 +20,7 @@ import {
 
 export function LandingScreen() {
   const router = useRouter();
-  const { user, loading: authLoading, isDemoMode } = useTripTraceAuth();
+  const { user, loading: authLoading, isDemoMode } = useCrumbsAuth();
   const travelerHome = useTravelerHomeTarget({
     user,
     authLoading,
@@ -41,7 +41,7 @@ export function LandingScreen() {
     const normalized = normalizeShareCode(code);
 
     if (!isValidShareCode(normalized)) {
-      toast.error(`Enter the ${TRIP_CODE_LENGTH}-character trip code.`);
+      toast.error(`Enter the ${TRIP_CODE_LENGTH}-character crumb code.`);
       return;
     }
 
@@ -57,14 +57,14 @@ export function LandingScreen() {
       ]);
 
       if (!shareSlug) {
-        toast.error("No trip matches that code.");
+        toast.error("No crumbs match that code.");
         return;
       }
 
       router.push(`/t/${shareSlug}`);
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : "TripTrace could not open the trip.",
+        error instanceof Error ? error.message : "Crumbs could not open the trip.",
       );
     } finally {
       setOpening(false);
@@ -81,7 +81,7 @@ export function LandingScreen() {
               Traveler mode
             </div>
             <CardTitle className="text-5xl leading-none sm:text-6xl">
-              Reopening TripTrace
+              Reopening Crumbs
             </CardTitle>
             <CardDescription className="text-lg leading-8 text-slate-600">
               {travelerHome.error ??
@@ -141,10 +141,10 @@ export function LandingScreen() {
             Private travel journal
           </div>
           <CardTitle className="text-5xl leading-none sm:text-6xl">
-            TripTrace
+            Crumbs
           </CardTitle>
           <CardDescription className="text-lg leading-8 text-slate-600">
-            A private map of the moments that made the trip.
+            Follow a private trail of crumbs from the moments that made the trip.
           </CardDescription>
         </CardHeader>
         <CardContent className="relative z-10 p-8 pt-0 sm:p-10">
@@ -154,7 +154,7 @@ export function LandingScreen() {
                 className="text-xs font-medium uppercase tracking-[0.18em] text-slate-500"
                 htmlFor="trip-code"
               >
-                Trip code
+                Crumb code
               </label>
               <Input
                 autoComplete="off"
@@ -176,8 +176,8 @@ export function LandingScreen() {
                 value={code}
               />
               <p className="text-sm leading-6 text-slate-600">
-                Ask the traveler for the {TRIP_CODE_LENGTH}-character code, or use a
-                shared link to skip this step.
+                Ask the traveler for the {TRIP_CODE_LENGTH}-character crumb code,
+                or use a shared link to skip this step.
               </p>
             </div>
             <Button
@@ -194,7 +194,7 @@ export function LandingScreen() {
                 </>
               ) : (
                 <>
-                  Open Trip
+                  Follow crumbs
                   <ArrowRight className="h-4 w-4" />
                 </>
               )}

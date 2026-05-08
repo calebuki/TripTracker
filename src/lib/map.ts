@@ -1,7 +1,7 @@
 import type { FeatureCollection, LineString } from "geojson";
 import { DateTime } from "luxon";
 
-import type { Moment, Trip, TripLocationPrivacyMode } from "@/types/triptrace";
+import type { Moment, Trip, TripLocationPrivacyMode } from "@/types/crumbs";
 import { sortMomentsChronologically } from "@/lib/time";
 
 const defaultParisCenter = {

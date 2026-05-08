@@ -6,14 +6,14 @@ import type { EmailOtpType } from "@supabase/supabase-js";
 import { demoOwner } from "@/lib/demo-data";
 import { hasSupabase, isDemoMode } from "@/lib/env";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
-import type { TripTraceUser } from "@/types/triptrace";
+import type { CrumbsUser } from "@/types/crumbs";
 
 function mapAuthUser(user: {
   id: string;
   email?: string | null;
   user_metadata?: { display_name?: string };
   created_at?: string;
-}): TripTraceUser {
+}): CrumbsUser {
   return {
     id: user.id,
     email: user.email ?? "",
@@ -113,8 +113,8 @@ async function withTimeout<T>(
   }
 }
 
-export function useTripTraceAuth() {
-  const [user, setUser] = useState<TripTraceUser | null>(
+export function useCrumbsAuth() {
+  const [user, setUser] = useState<CrumbsUser | null>(
     isDemoMode ? demoOwner : null,
   );
   const [loading, setLoading] = useState(hasSupabase);
@@ -136,7 +136,7 @@ export function useTripTraceAuth() {
         const { data, error: getUserError } = await withTimeout(
           () => supabase.auth.getUser(),
           authBootstrapTimeoutMs,
-          "TripTrace took too long to verify your sign-in. Please refresh and try again.",
+          "Crumbs took too long to verify your sign-in. Please refresh and try again.",
         );
 
         if (getUserError) {
@@ -197,7 +197,7 @@ export function useTripTraceAuth() {
         setUser(resolvedUser ? mapAuthUser(resolvedUser) : null);
         setError(
           callbackState.hasCallbackParams && !resolvedUser
-            ? "TripTrace couldn't finish signing you in. Try the magic link again."
+            ? "Crumbs couldn't finish signing you in. Try the magic link again."
             : null,
         );
       } catch (authError) {
@@ -209,7 +209,7 @@ export function useTripTraceAuth() {
         setError(
           authError instanceof Error
             ? authError.message
-            : "TripTrace couldn't finish signing you in.",
+            : "Crumbs couldn't finish signing you in.",
         );
       } finally {
         if (!mounted) {
@@ -230,7 +230,7 @@ export function useTripTraceAuth() {
         const { data } = await withTimeout(
           () => supabase.auth.getUser(),
           authBootstrapTimeoutMs,
-          "TripTrace took too long to refresh your sign-in. Please refresh and try again.",
+          "Crumbs took too long to refresh your sign-in. Please refresh and try again.",
         );
 
         if (!mounted) {
@@ -254,7 +254,7 @@ export function useTripTraceAuth() {
         setError(
           authError instanceof Error
             ? authError.message
-            : "TripTrace couldn't refresh your sign-in.",
+            : "Crumbs couldn't refresh your sign-in.",
         );
         setProcessingCallback(false);
         setLoading(false);

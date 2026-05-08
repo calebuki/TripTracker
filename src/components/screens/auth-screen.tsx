@@ -10,14 +10,14 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { useTravelerHomeTarget } from "@/hooks/use-traveler-home-target";
-import { useTripTraceAuth } from "@/hooks/use-triptrace-auth";
+import { useCrumbsAuth } from "@/hooks/use-crumbs-auth";
 import { getTripRepository } from "@/lib/repositories";
 import { resolveSiteUrl } from "@/lib/utils";
 
 export function AuthScreen() {
   const router = useRouter();
   const { user, loading: authLoading, isDemoMode, processingCallback, error } =
-    useTripTraceAuth();
+    useCrumbsAuth();
   const travelerHome = useTravelerHomeTarget({
     user,
     authLoading,
@@ -52,7 +52,7 @@ export function AuthScreen() {
       toast.error(
         error instanceof Error
           ? error.message
-          : "TripTrace could not send the sign-in link.",
+          : "Crumbs could not send the sign-in link.",
       );
     } finally {
       setSending(false);
@@ -66,7 +66,7 @@ export function AuthScreen() {
           <CardHeader>
             <CardTitle className="text-4xl">Demo mode is already open</CardTitle>
             <CardDescription>
-              TripTrace can run without Supabase while you shape the experience.
+              Crumbs can run without Supabase while you shape the experience.
             </CardDescription>
           </CardHeader>
           <CardContent className="flex flex-wrap gap-3">
@@ -97,7 +97,7 @@ export function AuthScreen() {
           </CardTitle>
           <CardDescription>
             {user || processingCallback || authLoading
-              ? "TripTrace is jumping back into your traveler flow."
+              ? "Crumbs is jumping back into your traveler flow."
               : "Use a simple email magic link so the traveler can add moments quickly from a phone."}
           </CardDescription>
         </CardHeader>

@@ -8,8 +8,12 @@ export const publicEnv = {
     "",
   mapStyleUrl:
     process.env.NEXT_PUBLIC_MAP_STYLE_URL?.trim() || fallbackMapStyle,
-  siteUrl: process.env.NEXT_PUBLIC_TRIPTRACE_SITE_URL?.trim() ?? "",
+  siteUrl:
+    process.env.NEXT_PUBLIC_CRUMBS_SITE_URL?.trim() ??
+    process.env.NEXT_PUBLIC_TRIPTRACE_SITE_URL?.trim() ??
+    "",
   storageBucket:
+    process.env.NEXT_PUBLIC_CRUMBS_STORAGE_BUCKET?.trim() ||
     process.env.NEXT_PUBLIC_TRIPTRACE_STORAGE_BUCKET?.trim() ||
     "trip-moments",
 };

@@ -9,9 +9,9 @@ import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { useTripTraceAuth } from "@/hooks/use-triptrace-auth";
+import { useCrumbsAuth } from "@/hooks/use-crumbs-auth";
 import { getTripRepository } from "@/lib/repositories";
-import type { Trip } from "@/types/triptrace";
+import type { Trip } from "@/types/crumbs";
 
 function formatEndedOn(date: string, timezone: string) {
   return DateTime.fromISO(date, { zone: timezone }).toFormat("LLL d, yyyy");
@@ -19,7 +19,7 @@ function formatEndedOn(date: string, timezone: string) {
 
 export function ProfileScreen() {
   const router = useRouter();
-  const { user, loading: authLoading, isDemoMode } = useTripTraceAuth();
+  const { user, loading: authLoading, isDemoMode } = useCrumbsAuth();
   const [trips, setTrips] = useState<Trip[]>([]);
   const [loadingTrips, setLoadingTrips] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -37,7 +37,7 @@ export function ProfileScreen() {
       setError(
         loadError instanceof Error
           ? loadError.message
-          : "TripTrace could not load your trips.",
+          : "Crumbs could not load your trips.",
       );
     } finally {
       setLoadingTrips(false);
@@ -82,7 +82,7 @@ export function ProfileScreen() {
       toast.error(
         resumeError instanceof Error
           ? resumeError.message
-          : "TripTrace could not resume this trip.",
+          : "Crumbs could not resume this trip.",
       );
     } finally {
       setWorkingTripId(null);
@@ -99,7 +99,7 @@ export function ProfileScreen() {
       toast.error(
         signOutError instanceof Error
           ? signOutError.message
-          : "TripTrace could not sign you out.",
+          : "Crumbs could not sign you out.",
       );
     } finally {
       setSigningOut(false);

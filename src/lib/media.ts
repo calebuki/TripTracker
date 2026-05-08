@@ -1,4 +1,4 @@
-import type { Moment } from "@/types/triptrace";
+import type { Moment } from "@/types/crumbs";
 
 function normalizeMediaPath(value: string | null | undefined) {
   if (!value) {

@@ -5,7 +5,7 @@ import { CalendarDays } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
-import type { DayFilter, DayOption } from "@/types/triptrace";
+import type { DayFilter, DayOption } from "@/types/crumbs";
 
 interface DaySelectorProps {
   options: DayOption[];

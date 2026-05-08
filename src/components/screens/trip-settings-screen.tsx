@@ -19,7 +19,7 @@ import {
   locationPrivacyChoices,
 } from "@/lib/trip-sharing";
 import { resolveSiteUrl } from "@/lib/utils";
-import type { Moment, TripLocationPrivacyMode } from "@/types/triptrace";
+import type { Moment, TripLocationPrivacyMode } from "@/types/crumbs";
 
 interface TripSettingsScreenProps {
   tripId: string;
@@ -40,7 +40,7 @@ export function TripSettingsScreen({ tripId }: TripSettingsScreenProps) {
       toast.error(
         updateError instanceof Error
           ? updateError.message
-          : "TripTrace could not restore the moment.",
+          : "Crumbs could not restore the moment.",
       );
     }
   }
@@ -58,7 +58,7 @@ export function TripSettingsScreen({ tripId }: TripSettingsScreenProps) {
       toast.error(
         deleteError instanceof Error
           ? deleteError.message
-          : "TripTrace could not delete the moment.",
+          : "Crumbs could not delete the moment.",
       );
     }
   }
@@ -79,7 +79,7 @@ export function TripSettingsScreen({ tripId }: TripSettingsScreenProps) {
           </CardHeader>
           <CardContent>
             <Button asChild>
-              <Link href="/">Back to TripTrace</Link>
+              <Link href="/">Back to Crumbs</Link>
             </Button>
           </CardContent>
         </Card>
@@ -238,7 +238,7 @@ function TripSettingsPanel({
       toast.error(
         updateError instanceof Error
           ? updateError.message
-          : "TripTrace could not save the settings.",
+          : "Crumbs could not save the settings.",
       );
     } finally {
       setWorkingAction(null);
@@ -267,7 +267,7 @@ function TripSettingsPanel({
       toast.error(
         updateError instanceof Error
           ? updateError.message
-          : "TripTrace could not update the trip status.",
+          : "Crumbs could not update the trip status.",
       );
     } finally {
       setWorkingAction(null);
@@ -294,7 +294,7 @@ function TripSettingsPanel({
                 await navigator.clipboard.writeText(shareUrl);
                 toast.success("Share link copied.");
               } catch {
-                toast.error("TripTrace couldn't copy the link.");
+                toast.error("Crumbs couldn't copy the link.");
               }
             }}
             type="button"
@@ -305,12 +305,12 @@ function TripSettingsPanel({
         </div>
 
         <div className="space-y-3 rounded-[28px] border border-black/5 bg-white p-4">
-          <Label>Trip code</Label>
+          <Label>Crumb code</Label>
           <p className="font-mono text-2xl tracking-[0.32em] text-[var(--ink)]">
             {shareCode}
           </p>
           <p className="text-sm text-slate-600">
-            Anyone can type this code on the TripTrace home page to open the trip.
+            Anyone can type this code on the Crumbs home page to follow the trail.
           </p>
           <Button
             size="sm"
@@ -318,9 +318,9 @@ function TripSettingsPanel({
             onClick={async () => {
               try {
                 await navigator.clipboard.writeText(shareCode);
-                toast.success("Trip code copied.");
+                toast.success("Crumb code copied.");
               } catch {
-                toast.error("TripTrace couldn't copy the code.");
+                toast.error("Crumbs couldn't copy the code.");
               }
             }}
             type="button"

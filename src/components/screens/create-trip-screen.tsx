@@ -17,7 +17,7 @@ import {
   requestCurrentCoordinates,
   reverseGeocodeCoordinates,
 } from "@/lib/location";
-import { useTripTraceAuth } from "@/hooks/use-triptrace-auth";
+import { useCrumbsAuth } from "@/hooks/use-crumbs-auth";
 import { getTripRepository } from "@/lib/repositories";
 import {
   clampPublishDelayHours,
@@ -25,7 +25,7 @@ import {
   locationPrivacyChoices,
 } from "@/lib/trip-sharing";
 import { getBrowserTimeZone } from "@/lib/utils";
-import type { TripLocationPrivacyMode, TripPrivacyMode } from "@/types/triptrace";
+import type { TripLocationPrivacyMode, TripPrivacyMode } from "@/types/crumbs";
 
 type SetupStatus = "idle" | "locating" | "ready" | "error";
 
@@ -39,7 +39,7 @@ interface TripSetupLocation {
 
 export function CreateTripScreen() {
   const router = useRouter();
-  const { user, loading, isDemoMode } = useTripTraceAuth();
+  const { user, loading, isDemoMode } = useCrumbsAuth();
   const travelerHome = useTravelerHomeTarget({
     user,
     authLoading: loading,
@@ -206,7 +206,7 @@ export function CreateTripScreen() {
       router.push(`/trips/${trip.id}`);
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : "TripTrace could not create this trip.",
+        error instanceof Error ? error.message : "Crumbs could not create this trip.",
       );
     } finally {
       setCreating(false);
@@ -258,7 +258,7 @@ export function CreateTripScreen() {
               <div className="rounded-[28px] border border-black/5 bg-[var(--paper)] p-5">
                 <div className="flex items-center gap-3 text-sm text-slate-600">
                   <LoaderCircle className="h-4 w-4 animate-spin text-[var(--ink)]" />
-                  You already have an active trip, so TripTrace is taking you back there.
+                  You already have an active trip, so Crumbs is taking you back there.
                 </div>
               </div>
             ) : null}

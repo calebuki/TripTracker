@@ -17,7 +17,7 @@ import {
 import { isMomentVideo, isVideoMimeType } from "@/lib/media";
 import { getTripRepository } from "@/lib/repositories";
 import { fileToOptimizedDataUrl } from "@/lib/storage";
-import type { LocationDraft, Moment, Trip } from "@/types/triptrace";
+import type { LocationDraft, Moment, Trip } from "@/types/crumbs";
 
 interface PhotoUploaderProps {
   trip: Trip;
@@ -231,7 +231,7 @@ export function PhotoUploader({
         toast.error(
           error instanceof Error
             ? error.message
-            : `TripTrace could not save ${request.file.name}.`,
+            : `Crumbs could not save ${request.file.name}.`,
         );
       } finally {
         setPendingUploads((current) =>
@@ -331,7 +331,7 @@ export function PhotoUploader({
       toast.error(
         error instanceof Error
           ? error.message
-          : "TripTrace could not update the location.",
+          : "Crumbs could not update the location.",
       );
     }
   }
@@ -354,7 +354,7 @@ export function PhotoUploader({
       toast.error(
         error instanceof Error
           ? error.message
-          : "TripTrace could not save that map pin.",
+          : "Crumbs could not save that map pin.",
       );
     }
   }
