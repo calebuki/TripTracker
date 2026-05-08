@@ -4,7 +4,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Map, {
   Layer,
   Marker,
-  NavigationControl,
   Source,
   type MapRef,
 } from "react-map-gl/maplibre";
@@ -289,10 +288,6 @@ export function TripMap({
             </div>
           </Marker>
         ) : null}
-
-        <div className="absolute right-3 top-3 hidden sm:block">
-          <NavigationControl showCompass={false} visualizePitch={false} />
-        </div>
       </Map>
     </div>
   );

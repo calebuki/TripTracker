@@ -3,7 +3,6 @@
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -34,11 +33,6 @@ export function AddMomentDialog({
       <DialogContent className="sm:max-w-3xl">
         <DialogHeader>
           <DialogTitle>{libraryOnly ? "Add a past moment" : "Add a moment"}</DialogTitle>
-          <DialogDescription>
-            {libraryOnly
-              ? "Past trips stay editable, but new additions come through the camera library so the timeline stays grounded in real captured media."
-              : "Keep it fast: hand off to the native camera or library, or jot a quick thought and pin it on the map."}
-          </DialogDescription>
         </DialogHeader>
         {libraryOnly ? (
           <PhotoUploader

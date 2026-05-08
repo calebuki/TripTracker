@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Camera, Film, Images, LoaderCircle, LocateFixed, MapPinned, Sparkles } from "lucide-react";
+import { Camera, Film, Images, LoaderCircle, LocateFixed, MapPinned } from "lucide-react";
 import { nanoid } from "nanoid";
 import { toast } from "sonner";
 
@@ -105,7 +105,6 @@ function getMomentLabel(moment: Moment) {
 
 export function PhotoUploader({
   trip,
-  cameraFirst = false,
   libraryOnly = false,
   onSaved,
   onClose,
@@ -385,74 +384,29 @@ export function PhotoUploader({
         type="file"
       />
 
-      <Card className="overflow-hidden rounded-[30px] border-black/5 p-0">
-        <div className="bg-[var(--ink)] px-5 py-6 text-white sm:px-6">
-          <div className="flex flex-wrap items-center gap-2">
-            <Badge variant="subtle" className="bg-white/12 text-white">
-              <Sparkles className="mr-1 h-3 w-3" />
-              {libraryOnly
-                ? "Past trip upload"
-                : cameraFirst
-                  ? "Camera-first traveler flow"
-                  : "Quick media posting"}
-            </Badge>
-            <Badge variant="subtle" className="bg-white/12 text-white/85">
-              {libraryOnly ? "Camera library only" : "Native iPhone capture"}
-            </Badge>
-          </div>
-
-          <div className="mt-6 flex flex-col items-center gap-4 text-center">
-            <div className="flex h-[72px] w-[72px] items-center justify-center rounded-full bg-white/10">
-              {libraryOnly ? (
-                <Images className="h-8 w-8 text-white" />
-              ) : (
-                <Camera className="h-8 w-8 text-white" />
-              )}
-            </div>
-            <div className="space-y-2">
-              <p className="text-xl font-medium text-white">
-                {libraryOnly
-                  ? "Add moments from your camera library"
-                  : "Post straight from your phone"}
-              </p>
-              <p className="max-w-xl text-sm leading-6 text-white/75">
-                {libraryOnly
-                  ? "Past trips stay editable, but new additions come from your camera library so the timeline stays grounded in real captured media."
-                  : "TripTrace now hands off directly to the native camera or camera library. There is no web camera preview or warm-up step in between."}
-              </p>
-            </div>
-          </div>
-
-          <div className="mt-6 grid gap-3 sm:grid-cols-2">
-            {!libraryOnly ? (
-              <Button
-                className="h-14 rounded-full bg-white text-[var(--ink)] hover:bg-white/95"
-                disabled={isBusy}
-                onClick={() => captureInputRef.current?.click()}
-                type="button"
-                variant="secondary"
-              >
-                <Camera className="h-5 w-5" />
-                {preparingOrigin === "camera"
-                  ? "Saving capture..."
-                  : "Snap photo/video"}
-              </Button>
-            ) : null}
-            <Button
-              className="h-14 rounded-full border-white/20 bg-white/10 text-white hover:bg-white/14"
-              disabled={isBusy}
-              onClick={() => libraryInputRef.current?.click()}
-              type="button"
-              variant="ghost"
-            >
-              <Images className="h-5 w-5" />
-              {preparingOrigin === "library"
-                ? "Loading selection..."
-                : "Open camera library"}
-            </Button>
-          </div>
-        </div>
-      </Card>
+      <div className={libraryOnly ? "grid gap-3" : "grid gap-3 sm:grid-cols-2"}>
+        {!libraryOnly ? (
+          <Button
+            className="h-14 rounded-full"
+            disabled={isBusy}
+            onClick={() => captureInputRef.current?.click()}
+            type="button"
+          >
+            <Camera className="h-5 w-5" />
+            {preparingOrigin === "camera" ? "Saving..." : "Snap photo"}
+          </Button>
+        ) : null}
+        <Button
+          className="h-14 rounded-full"
+          disabled={isBusy}
+          onClick={() => libraryInputRef.current?.click()}
+          type="button"
+          variant={libraryOnly ? "default" : "secondary"}
+        >
+          <Images className="h-5 w-5" />
+          {preparingOrigin === "library" ? "Opening..." : "Open library"}
+        </Button>
+      </div>
 
       {pendingUploads.length > 0 ? (
         <div className="space-y-3">
