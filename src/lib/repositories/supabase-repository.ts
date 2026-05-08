@@ -21,6 +21,36 @@ import type {
 type TripRow = Database["public"]["Tables"]["trips"]["Row"];
 type MomentRow = Database["public"]["Tables"]["moments"]["Row"];
 
+const authRequestTimeoutMs = 8_000;
+const queryRequestTimeoutMs = 8_000;
+const requestTimeoutMessage =
+  "TripTrace took too long to reach Supabase. Please try again.";
+
+function formatSupabaseError(error: { code?: string; message?: string } | null) {
+  if (
+    error?.code === "PGRST205" &&
+    error.message?.includes("schema cache")
+  ) {
+    return "TripTrace's Supabase schema has not been applied to this project yet.";
+  }
+
+  if (
+    error?.code === "23503" &&
+    error.message?.includes("owner_id")
+  ) {
+    return "TripTrace couldn't finish setting up your traveler profile yet. Please refresh and try again.";
+  }
+
+  if (
+    error?.message?.includes("AbortError") ||
+    error?.message?.includes("The user aborted a request")
+  ) {
+    return requestTimeoutMessage;
+  }
+
+  return error?.message ?? "TripTrace could not reach Supabase.";
+}
+
 function mapUser(user: {
   id: string;
   email?: string | null;
@@ -82,50 +112,121 @@ function mapMoment(row: MomentRow): Moment {
   };
 }
 
-async function requireUser() {
+async function withTimeout<T>(
+  action: () => PromiseLike<T>,
+  timeoutMs: number,
+  timeoutMessage: string,
+) {
+  let timeoutId: number | undefined;
+
+  try {
+    return await Promise.race([
+      action(),
+      new Promise<never>((_, reject) => {
+        timeoutId = window.setTimeout(() => {
+          reject(new Error(timeoutMessage));
+        }, timeoutMs);
+      }),
+    ]);
+  } finally {
+    if (timeoutId) {
+      window.clearTimeout(timeoutId);
+    }
+  }
+}
+
+function createQueryAbortSignal(timeoutMs = queryRequestTimeoutMs) {
+  const controller = new AbortController();
+  const timeoutId = window.setTimeout(() => {
+    controller.abort();
+  }, timeoutMs);
+
+  return {
+    signal: controller.signal,
+    clear() {
+      window.clearTimeout(timeoutId);
+    },
+  };
+}
+
+async function withQueryTimeout<T>(
+  action: (signal: AbortSignal) => PromiseLike<T>,
+  timeoutMessage = requestTimeoutMessage,
+) {
+  const { signal, clear } = createQueryAbortSignal();
+
+  try {
+    return await action(signal);
+  } catch (error) {
+    if (error instanceof Error && error.name === "AbortError") {
+      throw new Error(timeoutMessage);
+    }
+
+    throw error;
+  } finally {
+    clear();
+  }
+}
+
+function createClientUuid() {
+  const browserCrypto = globalThis.crypto;
+
+  if (browserCrypto && typeof browserCrypto.randomUUID === "function") {
+    return browserCrypto.randomUUID();
+  }
+
+  if (!browserCrypto) {
+    throw new Error("TripTrace could not access secure random values.");
+  }
+
+  const bytes = browserCrypto.getRandomValues(new Uint8Array(16));
+  bytes[6] = (bytes[6] & 0x0f) | 0x40;
+  bytes[8] = (bytes[8] & 0x3f) | 0x80;
+
+  const segments = Array.from(bytes, (byte) =>
+    byte.toString(16).padStart(2, "0"),
+  );
+
+  return [
+    segments.slice(0, 4).join(""),
+    segments.slice(4, 6).join(""),
+    segments.slice(6, 8).join(""),
+    segments.slice(8, 10).join(""),
+    segments.slice(10, 16).join(""),
+  ].join("-");
+}
+
+async function getAuthenticatedUser() {
   const supabase = getSupabaseBrowserClient();
-  const { data, error } = await supabase.auth.getUser();
+  const { data, error } = await withTimeout(
+    () => supabase.auth.getUser(),
+    authRequestTimeoutMs,
+    "TripTrace took too long to verify your sign-in. Please refresh and try again.",
+  );
 
   if (error || !data.user) {
     throw new Error("Please sign in to continue.");
   }
 
-  await ensurePublicUserProfile(data.user);
-
   return data.user;
 }
 
-async function ensurePublicUserProfile(user: {
-  id: string;
-  email?: string | null;
-  user_metadata?: { display_name?: string };
-}) {
-  const supabase = getSupabaseBrowserClient();
-  const { error } = await supabase.from("users").upsert(
-    {
-      id: user.id,
-      email: user.email ?? "",
-      display_name: user.user_metadata?.display_name ?? null,
-    },
-    {
-      onConflict: "id",
-    },
-  );
-
-  if (error) {
-    throw new Error(error.message);
-  }
+async function requireUser() {
+  return getAuthenticatedUser();
 }
 
 async function loadMoments(tripId: string) {
   const supabase = getSupabaseBrowserClient();
-  const { data, error } = await supabase
-    .from("moments")
-    .select("*")
-    .eq("trip_id", tripId);
+  const { data, error } = await withQueryTimeout((signal) =>
+    supabase
+      .from("moments")
+      .select("*")
+      .eq("trip_id", tripId)
+      .abortSignal(signal),
+  );
 
   if (error) {
-    throw new Error(error.message);
+    throw new Error(formatSupabaseError(error));
   }
 
   return sortMomentsChronologically((data ?? []).map(mapMoment));
@@ -140,17 +241,20 @@ function isActiveTripConflict(error: { code?: string; message?: string } | null)
 
 async function getActiveTripForUser(userId: string) {
   const supabase = getSupabaseBrowserClient();
-  const { data, error } = await supabase
-    .from("trips")
-    .select("*")
-    .eq("owner_id", userId)
-    .is("end_date", null)
-    .order("updated_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
+  const { data, error } = await withQueryTimeout((signal) =>
+    supabase
+      .from("trips")
+      .select("*")
+      .eq("owner_id", userId)
+      .is("end_date", null)
+      .order("updated_at", { ascending: false })
+      .limit(1)
+      .abortSignal(signal)
+      .maybeSingle(),
+  );
 
   if (error) {
-    throw new Error(error.message);
+    throw new Error(formatSupabaseError(error));
   }
 
   return data ? mapTrip(data) : null;
@@ -158,16 +262,19 @@ async function getActiveTripForUser(userId: string) {
 
 async function getLatestOwnedTripForUser(userId: string) {
   const supabase = getSupabaseBrowserClient();
-  const { data, error } = await supabase
-    .from("trips")
-    .select("*")
-    .eq("owner_id", userId)
-    .order("updated_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
+  const { data, error } = await withQueryTimeout((signal) =>
+    supabase
+      .from("trips")
+      .select("*")
+      .eq("owner_id", userId)
+      .order("updated_at", { ascending: false })
+      .limit(1)
+      .abortSignal(signal)
+      .maybeSingle(),
+  );
 
   if (error) {
-    throw new Error(error.message);
+    throw new Error(formatSupabaseError(error));
   }
 
   return data ? mapTrip(data) : null;
@@ -175,15 +282,18 @@ async function getLatestOwnedTripForUser(userId: string) {
 
 async function getOwnedTripForUser(userId: string, tripId: string) {
   const supabase = getSupabaseBrowserClient();
-  const { data, error } = await supabase
-    .from("trips")
-    .select("*")
-    .eq("id", tripId)
-    .eq("owner_id", userId)
-    .maybeSingle();
+  const { data, error } = await withQueryTimeout((signal) =>
+    supabase
+      .from("trips")
+      .select("*")
+      .eq("id", tripId)
+      .eq("owner_id", userId)
+      .abortSignal(signal)
+      .maybeSingle(),
+  );
 
   if (error) {
-    throw new Error(error.message);
+    throw new Error(formatSupabaseError(error));
   }
 
   return data ? mapTrip(data) : null;
@@ -191,14 +301,17 @@ async function getOwnedTripForUser(userId: string, tripId: string) {
 
 async function listOwnedTripsForUser(userId: string) {
   const supabase = getSupabaseBrowserClient();
-  const { data, error } = await supabase
-    .from("trips")
-    .select("*")
-    .eq("owner_id", userId)
-    .order("updated_at", { ascending: false });
+  const { data, error } = await withQueryTimeout((signal) =>
+    supabase
+      .from("trips")
+      .select("*")
+      .eq("owner_id", userId)
+      .order("updated_at", { ascending: false })
+      .abortSignal(signal),
+  );
 
   if (error) {
-    throw new Error(error.message);
+    throw new Error(formatSupabaseError(error));
   }
 
   return (data ?? []).map(mapTrip);
@@ -206,15 +319,18 @@ async function listOwnedTripsForUser(userId: string) {
 
 async function touchTripUpdatedAt(tripId: string) {
   const supabase = getSupabaseBrowserClient();
-  const { error } = await supabase
-    .from("trips")
-    .update({
-      updated_at: new Date().toISOString(),
-    })
-    .eq("id", tripId);
+  const { error } = await withQueryTimeout((signal) =>
+    supabase
+      .from("trips")
+      .update({
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", tripId)
+      .abortSignal(signal),
+  );
 
   if (error) {
-    throw new Error(error.message);
+    throw new Error(formatSupabaseError(error));
   }
 }
 
@@ -222,14 +338,15 @@ export function createSupabaseRepository(): TripRepository {
   return {
     mode: "supabase",
     async getSessionUser() {
-      const supabase = getSupabaseBrowserClient();
-      const { data, error } = await supabase.auth.getUser();
+      const { data, error } = await withTimeout(
+        () => getSupabaseBrowserClient().auth.getUser(),
+        authRequestTimeoutMs,
+        "TripTrace took too long to verify your sign-in. Please refresh and try again.",
+      );
 
       if (error || !data.user) {
         return null;
       }
-
-      await ensurePublicUserProfile(data.user);
 
       return mapUser(data.user);
     },
@@ -243,7 +360,7 @@ export function createSupabaseRepository(): TripRepository {
       });
 
       if (error) {
-        throw new Error(error.message);
+        throw new Error(formatSupabaseError(error));
       }
     },
     async signOut() {
@@ -251,7 +368,7 @@ export function createSupabaseRepository(): TripRepository {
       const { error } = await supabase.auth.signOut();
 
       if (error) {
-        throw new Error(error.message);
+        throw new Error(formatSupabaseError(error));
       }
     },
     async createTrip(input: CreateTripInput) {
@@ -266,29 +383,34 @@ export function createSupabaseRepository(): TripRepository {
 
       for (let attempt = 0; attempt < 5; attempt += 1) {
         const shareCode = generateShareCode();
-        const { data, error } = await supabase
-          .from("trips")
-          .insert({
-            owner_id: user.id,
-            title: input.title,
-            description: input.description ?? null,
-            start_date: input.startDate,
-            end_date: input.endDate ?? null,
-            timezone: input.timezone,
-            share_slug: shareSlug,
-            share_code: shareCode,
-            viewer_passcode_hash: input.passcode
-              ? await hashPasscode(shareSlug, input.passcode)
-              : null,
-            privacy_mode: input.privacyMode,
-            location_privacy_mode: input.locationPrivacyMode,
-            publish_delay_hours: clampPublishDelayHours(input.publishDelayHours),
-            cover_location_name: input.coverLocationName ?? null,
-            cover_latitude: input.coverLatitude ?? null,
-            cover_longitude: input.coverLongitude ?? null,
-          })
-          .select("*")
-          .single();
+        const viewerPasscodeHash = input.passcode
+          ? await hashPasscode(shareSlug, input.passcode)
+          : null;
+        const { data, error } = await withQueryTimeout((signal) =>
+          supabase
+            .from("trips")
+            .insert({
+              owner_id: user.id,
+              title: input.title,
+              description: input.description ?? null,
+              start_date: input.startDate,
+              end_date: input.endDate ?? null,
+              timezone: input.timezone,
+              share_slug: shareSlug,
+              share_code: shareCode,
+              viewer_passcode_hash: viewerPasscodeHash,
+              privacy_mode: input.privacyMode,
+              location_privacy_mode: input.locationPrivacyMode,
+              publish_delay_hours: clampPublishDelayHours(input.publishDelayHours),
+              cover_location_name: input.coverLocationName ?? null,
+              cover_latitude: input.coverLatitude ?? null,
+              cover_longitude: input.coverLongitude ?? null,
+            })
+            .select("*")
+            .abortSignal(signal)
+            .single(),
+          "TripTrace took too long to create your trip. Please try again.",
+        );
 
         if (!error && data) {
           return mapTrip(data);
@@ -303,7 +425,7 @@ export function createSupabaseRepository(): TripRepository {
         }
 
         if (!isDuplicateCode) {
-          throw new Error(error?.message ?? "Could not create trip.");
+          throw new Error(formatSupabaseError(error));
         }
       }
 
@@ -324,12 +446,16 @@ export function createSupabaseRepository(): TripRepository {
     async getTripById(tripId: string) {
       const user = await requireUser();
       const supabase = getSupabaseBrowserClient();
-      const { data, error } = await supabase
-        .from("trips")
-        .select("*")
-        .eq("id", tripId)
-        .eq("owner_id", user.id)
-        .single();
+      const { data, error } = await withQueryTimeout((signal) =>
+        supabase
+          .from("trips")
+          .select("*")
+          .eq("id", tripId)
+          .eq("owner_id", user.id)
+          .abortSignal(signal)
+          .single(),
+        "TripTrace took too long to load this trip. Please try again.",
+      );
 
       if (error || !data) {
         return null;
@@ -342,11 +468,14 @@ export function createSupabaseRepository(): TripRepository {
     },
     async getTripByShareSlug(shareSlug: string) {
       const supabase = getSupabaseBrowserClient();
-      const { data, error } = await supabase
-        .from("trips")
-        .select("*")
-        .eq("share_slug", shareSlug)
-        .single();
+      const { data, error } = await withQueryTimeout((signal) =>
+        supabase
+          .from("trips")
+          .select("*")
+          .eq("share_slug", shareSlug)
+          .abortSignal(signal)
+          .single(),
+      );
 
       if (error || !data) {
         return null;
@@ -359,11 +488,14 @@ export function createSupabaseRepository(): TripRepository {
     },
     async getTripByShareCode(shareCode: string) {
       const supabase = getSupabaseBrowserClient();
-      const { data, error } = await supabase
-        .from("trips")
-        .select("*")
-        .eq("share_code", shareCode.toUpperCase())
-        .single();
+      const { data, error } = await withQueryTimeout((signal) =>
+        supabase
+          .from("trips")
+          .select("*")
+          .eq("share_code", shareCode.toUpperCase())
+          .abortSignal(signal)
+          .single(),
+      );
 
       if (error || !data) {
         return null;
@@ -373,6 +505,23 @@ export function createSupabaseRepository(): TripRepository {
         trip: mapTrip(data),
         moments: await loadMoments(data.id),
       };
+    },
+    async getShareSlugByCode(shareCode: string) {
+      const supabase = getSupabaseBrowserClient();
+      const { data, error } = await withQueryTimeout((signal) =>
+        supabase
+          .from("trips")
+          .select("share_slug")
+          .eq("share_code", shareCode.toUpperCase())
+          .abortSignal(signal)
+          .maybeSingle(),
+      );
+
+      if (error || !data) {
+        return null;
+      }
+
+      return data.share_slug;
     },
     async createMoment(input: CreateMomentInput) {
       const user = await requireUser();
@@ -393,7 +542,7 @@ export function createSupabaseRepository(): TripRepository {
       }
 
       const supabase = getSupabaseBrowserClient();
-      const momentId = nanoid();
+      const momentId = createClientUuid();
       let imageUrl: string | null = input.imagePreviewUrl ?? null;
       let imageStoragePath: string | null = null;
 
@@ -442,7 +591,7 @@ export function createSupabaseRepository(): TripRepository {
         .single();
 
       if (error || !data) {
-        throw new Error(error?.message ?? "Could not save moment.");
+        throw new Error(error ? formatSupabaseError(error) : "Could not save moment.");
       }
 
       await touchTripUpdatedAt(input.tripId);
@@ -468,7 +617,7 @@ export function createSupabaseRepository(): TripRepository {
         .single();
 
       if (error || !data) {
-        throw new Error(error?.message ?? "Could not update moment.");
+        throw new Error(error ? formatSupabaseError(error) : "Could not update moment.");
       }
 
       await touchTripUpdatedAt(data.trip_id);
@@ -485,7 +634,7 @@ export function createSupabaseRepository(): TripRepository {
         .single();
 
       if (error || !data) {
-        throw new Error(error.message);
+        throw new Error(formatSupabaseError(error));
       }
 
       await touchTripUpdatedAt(data.trip_id);
@@ -499,13 +648,13 @@ export function createSupabaseRepository(): TripRepository {
         .single();
 
       if (readError || !moment) {
-        throw new Error(readError?.message ?? "Moment not found.");
+        throw new Error(readError ? formatSupabaseError(readError) : "Moment not found.");
       }
 
       const { error } = await supabase.from("moments").delete().eq("id", momentId);
 
       if (error) {
-        throw new Error(error.message);
+        throw new Error(formatSupabaseError(error));
       }
 
       await touchTripUpdatedAt(moment.trip_id);
@@ -565,7 +714,7 @@ export function createSupabaseRepository(): TripRepository {
           throw new Error("End your current active trip before reopening another one.");
         }
 
-        throw new Error(error?.message ?? "Could not update trip.");
+        throw new Error(error ? formatSupabaseError(error) : "Could not update trip.");
       }
 
       return mapTrip(data);

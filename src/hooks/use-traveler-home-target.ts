@@ -2,9 +2,8 @@
 
 import { useEffect, useState } from "react";
 
-import { useTripTraceAuth } from "@/hooks/use-triptrace-auth";
 import { getTripRepository } from "@/lib/repositories";
-import type { Trip } from "@/types/triptrace";
+import type { Trip, TripTraceUser } from "@/types/triptrace";
 
 type TravelerHomeStatus = "active" | "latest" | "new";
 
@@ -28,8 +27,17 @@ const initialState: TravelerHomeTargetState = {
 
 const dashboardLookupTimeoutMs = 5_000;
 
-export function useTravelerHomeTarget() {
-  const { user, loading: authLoading, isDemoMode } = useTripTraceAuth();
+interface UseTravelerHomeTargetOptions {
+  authLoading: boolean;
+  isDemoMode: boolean;
+  user: TripTraceUser | null;
+}
+
+export function useTravelerHomeTarget({
+  user,
+  authLoading,
+  isDemoMode,
+}: UseTravelerHomeTargetOptions) {
   const [state, setState] = useState<LoadedTravelerHomeTargetState | null>(null);
 
   useEffect(() => {

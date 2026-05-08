@@ -24,6 +24,7 @@ function mapAuthUser(user: {
 
 const authCallbackRetryDelayMs = 250;
 const authCallbackRetryCount = 12;
+const authBootstrapTimeoutMs = 8_000;
 
 function getAuthCallbackState() {
   if (typeof window === "undefined") {
@@ -89,6 +90,29 @@ function delay(ms: number) {
   return new Promise((resolve) => window.setTimeout(resolve, ms));
 }
 
+async function withTimeout<T>(
+  action: () => PromiseLike<T>,
+  timeoutMs: number,
+  timeoutMessage: string,
+) {
+  let timeoutId: number | undefined;
+
+  try {
+    return await Promise.race([
+      action(),
+      new Promise<never>((_, reject) => {
+        timeoutId = window.setTimeout(() => {
+          reject(new Error(timeoutMessage));
+        }, timeoutMs);
+      }),
+    ]);
+  } finally {
+    if (timeoutId) {
+      window.clearTimeout(timeoutId);
+    }
+  }
+}
+
 export function useTripTraceAuth() {
   const [user, setUser] = useState<TripTraceUser | null>(
     isDemoMode ? demoOwner : null,
@@ -109,7 +133,11 @@ export function useTripTraceAuth() {
 
     async function resolveCurrentUser(retryForCallback: boolean) {
       for (let attempt = 0; attempt <= authCallbackRetryCount; attempt += 1) {
-        const { data, error: getUserError } = await supabase.auth.getUser();
+        const { data, error: getUserError } = await withTimeout(
+          () => supabase.auth.getUser(),
+          authBootstrapTimeoutMs,
+          "TripTrace took too long to verify your sign-in. Please refresh and try again.",
+        );
 
         if (getUserError) {
           throw getUserError;
@@ -198,20 +226,39 @@ export function useTripTraceAuth() {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async () => {
-      const { data } = await supabase.auth.getUser();
+      try {
+        const { data } = await withTimeout(
+          () => supabase.auth.getUser(),
+          authBootstrapTimeoutMs,
+          "TripTrace took too long to refresh your sign-in. Please refresh and try again.",
+        );
 
-      if (!mounted) {
-        return;
+        if (!mounted) {
+          return;
+        }
+
+        if (data.user) {
+          clearAuthCallbackUrl();
+        }
+
+        setUser(data.user ? mapAuthUser(data.user) : null);
+        setError(null);
+        setProcessingCallback(false);
+        setLoading(false);
+      } catch (authError) {
+        if (!mounted) {
+          return;
+        }
+
+        setUser(null);
+        setError(
+          authError instanceof Error
+            ? authError.message
+            : "TripTrace couldn't refresh your sign-in.",
+        );
+        setProcessingCallback(false);
+        setLoading(false);
       }
-
-      if (data.user) {
-        clearAuthCallbackUrl();
-      }
-
-      setUser(data.user ? mapAuthUser(data.user) : null);
-      setError(null);
-      setProcessingCallback(false);
-      setLoading(false);
     });
 
     return () => {

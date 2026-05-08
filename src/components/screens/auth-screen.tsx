@@ -18,7 +18,11 @@ export function AuthScreen() {
   const router = useRouter();
   const { user, loading: authLoading, isDemoMode, processingCallback, error } =
     useTripTraceAuth();
-  const travelerHome = useTravelerHomeTarget();
+  const travelerHome = useTravelerHomeTarget({
+    user,
+    authLoading,
+    isDemoMode,
+  });
   const [email, setEmail] = useState("");
   const [sending, setSending] = useState(false);
 

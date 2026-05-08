@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { type FocusEvent, useRef, useState } from "react";
 import { LoaderCircle } from "lucide-react";
 import { toast } from "sonner";
 
@@ -34,6 +34,7 @@ export function EditMomentDetailsDialog({
   const [title, setTitle] = useState(() => moment?.caption ?? "");
   const [description, setDescription] = useState(() => moment?.thoughtText ?? "");
   const [saving, setSaving] = useState(false);
+  const contentRef = useRef<HTMLDivElement | null>(null);
 
   if (!moment) {
     return null;
@@ -72,9 +73,24 @@ export function EditMomentDetailsDialog({
     }
   }
 
+  function handleFieldFocus(event: FocusEvent<HTMLElement>) {
+    const target = event.target;
+
+    window.setTimeout(() => {
+      target.scrollIntoView({
+        block: "center",
+        inline: "nearest",
+        behavior: "smooth",
+      });
+    }, 180);
+  }
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-xl">
+      <DialogContent
+        ref={contentRef}
+        className="sm:max-w-xl"
+      >
         <DialogHeader>
           <DialogTitle>
             {moment?.type === "photo" ? "Edit photo details" : "Edit moment"}
@@ -85,7 +101,7 @@ export function EditMomentDetailsDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <div className="space-y-4 pb-2" onFocusCapture={handleFieldFocus}>
           <div className="space-y-2">
             <Label htmlFor="moment-title">Title</Label>
             <Input
@@ -113,17 +129,19 @@ export function EditMomentDetailsDialog({
             />
           </div>
 
-          <div className="flex justify-end">
-            <Button disabled={saving} onClick={() => void handleSave()} type="button">
-              {saving ? (
-                <>
-                  <LoaderCircle className="h-4 w-4 animate-spin" />
-                  Saving...
-                </>
-              ) : (
-                "Save details"
-              )}
-            </Button>
+          <div className="sticky bottom-[-1rem] -mx-6 border-t border-black/5 bg-white/96 px-6 pb-[calc(env(safe-area-inset-bottom)+0.25rem)] pt-4 backdrop-blur-sm">
+            <div className="flex justify-end">
+              <Button disabled={saving} onClick={() => void handleSave()} type="button">
+                {saving ? (
+                  <>
+                    <LoaderCircle className="h-4 w-4 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  "Save details"
+                )}
+              </Button>
+            </div>
           </div>
         </div>
       </DialogContent>

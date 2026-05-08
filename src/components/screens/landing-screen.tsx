@@ -10,6 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useTravelerHomeTarget } from "@/hooks/use-traveler-home-target";
+import { useTripTraceAuth } from "@/hooks/use-triptrace-auth";
 import { getTripRepository } from "@/lib/repositories";
 import {
   TRIP_CODE_LENGTH,
@@ -19,7 +20,12 @@ import {
 
 export function LandingScreen() {
   const router = useRouter();
-  const travelerHome = useTravelerHomeTarget();
+  const { user, loading: authLoading, isDemoMode } = useTripTraceAuth();
+  const travelerHome = useTravelerHomeTarget({
+    user,
+    authLoading,
+    isDemoMode,
+  });
   const [code, setCode] = useState("");
   const [opening, setOpening] = useState(false);
 
@@ -42,14 +48,20 @@ export function LandingScreen() {
     setOpening(true);
 
     try {
-      const record = await getTripRepository().getTripByShareCode(normalized);
+      const slugPromise = getTripRepository().getShareSlugByCode(normalized);
+      const shareSlug = await Promise.race([
+        slugPromise,
+        new Promise<null>((resolve) => {
+          window.setTimeout(() => resolve(null), 5_000);
+        }),
+      ]);
 
-      if (!record) {
+      if (!shareSlug) {
         toast.error("No trip matches that code.");
         return;
       }
 
-      router.push(`/t/${record.trip.shareSlug}`);
+      router.push(`/t/${shareSlug}`);
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : "TripTrace could not open the trip.",

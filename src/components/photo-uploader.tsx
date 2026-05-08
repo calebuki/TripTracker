@@ -1,17 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import {
-  Camera,
-  Images,
-  LoaderCircle,
-  LocateFixed,
-  MapPinned,
-  Sparkles,
-  VideoOff,
-  Zap,
-  ZoomIn,
-} from "lucide-react";
+import { Camera, Film, Images, LoaderCircle, LocateFixed, MapPinned, Sparkles } from "lucide-react";
 import { nanoid } from "nanoid";
 import { toast } from "sonner";
 
@@ -24,6 +14,7 @@ import {
   requestCurrentLocationDraft,
   resolvePlaceNameForCoordinates,
 } from "@/lib/location";
+import { isMomentVideo, isVideoMimeType } from "@/lib/media";
 import { getTripRepository } from "@/lib/repositories";
 import { fileToOptimizedDataUrl } from "@/lib/storage";
 import type { LocationDraft, Moment, Trip } from "@/types/triptrace";
@@ -40,11 +31,13 @@ interface PhotoUploaderProps {
 interface PendingUpload {
   id: string;
   fileName: string;
+  fileType: string;
   previewUrl: string;
 }
 
 interface SavedMomentEntry {
   id: string;
+  fileType: string;
   previewUrl: string;
   metadataError: string | null;
   moment: Moment;
@@ -61,215 +54,81 @@ interface UploadRequest {
   metadataError: string | null;
 }
 
-interface ZoomRange {
-  min: number;
-  max: number;
-  step: number;
-  value: number;
-}
-
-type CameraStatus = "starting" | "ready" | "error" | "unsupported";
+type UploadOrigin = "camera" | "library";
 
 function rememberObjectUrl(registry: { current: string[] }, url: string) {
   registry.current.push(url);
   return url;
 }
 
-function getZoomRange(value: unknown): ZoomRange | null {
-  if (!value || typeof value !== "object") {
-    return null;
+function MediaPreview({
+  alt,
+  className,
+  fileType,
+  src,
+}: {
+  alt: string;
+  className: string;
+  fileType: string;
+  src: string;
+}) {
+  if (isVideoMimeType(fileType)) {
+    return (
+      <video
+        aria-label={alt}
+        className={className}
+        muted
+        playsInline
+        preload="metadata"
+        src={src}
+      />
+    );
   }
 
-  const candidate = value as {
-    min?: number;
-    max?: number;
-    step?: number;
-  };
-
-  if (typeof candidate.min !== "number" || typeof candidate.max !== "number") {
-    return null;
-  }
-
-  return {
-    min: candidate.min,
-    max: candidate.max,
-    step:
-      typeof candidate.step === "number" && candidate.step > 0
-        ? candidate.step
-        : 0.1,
-    value: candidate.min,
-  };
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      alt={alt}
+      className={className}
+      src={src}
+    />
+  );
 }
 
-async function captureVideoFrame(video: HTMLVideoElement) {
-  if (!video.videoWidth || !video.videoHeight) {
-    throw new Error("Camera preview is still warming up.");
+function getMomentLabel(moment: Moment) {
+  if (moment.type !== "photo") {
+    return "Thought";
   }
 
-  const canvas = document.createElement("canvas");
-  canvas.width = video.videoWidth;
-  canvas.height = video.videoHeight;
-
-  const context = canvas.getContext("2d");
-
-  if (!context) {
-    throw new Error("TripTrace could not read the camera frame.");
-  }
-
-  context.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-  return await new Promise<Blob>((resolve, reject) => {
-    canvas.toBlob(
-      (blob) => {
-        if (!blob) {
-          reject(new Error("TripTrace could not capture that frame."));
-          return;
-        }
-
-        resolve(blob);
-      },
-      "image/jpeg",
-      0.92,
-    );
-  });
+  return isMomentVideo(moment) ? "Video" : "Photo";
 }
 
 export function PhotoUploader({
   trip,
-  active = true,
   cameraFirst = false,
   libraryOnly = false,
   onSaved,
   onClose,
 }: PhotoUploaderProps) {
-  const videoRef = useRef<HTMLVideoElement | null>(null);
   const libraryInputRef = useRef<HTMLInputElement | null>(null);
-  const fallbackCameraInputRef = useRef<HTMLInputElement | null>(null);
-  const streamRef = useRef<MediaStream | null>(null);
-  const trackRef = useRef<MediaStreamTrack | null>(null);
+  const captureInputRef = useRef<HTMLInputElement | null>(null);
   const objectUrlsRef = useRef<string[]>([]);
-  const [cameraStatus, setCameraStatus] = useState<CameraStatus>("starting");
-  const [cameraError, setCameraError] = useState<string | null>(null);
-  const [capturing, setCapturing] = useState(false);
   const [pendingUploads, setPendingUploads] = useState<PendingUpload[]>([]);
   const [recentMoments, setRecentMoments] = useState<SavedMomentEntry[]>([]);
   const [pickerMomentId, setPickerMomentId] = useState<string | null>(null);
-  const [torchSupported, setTorchSupported] = useState(false);
-  const [torchEnabled, setTorchEnabled] = useState(false);
-  const [zoomRange, setZoomRange] = useState<ZoomRange | null>(null);
+  const [preparingOrigin, setPreparingOrigin] = useState<UploadOrigin | null>(null);
 
   useEffect(() => {
     const objectUrls = objectUrlsRef.current;
 
     return () => {
       objectUrls.forEach((url) => URL.revokeObjectURL(url));
-      streamRef.current?.getTracks().forEach((track) => track.stop());
     };
   }, []);
 
-  useEffect(() => {
-    const currentVideo = videoRef.current;
-
-    if (!active || libraryOnly) {
-      streamRef.current?.getTracks().forEach((track) => track.stop());
-      streamRef.current = null;
-      trackRef.current = null;
-      if (currentVideo) {
-        currentVideo.srcObject = null;
-      }
-      return;
-    }
-
-    let cancelled = false;
-
-    async function startCamera() {
-      if (!navigator.mediaDevices?.getUserMedia) {
-        if (!cancelled) {
-          setCameraStatus("unsupported");
-          setCameraError(
-            "Live camera preview is not available here, but you can still use the device camera or photo library.",
-          );
-        }
-        return;
-      }
-
-      if (streamRef.current) {
-        return;
-      }
-
-      setCameraStatus("starting");
-      setCameraError(null);
-      setTorchEnabled(false);
-      setTorchSupported(false);
-      setZoomRange(null);
-
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          audio: false,
-          video: {
-            facingMode: { ideal: "environment" },
-            width: { ideal: 1920 },
-            height: { ideal: 1440 },
-          },
-        });
-
-        if (cancelled) {
-          stream.getTracks().forEach((track) => track.stop());
-          return;
-        }
-
-        streamRef.current = stream;
-        const track = stream.getVideoTracks()[0] ?? null;
-        trackRef.current = track;
-
-        const capabilities = track?.getCapabilities?.() as Record<string, unknown> | undefined;
-        const settings = track?.getSettings?.() as Record<string, unknown> | undefined;
-        const detectedZoom = getZoomRange(capabilities?.zoom);
-
-        setTorchSupported(capabilities?.torch === true);
-        setZoomRange(
-          detectedZoom
-            ? {
-                ...detectedZoom,
-                value:
-                  typeof settings?.zoom === "number"
-                    ? settings.zoom
-                    : detectedZoom.min,
-              }
-            : null,
-        );
-
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-          await videoRef.current.play().catch(() => undefined);
-        }
-
-        setCameraStatus("ready");
-      } catch (error) {
-        setCameraStatus("error");
-        setCameraError(
-          error instanceof Error
-            ? error.message
-            : "TripTrace could not open the camera right now.",
-        );
-      }
-    }
-
-    void startCamera();
-
-    return () => {
-      cancelled = true;
-      streamRef.current?.getTracks().forEach((track) => track.stop());
-      streamRef.current = null;
-      trackRef.current = null;
-      if (currentVideo) {
-        currentVideo.srcObject = null;
-      }
-    };
-  }, [active, libraryOnly]);
-
   const pickerMoment =
     recentMoments.find((entry) => entry.id === pickerMomentId) ?? null;
+  const isBusy = preparingOrigin !== null || pendingUploads.length > 0;
 
   function updateRecentMoment(momentId: string, patch: Partial<Moment>) {
     setRecentMoments((current) =>
@@ -287,7 +146,11 @@ export function PhotoUploader({
     );
   }
 
-  async function enrichPlaceName(momentId: string, latitude: number | null, longitude: number | null) {
+  async function enrichPlaceName(
+    momentId: string,
+    latitude: number | null,
+    longitude: number | null,
+  ) {
     const placeName = await resolvePlaceNameForCoordinates(latitude, longitude);
 
     if (!placeName) {
@@ -320,6 +183,7 @@ export function PhotoUploader({
         {
           id: pendingId,
           fileName: request.file.name,
+          fileType: request.file.type,
           previewUrl: request.previewUrl,
         },
         ...current,
@@ -348,6 +212,7 @@ export function PhotoUploader({
         setRecentMoments((current) => [
           {
             id: nanoid(),
+            fileType: request.file.type,
             moment: createdMoment,
             previewUrl: request.previewUrl,
             metadataError: request.metadataError,
@@ -386,125 +251,62 @@ export function PhotoUploader({
     }
   }
 
-  async function handleLibrarySelection(fileList: FileList | null) {
-    if (!fileList) {
-      return;
-    }
-
-    const requests = await Promise.all(
-      Array.from(fileList).map(async (file) => {
-        const metadata = await extractPhotoMetadata(file);
-        const previewUrl = rememberObjectUrl(
-          objectUrlsRef,
-          URL.createObjectURL(file),
-        );
-
-        return {
-          file,
-          previewUrl,
-          latitude: metadata.latitude,
-          longitude: metadata.longitude,
-          locationSource:
-            metadata.latitude !== null && metadata.longitude !== null
-              ? "exif"
-              : "none",
-          accuracyMeters: null,
-          takenAt:
-            metadata.takenAt ?? new Date().toISOString(),
-          metadataError: metadata.metadataError,
-        } satisfies UploadRequest;
-      }),
+  async function buildUploadRequest(file: File, origin: UploadOrigin) {
+    const metadata = await extractPhotoMetadata(file);
+    const previewUrl = rememberObjectUrl(
+      objectUrlsRef,
+      URL.createObjectURL(file),
     );
 
-    await saveUploadRequests(requests);
+    let fallbackLocation: LocationDraft | null = null;
+
+    if (
+      origin === "camera" &&
+      metadata.latitude === null &&
+      metadata.longitude === null
+    ) {
+      fallbackLocation = await requestCurrentLocationDraft().catch(() => null);
+    }
+
+    return {
+      file,
+      previewUrl,
+      latitude: metadata.latitude ?? fallbackLocation?.latitude ?? null,
+      longitude: metadata.longitude ?? fallbackLocation?.longitude ?? null,
+      locationSource:
+        metadata.latitude !== null && metadata.longitude !== null
+          ? "exif"
+          : fallbackLocation?.locationSource ?? "none",
+      accuracyMeters: fallbackLocation?.accuracyMeters ?? null,
+      takenAt: metadata.takenAt ?? new Date().toISOString(),
+      metadataError:
+        metadata.metadataError ??
+        (fallbackLocation === null &&
+        origin === "camera" &&
+        metadata.latitude === null &&
+        metadata.longitude === null
+          ? "Saved without GPS because current location was unavailable."
+          : null),
+    } satisfies UploadRequest;
   }
 
-  async function handleCapturePhoto() {
-    if (cameraStatus !== "ready" || !videoRef.current) {
-      fallbackCameraInputRef.current?.click();
+  async function handleFileSelection(
+    fileList: FileList | null,
+    origin: UploadOrigin,
+  ) {
+    if (!fileList || fileList.length === 0) {
       return;
     }
 
-    setCapturing(true);
+    setPreparingOrigin(origin);
 
     try {
-      const [blob, currentLocation] = await Promise.all([
-        captureVideoFrame(videoRef.current),
-        requestCurrentLocationDraft().catch(() => null),
-      ]);
-      const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
-      const file = new File([blob], `triptrace-${timestamp}.jpg`, {
-        type: "image/jpeg",
-        lastModified: Date.now(),
-      });
-      const previewUrl = rememberObjectUrl(objectUrlsRef, URL.createObjectURL(file));
-
-      await saveUploadRequests([
-        {
-          file,
-          previewUrl,
-          latitude: currentLocation?.latitude ?? null,
-          longitude: currentLocation?.longitude ?? null,
-          locationSource: currentLocation?.locationSource ?? "none",
-          accuracyMeters: currentLocation?.accuracyMeters ?? null,
-          takenAt: new Date().toISOString(),
-          metadataError:
-            currentLocation === null
-              ? "Saved without GPS because current location was unavailable."
-              : null,
-        },
-      ]);
-    } catch (error) {
-      toast.error(
-        error instanceof Error
-          ? error.message
-          : "TripTrace could not capture that photo.",
+      const requests = await Promise.all(
+        Array.from(fileList).map((file) => buildUploadRequest(file, origin)),
       );
+      await saveUploadRequests(requests);
     } finally {
-      setCapturing(false);
-    }
-  }
-
-  async function toggleTorch() {
-    const track = trackRef.current;
-
-    if (!track || !torchSupported) {
-      return;
-    }
-
-    const nextEnabled = !torchEnabled;
-
-    try {
-      await track.applyConstraints({
-        advanced: [{ torch: nextEnabled } as MediaTrackConstraintSet],
-      });
-      setTorchEnabled(nextEnabled);
-    } catch {
-      toast.error("This camera could not change flash mode.");
-    }
-  }
-
-  async function applyZoom(nextValue: number) {
-    const track = trackRef.current;
-
-    if (!track || !zoomRange) {
-      return;
-    }
-
-    try {
-      await track.applyConstraints({
-        advanced: [{ zoom: nextValue } as MediaTrackConstraintSet],
-      });
-      setZoomRange((current) =>
-        current
-          ? {
-              ...current,
-              value: nextValue,
-            }
-          : current,
-      );
-    } catch {
-      toast.error("This camera could not change zoom.");
+      setPreparingOrigin(null);
     }
   }
 
@@ -547,7 +349,7 @@ export function PhotoUploader({
       updateRecentMoment(momentId, updatedMoment);
       setPickerMomentId(null);
       void enrichPlaceName(momentId, location.latitude, location.longitude);
-      toast.success("Photo pinned on the map.");
+      toast.success("Moment pinned on the map.");
       await onSaved();
     } catch (error) {
       toast.error(
@@ -562,162 +364,92 @@ export function PhotoUploader({
     <div className="space-y-5">
       <input
         ref={libraryInputRef}
-        accept="image/*"
+        accept="image/*,video/*"
         className="sr-only"
         multiple
         onChange={(event) => {
-          void handleLibrarySelection(event.target.files);
+          void handleFileSelection(event.target.files, "library");
           event.target.value = "";
         }}
         type="file"
       />
       <input
-        ref={fallbackCameraInputRef}
-        accept="image/*"
+        ref={captureInputRef}
+        accept="image/*,video/*"
         capture="environment"
         className="sr-only"
         onChange={(event) => {
-          void handleLibrarySelection(event.target.files);
+          void handleFileSelection(event.target.files, "camera");
           event.target.value = "";
         }}
         type="file"
       />
 
       <Card className="overflow-hidden rounded-[30px] border-black/5 p-0">
-        <div className="relative bg-[var(--ink)] text-white">
-          <div className="absolute left-4 top-4 z-20 flex items-center gap-2">
+        <div className="bg-[var(--ink)] px-5 py-6 text-white sm:px-6">
+          <div className="flex flex-wrap items-center gap-2">
             <Badge variant="subtle" className="bg-white/12 text-white">
               <Sparkles className="mr-1 h-3 w-3" />
               {libraryOnly
                 ? "Past trip upload"
                 : cameraFirst
                   ? "Camera-first traveler flow"
-                  : "Quick photo posting"}
+                  : "Quick media posting"}
             </Badge>
-            <Badge variant="subtle" className="bg-white/12 text-white/80">
-              <VideoOff className="mr-1 h-3 w-3" />
-              {libraryOnly ? "Camera roll only" : "Photo mode live"}
+            <Badge variant="subtle" className="bg-white/12 text-white/85">
+              {libraryOnly ? "Camera library only" : "Native iPhone capture"}
             </Badge>
           </div>
 
-          <div className="aspect-[4/5] w-full bg-black sm:aspect-[16/10]">
-            {!libraryOnly && cameraStatus === "ready" ? (
-              <video
-                ref={videoRef}
-                autoPlay
-                className="h-full w-full object-cover"
-                muted
-                playsInline
-              />
-            ) : (
-              <div className="flex h-full flex-col items-center justify-center gap-3 px-6 text-center">
-                {libraryOnly ? (
-                  <>
-                    <Images className="h-6 w-6 text-white/80" />
-                    <p className="max-w-sm text-sm text-white/80">
-                      Pick photos from your camera roll to add moments to this past trip.
-                    </p>
-                  </>
-                ) : cameraStatus === "starting" ? (
-                  <>
-                    <LoaderCircle className="h-6 w-6 animate-spin" />
-                    <p className="max-w-sm text-sm text-white/80">
-                      Opening the rear camera so the traveler can post right away.
-                    </p>
-                  </>
-                ) : (
-                  <>
-                    <Camera className="h-6 w-6 text-white/80" />
-                    <p className="max-w-sm text-sm text-white/80">
-                      {cameraError ??
-                        "Live camera preview is unavailable, but you can still use the device camera or photo library."}
-                    </p>
-                  </>
-                )}
-              </div>
-            )}
-          </div>
-
-          <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-4 sm:px-5">
-            <div className="flex flex-wrap items-center gap-2">
-              {!libraryOnly ? (
-                <>
-                  <Button
-                    disabled={!torchSupported}
-                    onClick={() => void toggleTorch()}
-                    size="sm"
-                    type="button"
-                    variant={torchEnabled ? "secondary" : "ghost"}
-                  >
-                    <Zap className="h-4 w-4" />
-                    {torchSupported ? (torchEnabled ? "Flash on" : "Flash off") : "Flash unavailable"}
-                  </Button>
-
-                  {zoomRange ? (
-                    <div className="flex items-center gap-2 rounded-full bg-white/10 px-3 py-2 text-sm">
-                      <ZoomIn className="h-4 w-4" />
-                      <input
-                        className="w-28 accent-white"
-                        max={zoomRange.max}
-                        min={zoomRange.min}
-                        onChange={(event) =>
-                          void applyZoom(Number(event.target.value))
-                        }
-                        step={zoomRange.step}
-                        type="range"
-                        value={zoomRange.value}
-                      />
-                    </div>
-                  ) : null}
-                </>
+          <div className="mt-6 flex flex-col items-center gap-4 text-center">
+            <div className="flex h-[72px] w-[72px] items-center justify-center rounded-full bg-white/10">
+              {libraryOnly ? (
+                <Images className="h-8 w-8 text-white" />
               ) : (
-                <p className="text-sm text-white/70">
-                  The timeline stays editable, but new additions come from real photos in your library.
-                </p>
+                <Camera className="h-8 w-8 text-white" />
               )}
             </div>
+            <div className="space-y-2">
+              <p className="text-xl font-medium text-white">
+                {libraryOnly
+                  ? "Add moments from your camera library"
+                  : "Post straight from your phone"}
+              </p>
+              <p className="max-w-xl text-sm leading-6 text-white/75">
+                {libraryOnly
+                  ? "Past trips stay editable, but new additions come from your camera library so the timeline stays grounded in real captured media."
+                  : "TripTrace now hands off directly to the native camera or camera library. There is no web camera preview or warm-up step in between."}
+              </p>
+            </div>
+          </div>
 
-            <div className="flex flex-wrap items-center gap-2">
+          <div className="mt-6 grid gap-3 sm:grid-cols-2">
+            {!libraryOnly ? (
               <Button
-                onClick={() => libraryInputRef.current?.click()}
-                size="sm"
+                className="h-14 rounded-full bg-white text-[var(--ink)] hover:bg-white/95"
+                disabled={isBusy}
+                onClick={() => captureInputRef.current?.click()}
                 type="button"
                 variant="secondary"
               >
-                <Images className="h-4 w-4" />
-                {libraryOnly ? "Open camera roll" : "Photo library"}
+                <Camera className="h-5 w-5" />
+                {preparingOrigin === "camera"
+                  ? "Saving capture..."
+                  : "Snap photo/video"}
               </Button>
-              {!libraryOnly ? (
-                <>
-                  <Button
-                    onClick={() => fallbackCameraInputRef.current?.click()}
-                    size="sm"
-                    type="button"
-                    variant="secondary"
-                  >
-                    <Camera className="h-4 w-4" />
-                    Device camera
-                  </Button>
-                  <Button
-                    disabled={capturing || pendingUploads.length > 0}
-                    onClick={() => void handleCapturePhoto()}
-                    type="button"
-                  >
-                    {capturing ? (
-                      <>
-                        <LoaderCircle className="h-4 w-4 animate-spin" />
-                        Capturing...
-                      </>
-                    ) : (
-                      <>
-                        <Camera className="h-4 w-4" />
-                        Snap photo
-                      </>
-                    )}
-                  </Button>
-                </>
-              ) : null}
-            </div>
+            ) : null}
+            <Button
+              className="h-14 rounded-full border-white/20 bg-white/10 text-white hover:bg-white/14"
+              disabled={isBusy}
+              onClick={() => libraryInputRef.current?.click()}
+              type="button"
+              variant="ghost"
+            >
+              <Images className="h-5 w-5" />
+              {preparingOrigin === "library"
+                ? "Loading selection..."
+                : "Open camera library"}
+            </Button>
           </div>
         </div>
       </Card>
@@ -732,17 +464,25 @@ export function PhotoUploader({
                 className="overflow-hidden rounded-[26px] border-black/5 p-0"
               >
                 <div className="grid gap-4 p-4 sm:grid-cols-[100px_1fr]">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
+                  <MediaPreview
                     alt={upload.fileName}
-                    className="h-24 w-full rounded-[18px] object-cover"
+                    className="h-24 w-full rounded-[18px] bg-slate-100 object-cover"
+                    fileType={upload.fileType}
                     src={upload.previewUrl}
                   />
                   <div className="flex items-center justify-between gap-3">
                     <div>
-                      <p className="line-clamp-1 text-sm font-medium text-[var(--ink)]">
-                        {upload.fileName}
-                      </p>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="line-clamp-1 text-sm font-medium text-[var(--ink)]">
+                          {upload.fileName}
+                        </p>
+                        {isVideoMimeType(upload.fileType) ? (
+                          <Badge variant="subtle">
+                            <Film className="mr-1 h-3 w-3" />
+                            Video
+                          </Badge>
+                        ) : null}
+                      </div>
                       <p className="mt-1 text-sm text-slate-600">
                         Uploading this moment now.
                       </p>
@@ -783,10 +523,10 @@ export function PhotoUploader({
                   className="overflow-hidden rounded-[28px] border-black/5 p-0"
                 >
                   <div className="grid gap-4 p-4 sm:grid-cols-[140px_1fr]">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      alt={entry.moment.caption ?? "Trip moment photo"}
-                      className="h-36 w-full rounded-[22px] object-cover"
+                    <MediaPreview
+                      alt={entry.moment.caption ?? "Trip media moment"}
+                      className="h-36 w-full rounded-[22px] bg-slate-100 object-cover"
+                      fileType={entry.fileType}
                       src={entry.previewUrl}
                     />
                     <div className="space-y-3">
@@ -795,12 +535,13 @@ export function PhotoUploader({
                           <Badge variant={hasLocation ? "accent" : "default"}>
                             {hasLocation
                               ? entry.moment.locationSource === "exif"
-                                ? "Placed from photo metadata"
+                                ? "Placed from media metadata"
                                 : entry.moment.locationSource === "browser_gps"
                                   ? "Placed from current location"
                                   : "Pinned manually"
                               : "Saved without location"}
                           </Badge>
+                          <Badge variant="subtle">{getMomentLabel(entry.moment)}</Badge>
                           {entry.moment.placeName ? (
                             <Badge variant="subtle">{entry.moment.placeName}</Badge>
                           ) : null}
@@ -849,10 +590,10 @@ export function PhotoUploader({
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-[var(--ink)]">
-                Tap the map to place this photo
+                Tap the map to place this moment
               </p>
               <p className="text-sm text-slate-600">
-                Choose the exact spot for this moment, then keep posting.
+                Choose the exact spot for this upload, then keep posting.
               </p>
             </div>
             <Button

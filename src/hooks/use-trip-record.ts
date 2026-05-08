@@ -12,6 +12,8 @@ interface UseTripRecordOptions {
   shareSlug?: string;
 }
 
+const tripRecordTimeoutMs = 8_000;
+
 export function useTripRecord({
   role,
   tripId,
@@ -28,19 +30,34 @@ export function useTripRecord({
 
     try {
       const repository = getTripRepository();
-      const nextRecord =
-        role === "owner"
-          ? await repository.getTripById(tripId ?? "")
-          : await repository.getTripByShareSlug(shareSlug ?? "");
-
-      setRecord(nextRecord);
-
-      if (!nextRecord) {
-        setError(
+      let timeoutId: number | undefined;
+      try {
+        const nextRecord = await Promise.race([
           role === "owner"
-            ? "Trip not found or you do not have access."
-            : "We couldn't find that shared trip.",
-        );
+            ? repository.getTripById(tripId ?? "")
+            : repository.getTripByShareSlug(shareSlug ?? ""),
+          new Promise<never>((_, reject) => {
+            timeoutId = window.setTimeout(() => {
+              reject(
+                new Error("TripTrace took too long to load this trip. Please try again."),
+              );
+            }, tripRecordTimeoutMs);
+          }),
+        ]);
+
+        setRecord(nextRecord);
+
+        if (!nextRecord) {
+          setError(
+            role === "owner"
+              ? "Trip not found or you do not have access."
+              : "We couldn't find that shared trip.",
+          );
+        }
+      } finally {
+        if (timeoutId) {
+          window.clearTimeout(timeoutId);
+        }
       }
     } catch (loadError) {
       setError(
@@ -55,18 +72,18 @@ export function useTripRecord({
   }, [role, shareSlug, tripId]);
 
   useEffect(() => {
-    if (authLoading) {
+    if (role === "owner" && authLoading) {
       return;
     }
 
     queueMicrotask(() => {
       void refresh();
     });
-  }, [authLoading, refresh, user?.id]);
+  }, [authLoading, refresh, role, user?.id]);
 
   return {
     record,
-    loading: loading || authLoading,
+    loading: loading || (role === "owner" && authLoading),
     error,
     refresh,
     user,

@@ -36,8 +36,8 @@ export function AddMomentDialog({
           <DialogTitle>{libraryOnly ? "Add a past moment" : "Add a moment"}</DialogTitle>
           <DialogDescription>
             {libraryOnly
-              ? "Past trips stay editable, but new additions come through the camera roll so the timeline stays grounded in real photos."
-              : "Keep it fast: drop in a photo or jot a quick thought, and TripTrace places it on the map."}
+              ? "Past trips stay editable, but new additions come through the camera library so the timeline stays grounded in real captured media."
+              : "Keep it fast: hand off to the native camera or library, or jot a quick thought and pin it on the map."}
           </DialogDescription>
         </DialogHeader>
         {libraryOnly ? (
@@ -52,7 +52,7 @@ export function AddMomentDialog({
         ) : (
           <Tabs defaultValue="photo" key={open ? "open" : "closed"}>
             <TabsList>
-              <TabsTrigger value="photo">Camera</TabsTrigger>
+              <TabsTrigger value="photo">Media</TabsTrigger>
               <TabsTrigger value="thought">Write Thought</TabsTrigger>
             </TabsList>
             <TabsContent value="photo">

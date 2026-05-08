@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Map, {
   Layer,
   Marker,
@@ -13,10 +13,12 @@ import maplibregl from "maplibre-gl";
 import { MomentMarker } from "@/components/moment-marker";
 import { publicEnv } from "@/lib/env";
 import {
+  buildMomentMarkerGroups,
   buildTrailGeoJson,
   getMapBounds,
   getMapCenter,
   hasCoordinates,
+  type MomentMarkerGroup,
 } from "@/lib/map";
 import { cn } from "@/lib/utils";
 import type { LocationDraft, Moment, Trip } from "@/types/triptrace";
@@ -80,6 +82,7 @@ interface TripMapProps {
   fitKey?: number | string;
   heightClassName?: string;
   className?: string;
+  onMomentGroupsChange?: (groups: MomentMarkerGroup[]) => void;
 }
 
 export function TripMap({
@@ -93,10 +96,28 @@ export function TripMap({
   fitKey = 0,
   heightClassName = "h-[calc(100vh-1.5rem)]",
   className,
+  onMomentGroupsChange,
 }: TripMapProps) {
   const mapRef = useRef<MapRef | null>(null);
+  const [momentGroups, setMomentGroups] = useState<MomentMarkerGroup[]>([]);
   const center = getMapCenter(trip, moments);
   const trail = buildTrailGeoJson(moments);
+
+  const recomputeMomentGroups = useCallback(() => {
+    const map = mapRef.current?.getMap();
+
+    if (!map) {
+      return;
+    }
+
+    const nextGroups = buildMomentMarkerGroups(
+      moments,
+      (coordinates) => map.project(coordinates),
+    );
+
+    setMomentGroups(nextGroups);
+    onMomentGroupsChange?.(nextGroups);
+  }, [moments, onMomentGroupsChange]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -122,8 +143,11 @@ export function TripMap({
         duration: 900,
         maxZoom: 14,
       });
+      return;
     }
-  }, [moments, draftLocation, fitKey]);
+
+    recomputeMomentGroups();
+  }, [moments, draftLocation, fitKey, recomputeMomentGroups]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -165,6 +189,9 @@ export function TripMap({
         mapLib={maplibregl}
         mapStyle={publicEnv.mapStyleUrl}
         reuseMaps
+        onLoad={() => {
+          recomputeMomentGroups();
+        }}
         onClick={(event) => {
           if (!allowPick || !onPickLocation) {
             return;
@@ -176,6 +203,9 @@ export function TripMap({
             locationSource: "manual",
           });
         }}
+        onMoveEnd={() => {
+          recomputeMomentGroups();
+        }}
       >
         <Source data={trail} id="triptrace-route-source" type="geojson">
           <Layer {...routeGlowLayer} />
@@ -183,21 +213,31 @@ export function TripMap({
           <Layer {...routeDirectionLayer} />
         </Source>
 
-        {moments.filter(hasCoordinates).map((moment, index) => (
-          <Marker
-            key={moment.id}
-            anchor="bottom"
-            latitude={moment.latitude as number}
-            longitude={moment.longitude as number}
-          >
-            <MomentMarker
-              moment={moment}
-              onClick={() => onSelectMoment?.(moment.id)}
-              order={index + 1}
-              selected={selectedMomentId === moment.id}
-            />
-          </Marker>
-        ))}
+        {momentGroups.map((group) => {
+          const activeMoment =
+            group.moments.find((moment) => moment.id === selectedMomentId) ??
+            group.moments[0];
+
+          return (
+            <Marker
+              key={group.id}
+              anchor="bottom"
+              latitude={group.latitude}
+              longitude={group.longitude}
+            >
+              <MomentMarker
+                moment={activeMoment}
+                onClick={() => onSelectMoment?.(activeMoment.id)}
+                order={group.startOrder}
+                endOrder={group.endOrder}
+                clusterSize={group.moments.length}
+                selected={
+                  selectedMomentId ? group.momentIds.includes(selectedMomentId) : false
+                }
+              />
+            </Marker>
+          );
+        })}
 
         {draftLocation ? (
           <Marker

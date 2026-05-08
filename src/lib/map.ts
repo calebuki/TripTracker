@@ -9,6 +9,16 @@ const defaultParisCenter = {
   longitude: 2.3522,
 };
 
+export interface MomentMarkerGroup {
+  id: string;
+  moments: Moment[];
+  momentIds: string[];
+  latitude: number;
+  longitude: number;
+  startOrder: number;
+  endOrder: number;
+}
+
 export function hasCoordinates(moment: Pick<Moment, "latitude" | "longitude">) {
   return typeof moment.latitude === "number" && typeof moment.longitude === "number";
 }
@@ -93,6 +103,80 @@ export function buildTrailGeoJson(
       },
     ],
   };
+}
+
+export function buildMomentMarkerGroups(
+  moments: Moment[],
+  project: (coordinates: [number, number]) => { x: number; y: number },
+  pixelThreshold = 52,
+) {
+  const orderedMoments = getMomentsWithCoordinates(moments);
+  const workingGroups: Array<
+    MomentMarkerGroup & {
+      centroidX: number;
+      centroidY: number;
+      latitudeTotal: number;
+      longitudeTotal: number;
+    }
+  > = [];
+
+  orderedMoments.forEach((moment, index) => {
+    const latitude = moment.latitude as number;
+    const longitude = moment.longitude as number;
+    const projected = project([longitude, latitude]);
+    const order = index + 1;
+
+    const existingGroup = workingGroups.find((group) => {
+      const deltaX = projected.x - group.centroidX;
+      const deltaY = projected.y - group.centroidY;
+
+      return Math.hypot(deltaX, deltaY) <= pixelThreshold;
+    });
+
+    if (!existingGroup) {
+      workingGroups.push({
+        id: moment.id,
+        moments: [moment],
+        momentIds: [moment.id],
+        latitude,
+        longitude,
+        startOrder: order,
+        endOrder: order,
+        centroidX: projected.x,
+        centroidY: projected.y,
+        latitudeTotal: latitude,
+        longitudeTotal: longitude,
+      });
+      return;
+    }
+
+    existingGroup.moments.push(moment);
+    existingGroup.momentIds.push(moment.id);
+    existingGroup.endOrder = order;
+    existingGroup.latitudeTotal += latitude;
+    existingGroup.longitudeTotal += longitude;
+    existingGroup.latitude =
+      existingGroup.latitudeTotal / existingGroup.moments.length;
+    existingGroup.longitude =
+      existingGroup.longitudeTotal / existingGroup.moments.length;
+    existingGroup.centroidX =
+      (existingGroup.centroidX * (existingGroup.moments.length - 1) + projected.x) /
+      existingGroup.moments.length;
+    existingGroup.centroidY =
+      (existingGroup.centroidY * (existingGroup.moments.length - 1) + projected.y) /
+      existingGroup.moments.length;
+    existingGroup.id = existingGroup.momentIds.join(":");
+  });
+
+  return workingGroups.map((group) => ({
+    id: group.id,
+    moments: group.moments,
+    momentIds: group.momentIds,
+    latitude: group.latitude,
+    longitude: group.longitude,
+    startOrder: group.startOrder,
+    endOrder: group.endOrder,
+  }));
 }
 
 export function applyLocationPrivacy(

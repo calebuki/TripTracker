@@ -21,6 +21,7 @@ export interface TripRepository {
   getTripById(tripId: string): Promise<TripRecord | null>;
   getTripByShareSlug(shareSlug: string): Promise<TripRecord | null>;
   getTripByShareCode(shareCode: string): Promise<TripRecord | null>;
+  getShareSlugByCode(shareCode: string): Promise<string | null>;
   createMoment(input: CreateMomentInput): Promise<Moment>;
   updateMoment(momentId: string, input: UpdateMomentInput): Promise<Moment>;
   updateMomentVisibility(

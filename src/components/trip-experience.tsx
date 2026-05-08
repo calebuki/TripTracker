@@ -16,7 +16,12 @@ import { TripMap } from "@/components/trip-map";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useTravelerHomeTarget } from "@/hooks/use-traveler-home-target";
-import { applyLocationPrivacy, hasCoordinates } from "@/lib/map";
+import { useTripTraceAuth } from "@/hooks/use-triptrace-auth";
+import {
+  applyLocationPrivacy,
+  hasCoordinates,
+  type MomentMarkerGroup,
+} from "@/lib/map";
 import { getTripRepository } from "@/lib/repositories";
 import {
   filterMomentsByDay,
@@ -43,7 +48,13 @@ export function TripExperience({
   onRefresh,
   autoOpenCapture = false,
 }: TripExperienceProps) {
-  const travelerHome = useTravelerHomeTarget();
+  const { user, loading: authLoading, isDemoMode: authIsDemoMode } =
+    useTripTraceAuth();
+  const travelerHome = useTravelerHomeTarget({
+    user,
+    authLoading,
+    isDemoMode: authIsDemoMode,
+  });
   const shouldAutoOpenCapture =
     autoOpenCapture &&
     role === "owner" &&
@@ -67,6 +78,7 @@ export function TripExperience({
   const [shareOpen, setShareOpen] = useState(false);
   const [addMomentOpen, setAddMomentOpen] = useState(shouldAutoOpenCapture);
   const [manualFitCount, setManualFitCount] = useState(0);
+  const [markerGroups, setMarkerGroups] = useState<MomentMarkerGroup[]>([]);
   const filteredMoments = filterMomentsByDay(
     displayMoments,
     record.trip.timezone,
@@ -81,6 +93,15 @@ export function TripExperience({
       : null;
   const selectedMoment =
     filteredMoments.find((moment) => moment.id === activeSelectedMomentId) ?? null;
+  const selectedMomentGroup =
+    activeSelectedMomentId
+      ? markerGroups.find((group) =>
+          group.momentIds.includes(activeSelectedMomentId),
+        ) ?? null
+      : null;
+  const selectedSheetMoments = selectedMoment
+    ? selectedMomentGroup?.moments ?? [selectedMoment]
+    : [];
   const editingMoment =
     record.moments.find((moment) => moment.id === editingMomentId) ?? null;
   const dayOptions = getDayOptions(record.trip, displayMoments);
@@ -152,6 +173,7 @@ export function TripExperience({
             moments={mapMoments}
             selectedMomentId={activeSelectedMomentId}
             onSelectMoment={setSelectedMomentId}
+            onMomentGroupsChange={setMarkerGroups}
             fitKey={fitKey}
             className="min-h-[calc(100vh-1.5rem)]"
           />
@@ -289,10 +311,12 @@ export function TripExperience({
 
             <MomentBottomSheet
               trip={record.trip}
-              moment={selectedMoment}
+              moments={selectedSheetMoments}
+              selectedMomentId={activeSelectedMomentId}
               open={Boolean(activeSelectedMomentId)}
               canManage={role === "owner"}
               onClose={() => setSelectedMomentId(null)}
+              onSelectMoment={setSelectedMomentId}
               onEdit={(moment) => setEditingMomentId(moment.id)}
               onHide={hideMoment}
               onDelete={deleteMoment}

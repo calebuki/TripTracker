@@ -7,6 +7,57 @@ create table if not exists public.users (
   created_at timestamptz not null default now()
 );
 
+create or replace function public.sync_auth_user_to_public_user()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  insert into public.users (id, email, display_name, created_at)
+  values (
+    new.id,
+    coalesce(new.email, ''),
+    coalesce(
+      new.raw_user_meta_data ->> 'display_name',
+      new.raw_user_meta_data ->> 'full_name'
+    ),
+    coalesce(new.created_at, now())
+  )
+  on conflict (id) do update
+  set email = excluded.email,
+      display_name = coalesce(excluded.display_name, public.users.display_name);
+
+  return new;
+end;
+$$;
+
+drop trigger if exists on_auth_user_created on auth.users;
+create trigger on_auth_user_created
+after insert on auth.users
+for each row
+execute function public.sync_auth_user_to_public_user();
+
+drop trigger if exists on_auth_user_updated on auth.users;
+create trigger on_auth_user_updated
+after update of email, raw_user_meta_data on auth.users
+for each row
+execute function public.sync_auth_user_to_public_user();
+
+insert into public.users (id, email, display_name, created_at)
+select
+  id,
+  coalesce(email, ''),
+  coalesce(
+    raw_user_meta_data ->> 'display_name',
+    raw_user_meta_data ->> 'full_name'
+  ),
+  created_at
+from auth.users
+on conflict (id) do update
+set email = excluded.email,
+    display_name = coalesce(excluded.display_name, public.users.display_name);
+
 create table if not exists public.trips (
   id uuid primary key default gen_random_uuid(),
   owner_id uuid not null references public.users (id) on delete cascade,

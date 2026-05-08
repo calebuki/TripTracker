@@ -253,6 +253,13 @@ export function createDemoRepository(): TripRepository {
       );
       return trip ? buildTripRecord(database, trip) : null;
     },
+    async getShareSlugByCode(shareCode: string) {
+      const database = loadDatabase();
+      const trip = database.trips.find(
+        (entry) => entry.shareCode.toUpperCase() === shareCode.toUpperCase(),
+      );
+      return trip?.shareSlug ?? null;
+    },
     async createMoment(input: CreateMomentInput) {
       const database = loadDatabase();
       const trip = database.trips.find((entry) => entry.id === input.tripId);

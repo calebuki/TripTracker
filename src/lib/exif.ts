@@ -10,6 +10,15 @@ export interface ExtractedPhotoMetadata {
 export async function extractPhotoMetadata(
   file: File,
 ): Promise<ExtractedPhotoMetadata> {
+  if (file.type.startsWith("video/")) {
+    return {
+      latitude: null,
+      longitude: null,
+      takenAt: null,
+      metadataError: null,
+    };
+  }
+
   try {
     const [gps, details] = await Promise.all([
       exifr.gps(file).catch(() => null),

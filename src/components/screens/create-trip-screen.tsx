@@ -40,7 +40,11 @@ interface TripSetupLocation {
 export function CreateTripScreen() {
   const router = useRouter();
   const { user, loading, isDemoMode } = useTripTraceAuth();
-  const travelerHome = useTravelerHomeTarget();
+  const travelerHome = useTravelerHomeTarget({
+    user,
+    authLoading: loading,
+    isDemoMode,
+  });
   const [title, setTitle] = useState("Paris Maymester");
   const [description, setDescription] = useState(
     "A quiet map of the moments that made the trip.",
