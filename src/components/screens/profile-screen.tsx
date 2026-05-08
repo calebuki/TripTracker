@@ -4,10 +4,9 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { DateTime } from "luxon";
-import { Camera, LoaderCircle, LogOut, Play, Settings, User } from "lucide-react";
+import { LoaderCircle, LogOut, Play, Settings, User } from "lucide-react";
 import { toast } from "sonner";
 
-import { LoadingShell } from "@/components/loading-shell";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useTripTraceAuth } from "@/hooks/use-triptrace-auth";
@@ -67,7 +66,7 @@ export function ProfileScreen() {
     () => trips.filter((trip) => trip.endDate !== null),
     [trips],
   );
-  const pageLoading = authLoading || ((Boolean(user) || isDemoMode) && loadingTrips);
+  const tripsLoading = authLoading || loadingTrips;
 
   async function handleResumeTrip(trip: Trip) {
     setWorkingTripId(trip.id);
@@ -107,11 +106,7 @@ export function ProfileScreen() {
     }
   }
 
-  if (pageLoading) {
-    return <LoadingShell label="Loading your traveler profile..." />;
-  }
-
-  if (!user && !isDemoMode) {
+  if (!authLoading && !user && !isDemoMode) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-[var(--paper)] px-4">
         <Card className="w-full max-w-lg rounded-[34px]">
@@ -147,19 +142,12 @@ export function ProfileScreen() {
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            {activeTrip ? (
-              <Button asChild variant="secondary">
-                <Link href={`/trips/${activeTrip.id}?capture=1`}>
-                  <Camera className="h-4 w-4" />
-                  Open active trip
-                </Link>
-              </Button>
-            ) : (
+            {!tripsLoading && !activeTrip ? (
               <Button asChild variant="secondary">
                 <Link href="/trips/new">Create trip</Link>
               </Button>
-            )}
-            {!isDemoMode ? (
+            ) : null}
+            {!authLoading && user && !isDemoMode ? (
               <Button
                 disabled={signingOut}
                 onClick={() => void handleSignOut()}
@@ -193,12 +181,11 @@ export function ProfileScreen() {
         <section className="space-y-4">
           <div>
             <h2 className="text-2xl font-medium text-[var(--ink)]">Active trip</h2>
-            <p className="mt-1 text-sm text-slate-600">
-              Opening the app still jumps straight into this trip and starts with the camera flow.
-            </p>
           </div>
 
-          {activeTrip ? (
+          {tripsLoading ? (
+            <TripCardSkeleton />
+          ) : activeTrip ? (
             <TripCard
               trip={activeTrip}
               primaryActionHref={`/trips/${activeTrip.id}?capture=1`}
@@ -223,7 +210,12 @@ export function ProfileScreen() {
             </p>
           </div>
 
-          {pastTrips.length > 0 ? (
+          {tripsLoading ? (
+            <div className="grid gap-4">
+              <TripCardSkeleton />
+              <TripCardSkeleton />
+            </div>
+          ) : pastTrips.length > 0 ? (
             <div className="grid gap-4">
               {pastTrips.map((trip) => (
                 <TripCard
@@ -273,6 +265,26 @@ export function ProfileScreen() {
         </section>
       </div>
     </main>
+  );
+}
+
+function TripCardSkeleton() {
+  return (
+    <Card aria-hidden className="rounded-[30px]">
+      <CardContent className="flex flex-wrap items-start justify-between gap-4 p-5">
+        <div className="w-full max-w-sm space-y-3">
+          <div className="h-6 w-24 animate-pulse rounded-full bg-slate-200" />
+          <div className="space-y-2">
+            <div className="h-6 w-48 animate-pulse rounded-full bg-slate-200" />
+            <div className="h-4 w-36 animate-pulse rounded-full bg-slate-200" />
+          </div>
+        </div>
+        <div className="flex gap-2">
+          <div className="h-11 w-24 animate-pulse rounded-full bg-slate-200" />
+          <div className="h-11 w-32 animate-pulse rounded-full bg-slate-200" />
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 

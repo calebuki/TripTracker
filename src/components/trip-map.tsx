@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Map, {
   Layer,
   Marker,
@@ -125,9 +125,11 @@ export function TripMap({
 }: TripMapProps) {
   const mapRef = useRef<MapRef | null>(null);
   const latestMomentGroupsRef = useRef<MomentMarkerGroup[]>([]);
+  const [mapReady, setMapReady] = useState(false);
   const [momentGroups, setMomentGroups] = useState<MomentMarkerGroup[]>([]);
-  const center = getMapCenter(trip, moments);
-  const trail = buildTrailGeoJson(moments);
+  const center = useMemo(() => getMapCenter(trip, moments), [trip, moments]);
+  const bounds = useMemo(() => getMapBounds(moments), [moments]);
+  const trail = useMemo(() => buildTrailGeoJson(moments), [moments]);
 
   const publishMomentGroups = useCallback(
     (nextGroups: MomentMarkerGroup[]) => {
@@ -160,7 +162,7 @@ export function TripMap({
   useEffect(() => {
     const map = mapRef.current;
 
-    if (!map) {
+    if (!map || !mapReady) {
       return;
     }
 
@@ -173,8 +175,6 @@ export function TripMap({
       return;
     }
 
-    const bounds = getMapBounds(moments);
-
     if (bounds) {
       map.fitBounds(bounds, {
         padding: 64,
@@ -185,7 +185,7 @@ export function TripMap({
     }
 
     recomputeMomentGroups();
-  }, [moments, draftLocation, fitKey, recomputeMomentGroups]);
+  }, [bounds, draftLocation, fitKey, mapReady, recomputeMomentGroups]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -228,6 +228,7 @@ export function TripMap({
         mapStyle={publicEnv.mapStyleUrl}
         reuseMaps
         onLoad={() => {
+          setMapReady(true);
           recomputeMomentGroups();
         }}
         onClick={(event) => {

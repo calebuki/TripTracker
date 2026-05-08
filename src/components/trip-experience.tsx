@@ -1,17 +1,15 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { ChevronLeft, User } from "lucide-react";
 import { toast } from "sonner";
 
 import { AddMomentButton } from "@/components/add-moment-button";
-import { AddMomentDialog } from "@/components/add-moment-dialog";
 import { DaySelector } from "@/components/day-selector";
-import { EditMomentDetailsDialog } from "@/components/edit-moment-details-dialog";
 import { EmptyDayState } from "@/components/empty-day-state";
 import { MomentBottomSheet } from "@/components/moment-bottom-sheet";
-import { TripMap } from "@/components/trip-map";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useTravelerHomeTarget } from "@/hooks/use-traveler-home-target";
@@ -29,6 +27,39 @@ import {
   resolveInitialDayFilter,
 } from "@/lib/time";
 import type { DayFilter, Moment, RouteRole, TripRecord } from "@/types/triptrace";
+
+const AddMomentDialog = dynamic(
+  () =>
+    import("@/components/add-moment-dialog").then(
+      (module) => module.AddMomentDialog,
+    ),
+  { ssr: false },
+);
+
+const EditMomentDetailsDialog = dynamic(
+  () =>
+    import("@/components/edit-moment-details-dialog").then(
+      (module) => module.EditMomentDetailsDialog,
+    ),
+  { ssr: false },
+);
+
+const TripMap = dynamic(
+  () => import("@/components/trip-map").then((module) => module.TripMap),
+  {
+    loading: () => <TripMapFallback />,
+    ssr: false,
+  },
+);
+
+function TripMapFallback() {
+  return (
+    <div
+      aria-hidden
+      className="min-h-[calc(100vh-1.5rem)] overflow-hidden rounded-[30px] border border-black/5 bg-[#dfe7ef]"
+    />
+  );
+}
 
 interface TripExperienceProps {
   record: TripRecord;
@@ -195,9 +226,17 @@ export function TripExperience({
                     </h1>
                     {isDemoMode ? <Badge variant="accent">Demo mode</Badge> : null}
                   </div>
-                  <p className="mt-1 text-sm leading-6 text-slate-600">
-                    {dayHeadline}
-                  </p>
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                    <p className="text-sm leading-6 text-slate-600">
+                      {dayHeadline}
+                    </p>
+                    <Badge
+                      className="font-mono uppercase tracking-[0.12em]"
+                      variant="subtle"
+                    >
+                      Code {record.trip.shareCode}
+                    </Badge>
+                  </div>
                   {postingLockedToActiveTrip ? (
                     <p className="mt-2 text-sm leading-6 text-slate-600">
                       This past trip is view-only for new moments while{" "}
@@ -300,13 +339,15 @@ export function TripExperience({
 
       {role === "owner" ? (
         <>
-          <AddMomentDialog
-            trip={record.trip}
-            open={canAddMoments && addMomentOpen}
-            onOpenChange={setAddMomentOpen}
-            onSaved={onRefresh}
-            cameraFirst={autoOpenCapture}
-          />
+          {canAddMoments && addMomentOpen ? (
+            <AddMomentDialog
+              trip={record.trip}
+              open
+              onOpenChange={setAddMomentOpen}
+              onSaved={onRefresh}
+              cameraFirst={autoOpenCapture}
+            />
+          ) : null}
           {editingMoment ? (
             <EditMomentDetailsDialog
               key={editingMoment.id}
