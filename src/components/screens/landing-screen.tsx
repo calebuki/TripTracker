@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { ArrowRight, Compass, LoaderCircle, LogIn } from "lucide-react";
+import { ArrowRight, LoaderCircle, LogIn } from "lucide-react";
 import { toast } from "sonner";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -127,7 +127,7 @@ export function LandingScreen() {
       <Card className="relative w-full max-w-xl overflow-hidden rounded-[36px] bg-[#f9f5ee]">
         <Link
           aria-label="Traveler login"
-          className="absolute right-6 top-6 z-20 inline-flex items-center gap-2 rounded-full bg-[var(--ink)] px-4 py-3 text-sm font-medium text-white shadow-[0_18px_45px_rgba(15,23,42,0.18)] transition hover:bg-[var(--ink-strong)]"
+          className="absolute right-5 top-5 z-20 inline-flex items-center gap-2 rounded-full bg-white px-4 py-3 text-sm font-semibold text-[var(--ink)] shadow-[0_18px_45px_rgba(15,23,42,0.16),inset_0_0_0_1px_rgba(15,23,42,0.08)] transition hover:bg-[var(--paper)] sm:right-6 sm:top-6"
           href="/auth"
           title="Traveler login"
         >
@@ -135,11 +135,7 @@ export function LandingScreen() {
           Traveler login
         </Link>
 
-        <CardHeader className="relative z-10 space-y-4 p-8 sm:p-10">
-          <div className="inline-flex w-fit items-center gap-2 rounded-full bg-white px-3 py-1.5 text-xs font-medium uppercase tracking-[0.18em] text-slate-500 shadow-[0_10px_30px_rgba(15,23,42,0.08)]">
-            <Compass className="h-3.5 w-3.5" />
-            Private travel journal
-          </div>
+        <CardHeader className="relative z-10 space-y-4 p-8 pt-24 sm:p-10 sm:pt-24">
           <CardTitle className="text-5xl leading-none sm:text-6xl">
             Crumbs
           </CardTitle>

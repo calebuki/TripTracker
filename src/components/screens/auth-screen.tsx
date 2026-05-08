@@ -122,7 +122,11 @@ export function AuthScreen() {
                 type="email"
                 value={email}
               />
-              <Button disabled={sending} onClick={() => void handleSendLink()}>
+              <Button
+                className="w-full bg-[var(--ink)] text-white hover:bg-[var(--ink-strong)]"
+                disabled={sending}
+                onClick={() => void handleSendLink()}
+              >
                 {sending ? "Sending magic link..." : "Send magic link"}
               </Button>
             </>
