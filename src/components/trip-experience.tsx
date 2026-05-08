@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { ChevronLeft, Map, Share2, SlidersHorizontal, User } from "lucide-react";
 import { toast } from "sonner";
 
@@ -59,17 +59,21 @@ export function TripExperience({
     autoOpenCapture &&
     role === "owner" &&
     !record.trip.endDate;
-  const visibleMoments = record.moments.filter(
-    (moment) => moment.visibility === "visible",
+  const visibleMoments = useMemo(
+    () => record.moments.filter((moment) => moment.visibility === "visible"),
+    [record.moments],
   );
-  const displayMoments =
-    role === "viewer"
-      ? applyLocationPrivacy(
-          record.trip,
-          visibleMoments,
-          record.trip.locationPrivacyMode,
-        )
-      : visibleMoments;
+  const displayMoments = useMemo(
+    () =>
+      role === "viewer"
+        ? applyLocationPrivacy(
+            record.trip,
+            visibleMoments,
+            record.trip.locationPrivacyMode,
+          )
+        : visibleMoments,
+    [record.trip, role, visibleMoments],
+  );
   const [dayFilter, setDayFilter] = useState<DayFilter>(() =>
     resolveInitialDayFilter(record.trip, displayMoments),
   );
@@ -79,13 +83,18 @@ export function TripExperience({
   const [addMomentOpen, setAddMomentOpen] = useState(shouldAutoOpenCapture);
   const [manualFitCount, setManualFitCount] = useState(0);
   const [markerGroups, setMarkerGroups] = useState<MomentMarkerGroup[]>([]);
-  const filteredMoments = filterMomentsByDay(
-    displayMoments,
-    record.trip.timezone,
-    dayFilter,
+  const filteredMoments = useMemo(
+    () => filterMomentsByDay(displayMoments, record.trip.timezone, dayFilter),
+    [dayFilter, displayMoments, record.trip.timezone],
   );
-  const mapMoments = filteredMoments.filter(hasCoordinates);
-  const offMapMoments = filteredMoments.filter((moment) => !hasCoordinates(moment));
+  const mapMoments = useMemo(
+    () => filteredMoments.filter(hasCoordinates),
+    [filteredMoments],
+  );
+  const offMapMoments = useMemo(
+    () => filteredMoments.filter((moment) => !hasCoordinates(moment)),
+    [filteredMoments],
+  );
   const activeSelectedMomentId =
     selectedMomentId &&
     filteredMoments.some((moment) => moment.id === selectedMomentId)

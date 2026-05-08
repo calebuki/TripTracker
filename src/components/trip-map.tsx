@@ -85,6 +85,32 @@ interface TripMapProps {
   onMomentGroupsChange?: (groups: MomentMarkerGroup[]) => void;
 }
 
+function areMomentMarkerGroupsEqual(
+  left: MomentMarkerGroup[],
+  right: MomentMarkerGroup[],
+) {
+  if (left.length !== right.length) {
+    return false;
+  }
+
+  return left.every((leftGroup, index) => {
+    const rightGroup = right[index];
+
+    return (
+      rightGroup &&
+      leftGroup.id === rightGroup.id &&
+      leftGroup.latitude === rightGroup.latitude &&
+      leftGroup.longitude === rightGroup.longitude &&
+      leftGroup.startOrder === rightGroup.startOrder &&
+      leftGroup.endOrder === rightGroup.endOrder &&
+      leftGroup.momentIds.length === rightGroup.momentIds.length &&
+      leftGroup.momentIds.every(
+        (momentId, momentIndex) => momentId === rightGroup.momentIds[momentIndex],
+      )
+    );
+  });
+}
+
 export function TripMap({
   trip,
   moments,
@@ -99,9 +125,23 @@ export function TripMap({
   onMomentGroupsChange,
 }: TripMapProps) {
   const mapRef = useRef<MapRef | null>(null);
+  const latestMomentGroupsRef = useRef<MomentMarkerGroup[]>([]);
   const [momentGroups, setMomentGroups] = useState<MomentMarkerGroup[]>([]);
   const center = getMapCenter(trip, moments);
   const trail = buildTrailGeoJson(moments);
+
+  const publishMomentGroups = useCallback(
+    (nextGroups: MomentMarkerGroup[]) => {
+      if (areMomentMarkerGroupsEqual(latestMomentGroupsRef.current, nextGroups)) {
+        return;
+      }
+
+      latestMomentGroupsRef.current = nextGroups;
+      setMomentGroups(nextGroups);
+      onMomentGroupsChange?.(nextGroups);
+    },
+    [onMomentGroupsChange],
+  );
 
   const recomputeMomentGroups = useCallback(() => {
     const map = mapRef.current?.getMap();
@@ -115,9 +155,8 @@ export function TripMap({
       (coordinates) => map.project(coordinates),
     );
 
-    setMomentGroups(nextGroups);
-    onMomentGroupsChange?.(nextGroups);
-  }, [moments, onMomentGroupsChange]);
+    publishMomentGroups(nextGroups);
+  }, [moments, publishMomentGroups]);
 
   useEffect(() => {
     const map = mapRef.current;
