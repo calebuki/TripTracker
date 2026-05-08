@@ -234,7 +234,7 @@ export function TripExperience({
                       className="font-mono uppercase tracking-[0.12em]"
                       variant="subtle"
                     >
-                      Crumb {record.trip.shareCode}
+                      {record.trip.shareCode}
                     </Badge>
                   </div>
                   {postingLockedToActiveTrip ? (
