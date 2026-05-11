@@ -222,7 +222,7 @@ export function TripMap({
   return (
     <div
       className={cn(
-        "overflow-hidden rounded-[30px] border border-black/5 bg-[#dfe7ef]",
+        "overflow-hidden rounded-[24px] border border-black/5 bg-[#dfe7ef]",
         heightClassName,
         className,
       )}

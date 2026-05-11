@@ -56,7 +56,7 @@ function TripMapFallback() {
   return (
     <div
       aria-hidden
-      className="min-h-[calc(100vh-1.5rem)] overflow-hidden rounded-[30px] border border-black/5 bg-[#dfe7ef]"
+      className="min-h-[calc(100vh-1.5rem)] overflow-hidden rounded-[24px] border border-black/5 bg-[#dfe7ef]"
     />
   );
 }
@@ -197,7 +197,7 @@ export function TripExperience({
   return (
     <div className="min-h-screen bg-[var(--paper)] px-3 py-3 sm:px-4 sm:py-4">
       <div className="mx-auto max-w-[1480px]">
-        <div className="relative overflow-hidden rounded-[34px] border border-black/5 bg-white shadow-[0_28px_90px_rgba(15,23,42,0.08)]">
+        <div className="relative overflow-hidden rounded-[26px] border border-black/5 bg-white shadow-[0_28px_90px_rgba(15,23,42,0.08)]">
           <TripMap
             trip={record.trip}
             moments={mapMoments}
