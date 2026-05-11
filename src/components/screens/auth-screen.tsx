@@ -18,6 +18,7 @@ export function AuthScreen() {
   const router = useRouter();
   const { user, loading: authLoading, isDemoMode, processingCallback, error } =
     useCrumbsAuth();
+  const isOpeningTrip = Boolean(user || processingCallback || authLoading);
   const travelerHome = useTravelerHomeTarget({
     user,
     authLoading,
@@ -91,23 +92,20 @@ export function AuthScreen() {
             Magic link sign-in
           </div>
           <CardTitle className="text-4xl">
-            {user || processingCallback || authLoading
-              ? "Opening your trip"
-              : "Traveler sign-in"}
+            {isOpeningTrip ? "Opening your trip" : "Traveler sign-in"}
           </CardTitle>
-          <CardDescription>
-            {user || processingCallback || authLoading
-              ? "Crumbs is jumping back into your traveler flow."
-              : "Use a simple email magic link so the traveler can add moments quickly from a phone."}
-          </CardDescription>
+          {isOpeningTrip ? null : (
+            <CardDescription>
+              Use a simple email magic link so the traveler can add moments quickly
+              from a phone.
+            </CardDescription>
+          )}
         </CardHeader>
         <CardContent className="space-y-4">
-          {user || processingCallback || authLoading ? (
+          {isOpeningTrip ? (
             <div className="flex items-center gap-3 rounded-[24px] bg-[var(--paper)] px-4 py-4 text-sm text-slate-600">
               <LoaderCircle className="h-4 w-4 animate-spin text-[var(--ink)]" />
-              {error ??
-                travelerHome.error ??
-                "Loading your current trip and preparing the camera-first view."}
+              {error ?? travelerHome.error ?? "Loading"}
             </div>
           ) : (
             <>
