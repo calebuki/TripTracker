@@ -2,7 +2,7 @@
 
 import { Film, MessageSquareText } from "lucide-react";
 
-import { isMomentVideo } from "@/lib/media";
+import { getSupabaseImageTransformUrl, isMomentVideo } from "@/lib/media";
 import { cn } from "@/lib/utils";
 import type { Moment } from "@/types/crumbs";
 
@@ -25,6 +25,10 @@ export function MomentMarker({
 }: MomentMarkerProps) {
   const hasMedia = moment.type === "photo" && moment.imageUrl;
   const isVideo = hasMedia && isMomentVideo(moment);
+  const markerImageUrl = getSupabaseImageTransformUrl(moment.imageUrl, {
+    width: 112,
+    height: 112,
+  });
   const orderLabel =
     clusterSize > 1 && endOrder && endOrder !== order
       ? `${order}-${endOrder}`
@@ -51,7 +55,17 @@ export function MomentMarker({
           <img
             alt={moment.caption ?? moment.placeName ?? "Trip moment photo"}
             className="h-full w-full object-cover"
-            src={moment.imageUrl ?? ""}
+            decoding="async"
+            fetchPriority={selected ? "high" : "low"}
+            loading="lazy"
+            onError={(event) => {
+              const originalUrl = moment.imageUrl ?? "";
+
+              if (originalUrl && event.currentTarget.src !== originalUrl) {
+                event.currentTarget.src = originalUrl;
+              }
+            }}
+            src={markerImageUrl}
           />
         </div>
       ) : hasMedia ? (

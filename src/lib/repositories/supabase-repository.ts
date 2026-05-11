@@ -13,6 +13,7 @@ import type {
   CreateTripInput,
   Moment,
   Trip,
+  TripRecord,
   CrumbsUser,
   UpdateMomentInput,
   UpdateTripSettingsInput,
@@ -20,11 +21,18 @@ import type {
 
 type TripRow = Database["public"]["Tables"]["trips"]["Row"];
 type MomentRow = Database["public"]["Tables"]["moments"]["Row"];
+type TripWithMomentsRow = TripRow & {
+  moments?: MomentRow[] | null;
+};
 
 const authRequestTimeoutMs = 8_000;
 const queryRequestTimeoutMs = 8_000;
 const requestTimeoutMessage =
   "Crumbs took too long to reach Supabase. Please try again.";
+const tripRecordSelect = `
+  *,
+  moments (*)
+`;
 
 function formatSupabaseError(error: { code?: string; message?: string } | null) {
   if (
@@ -109,6 +117,13 @@ function mapMoment(row: MomentRow): Moment {
     visibility: row.visibility,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
+  };
+}
+
+function mapTripRecord(row: TripWithMomentsRow): TripRecord {
+  return {
+    trip: mapTrip(row),
+    moments: sortMomentsChronologically((row.moments ?? []).map(mapMoment)),
   };
 }
 
@@ -213,23 +228,6 @@ async function getAuthenticatedUser() {
 
 async function requireUser() {
   return getAuthenticatedUser();
-}
-
-async function loadMoments(tripId: string) {
-  const supabase = getSupabaseBrowserClient();
-  const { data, error } = await withQueryTimeout((signal) =>
-    supabase
-      .from("moments")
-      .select("*")
-      .eq("trip_id", tripId)
-      .abortSignal(signal),
-  );
-
-  if (error) {
-    throw new Error(formatSupabaseError(error));
-  }
-
-  return sortMomentsChronologically((data ?? []).map(mapMoment));
 }
 
 function isActiveTripConflict(error: { code?: string; message?: string } | null) {
@@ -449,7 +447,7 @@ export function createSupabaseRepository(): TripRepository {
       const { data, error } = await withQueryTimeout((signal) =>
         supabase
           .from("trips")
-          .select("*")
+          .select(tripRecordSelect)
           .eq("id", tripId)
           .eq("owner_id", user.id)
           .abortSignal(signal)
@@ -461,17 +459,14 @@ export function createSupabaseRepository(): TripRepository {
         return null;
       }
 
-      return {
-        trip: mapTrip(data),
-        moments: await loadMoments(tripId),
-      };
+      return mapTripRecord(data as TripWithMomentsRow);
     },
     async getTripByShareSlug(shareSlug: string) {
       const supabase = getSupabaseBrowserClient();
       const { data, error } = await withQueryTimeout((signal) =>
         supabase
           .from("trips")
-          .select("*")
+          .select(tripRecordSelect)
           .eq("share_slug", shareSlug)
           .abortSignal(signal)
           .single(),
@@ -481,17 +476,14 @@ export function createSupabaseRepository(): TripRepository {
         return null;
       }
 
-      return {
-        trip: mapTrip(data),
-        moments: await loadMoments(data.id),
-      };
+      return mapTripRecord(data as TripWithMomentsRow);
     },
     async getTripByShareCode(shareCode: string) {
       const supabase = getSupabaseBrowserClient();
       const { data, error } = await withQueryTimeout((signal) =>
         supabase
           .from("trips")
-          .select("*")
+          .select(tripRecordSelect)
           .eq("share_code", shareCode.toUpperCase())
           .abortSignal(signal)
           .single(),
@@ -501,10 +493,7 @@ export function createSupabaseRepository(): TripRepository {
         return null;
       }
 
-      return {
-        trip: mapTrip(data),
-        moments: await loadMoments(data.id),
-      };
+      return mapTripRecord(data as TripWithMomentsRow);
     },
     async getShareSlugByCode(shareCode: string) {
       const supabase = getSupabaseBrowserClient();

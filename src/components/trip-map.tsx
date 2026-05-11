@@ -124,6 +124,7 @@ export function TripMap({
   onMomentGroupsChange,
 }: TripMapProps) {
   const mapRef = useRef<MapRef | null>(null);
+  const didFitInitialViewRef = useRef(false);
   const latestMomentGroupsRef = useRef<MomentMarkerGroup[]>([]);
   const [mapReady, setMapReady] = useState(false);
   const [momentGroups, setMomentGroups] = useState<MomentMarkerGroup[]>([]);
@@ -176,14 +177,25 @@ export function TripMap({
     }
 
     if (bounds) {
+      const fitDuration = didFitInitialViewRef.current ? 900 : 0;
+
       map.fitBounds(bounds, {
         padding: 64,
-        duration: 900,
+        duration: fitDuration,
         maxZoom: 14,
       });
+      didFitInitialViewRef.current = true;
+
+      if (fitDuration === 0) {
+        window.requestAnimationFrame(() => {
+          recomputeMomentGroups();
+        });
+      }
+
       return;
     }
 
+    didFitInitialViewRef.current = true;
     recomputeMomentGroups();
   }, [bounds, draftLocation, fitKey, mapReady, recomputeMomentGroups]);
 
