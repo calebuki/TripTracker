@@ -75,6 +75,14 @@ function MomentComments({
   const visibleComments = comments ?? [];
   const loading = comments === null;
 
+  function isMissingCommentsTableError(error: unknown) {
+    return (
+      error instanceof Error &&
+      error.message.includes("moment_comments") &&
+      error.message.includes("schema cache")
+    );
+  }
+
   useEffect(() => {
     let mounted = true;
 
@@ -90,11 +98,18 @@ function MomentComments({
       })
       .catch((error) => {
         if (mounted) {
-          toast.error(
-            error instanceof Error
-              ? error.message
-              : "Crumbs could not load comments.",
-          );
+          setCommentsResult({
+            momentId: moment.id,
+            comments: [],
+          });
+
+          if (!isMissingCommentsTableError(error)) {
+            toast.error(
+              error instanceof Error
+                ? error.message
+                : "Crumbs could not load comments.",
+            );
+          }
         }
       });
 
