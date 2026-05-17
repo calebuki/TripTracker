@@ -42,7 +42,6 @@ interface MomentBottomSheetProps {
   selectedMomentId: string | null;
   open: boolean;
   canManage?: boolean;
-  carouselDescription?: string;
   carouselTitle?: string;
   onClose: () => void;
   onSelectMoment?: (momentId: string) => void;
@@ -448,7 +447,6 @@ export function MomentBottomSheet({
   selectedMomentId,
   open,
   canManage = false,
-  carouselDescription = "Swipe left or right to follow them in chronological order.",
   carouselTitle,
   onClose,
   onSelectMoment,
@@ -516,9 +514,6 @@ export function MomentBottomSheet({
                   <div>
                     <p className="text-xs uppercase tracking-[0.18em] text-slate-500">
                       {carouselTitle ?? `${moments.length} moments in this spot`}
-                    </p>
-                    <p className="mt-1 text-sm text-slate-600">
-                      {carouselDescription}
                     </p>
                   </div>
                   <div className="flex items-center gap-1">

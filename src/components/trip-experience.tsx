@@ -58,7 +58,7 @@ function TripMapFallback() {
   return (
     <div
       aria-hidden
-      className="min-h-[calc(100vh-1.5rem)] overflow-hidden rounded-[24px] border border-black/5 bg-[#dfe7ef]"
+      className="h-[100dvh] min-h-[100dvh] overflow-hidden bg-[#dfe7ef]"
     />
   );
 }
@@ -217,16 +217,17 @@ export function TripExperience({
   }
 
   return (
-    <div className="min-h-screen bg-[var(--paper)] px-3 py-3 sm:px-4 sm:py-4">
-      <div className="mx-auto max-w-[1480px]">
-        <div className="relative overflow-hidden rounded-[26px] border border-black/5 bg-white shadow-[0_28px_90px_rgba(15,23,42,0.08)]">
+    <div className="h-[100dvh] overflow-hidden bg-[var(--paper)]">
+      <div className="h-full w-full">
+        <div className="relative h-full w-full overflow-hidden bg-white">
           <TripMap
             trip={record.trip}
             moments={mapMoments}
             selectedMomentId={activeSelectedMomentId}
             onSelectMoment={selectSpotMoment}
             onMomentGroupsChange={setMarkerGroups}
-            className="min-h-[calc(100vh-1.5rem)]"
+            heightClassName="h-[100dvh] min-h-[100dvh]"
+            className="rounded-none border-0"
           />
 
           <div className="pointer-events-none absolute inset-0">
@@ -364,11 +365,6 @@ export function TripExperience({
               selectedMomentId={activeSelectedMomentId}
               open={Boolean(activeSelectedMomentId)}
               canManage={role === "owner"}
-              carouselDescription={
-                momentSheetMode === "timeline"
-                  ? "Swipe left or right to follow the day oldest to newest."
-                  : undefined
-              }
               carouselTitle={
                 momentSheetMode === "timeline"
                   ? `${selectedSheetMoments.length} moments in this view`
