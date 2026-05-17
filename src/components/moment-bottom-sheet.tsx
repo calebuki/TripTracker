@@ -1,6 +1,13 @@
 "use client";
 
-import { type FormEvent, useEffect, useRef, useState } from "react";
+import {
+  type FormEvent,
+  type TouchEvent,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import {
   ChevronLeft,
   ChevronRight,
@@ -376,12 +383,67 @@ function MomentSheetSlide({
 }
 
 function MomentPhotoViewer({
-  moment,
+  activeMomentId,
+  moments,
   onClose,
+  onSelectMoment,
 }: {
-  moment: Moment | null;
+  activeMomentId: string | null;
+  moments: Moment[];
   onClose: () => void;
+  onSelectMoment: (momentId: string) => void;
 }) {
+  const touchStartXRef = useRef<number | null>(null);
+  const activeMomentIndex = moments.findIndex(
+    (moment) => moment.id === activeMomentId,
+  );
+  const activeIndex = Math.max(0, activeMomentIndex);
+  const moment = activeMomentIndex >= 0 ? moments[activeIndex] ?? null : null;
+  const hasMultiplePhotos = moments.length > 1;
+  const canSelectPrevious = hasMultiplePhotos && activeIndex > 0;
+  const canSelectNext = hasMultiplePhotos && activeIndex < moments.length - 1;
+
+  const selectPhotoAtIndex = useCallback(
+    (nextIndex: number) => {
+      const nextMoment = moments[nextIndex];
+
+      if (!nextMoment) {
+        return;
+      }
+
+      onSelectMoment(nextMoment.id);
+    },
+    [moments, onSelectMoment],
+  );
+
+  function handleTouchStart(event: TouchEvent<HTMLDivElement>) {
+    touchStartXRef.current = event.touches[0]?.clientX ?? null;
+  }
+
+  function handleTouchEnd(event: TouchEvent<HTMLDivElement>) {
+    const startX = touchStartXRef.current;
+    const endX = event.changedTouches[0]?.clientX;
+    touchStartXRef.current = null;
+
+    if (startX === null || endX === undefined) {
+      return;
+    }
+
+    const deltaX = endX - startX;
+
+    if (Math.abs(deltaX) < 48) {
+      return;
+    }
+
+    if (deltaX > 0 && canSelectPrevious) {
+      selectPhotoAtIndex(activeIndex - 1);
+    }
+
+    if (deltaX < 0 && canSelectNext) {
+      selectPhotoAtIndex(activeIndex + 1);
+    }
+  }
+
   useEffect(() => {
     if (!moment) {
       return;
@@ -391,6 +453,14 @@ function MomentPhotoViewer({
       if (event.key === "Escape") {
         onClose();
       }
+
+      if (event.key === "ArrowLeft" && canSelectPrevious) {
+        selectPhotoAtIndex(activeIndex - 1);
+      }
+
+      if (event.key === "ArrowRight" && canSelectNext) {
+        selectPhotoAtIndex(activeIndex + 1);
+      }
     }
 
     window.addEventListener("keydown", handleKeyDown);
@@ -398,7 +468,14 @@ function MomentPhotoViewer({
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [moment, onClose]);
+  }, [
+    activeIndex,
+    canSelectNext,
+    canSelectPrevious,
+    moment,
+    onClose,
+    selectPhotoAtIndex,
+  ]);
 
   if (!moment?.imageUrl) {
     return null;
@@ -409,6 +486,8 @@ function MomentPhotoViewer({
       aria-label="Full-screen photo"
       aria-modal="true"
       className="pointer-events-auto fixed inset-0 z-50 flex items-center justify-center bg-black/95 p-3 text-white sm:p-6"
+      onTouchEnd={handleTouchEnd}
+      onTouchStart={handleTouchStart}
       role="dialog"
     >
       <button
@@ -431,10 +510,41 @@ function MomentPhotoViewer({
         <X className="h-5 w-5" />
         <span className="sr-only">Close full-screen photo</span>
       </Button>
+      {hasMultiplePhotos ? (
+        <>
+          <Button
+            className="absolute left-3 top-1/2 z-20 h-11 w-11 -translate-y-1/2 bg-white/10 text-white hover:bg-white/20 disabled:bg-white/5 sm:left-5 sm:h-12 sm:w-12"
+            disabled={!canSelectPrevious}
+            onClick={() => selectPhotoAtIndex(activeIndex - 1)}
+            size="icon"
+            title="Previous photo"
+            type="button"
+            variant="ghost"
+          >
+            <ChevronLeft className="h-6 w-6" />
+            <span className="sr-only">Previous photo</span>
+          </Button>
+          <Button
+            className="absolute right-3 top-1/2 z-20 h-11 w-11 -translate-y-1/2 bg-white/10 text-white hover:bg-white/20 disabled:bg-white/5 sm:right-5 sm:h-12 sm:w-12"
+            disabled={!canSelectNext}
+            onClick={() => selectPhotoAtIndex(activeIndex + 1)}
+            size="icon"
+            title="Next photo"
+            type="button"
+            variant="ghost"
+          >
+            <ChevronRight className="h-6 w-6" />
+            <span className="sr-only">Next photo</span>
+          </Button>
+          <div className="absolute bottom-[calc(env(safe-area-inset-bottom)+1rem)] left-1/2 z-20 -translate-x-1/2 rounded-full bg-white/10 px-3 py-1 text-sm font-medium text-white backdrop-blur-sm">
+            {activeIndex + 1} / {moments.length}
+          </div>
+        </>
+      ) : null}
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         alt={moment.caption ?? moment.placeName ?? "Trip photo"}
-        className="relative z-10 max-h-[calc(100dvh-1.5rem)] max-w-full object-contain sm:max-h-[calc(100dvh-3rem)]"
+        className="relative z-10 max-h-[calc(100dvh-1.5rem)] max-w-[calc(100vw-1.5rem)] object-contain sm:max-h-[calc(100dvh-3rem)] sm:max-w-[calc(100vw-8rem)]"
         src={moment.imageUrl}
       />
     </div>
@@ -455,13 +565,19 @@ export function MomentBottomSheet({
   onDelete,
 }: MomentBottomSheetProps) {
   const scrollerRef = useRef<HTMLDivElement | null>(null);
-  const [photoViewerMoment, setPhotoViewerMoment] = useState<Moment | null>(null);
+  const [photoViewerMomentId, setPhotoViewerMomentId] = useState<string | null>(null);
   const selectedIndex = Math.max(
     0,
     moments.findIndex((moment) => moment.id === selectedMomentId),
   );
   const activeMoment = moments[selectedIndex] ?? null;
   const hasMultipleMoments = moments.length > 1;
+  const photoViewerMoments = moments.filter(
+    (moment) =>
+      moment.type === "photo" &&
+      Boolean(moment.imageUrl) &&
+      !isMomentVideo(moment),
+  );
 
   useEffect(() => {
     const scroller = scrollerRef.current;
@@ -587,7 +703,7 @@ export function MomentBottomSheet({
                     onDelete={onDelete}
                     onEdit={onEdit}
                     onHide={onHide}
-                    onOpenPhotoViewer={setPhotoViewerMoment}
+                    onOpenPhotoViewer={(moment) => setPhotoViewerMomentId(moment.id)}
                     trip={trip}
                   />
                 ))}
@@ -597,8 +713,10 @@ export function MomentBottomSheet({
         </div>
       </div>
       <MomentPhotoViewer
-        moment={photoViewerMoment}
-        onClose={() => setPhotoViewerMoment(null)}
+        activeMomentId={photoViewerMomentId}
+        moments={photoViewerMoments}
+        onClose={() => setPhotoViewerMomentId(null)}
+        onSelectMoment={setPhotoViewerMomentId}
       />
     </>
   );
