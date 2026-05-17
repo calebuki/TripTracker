@@ -134,6 +134,34 @@ create table if not exists public.moments (
   updated_at timestamptz not null default now()
 );
 
+create table if not exists public.trip_commenters (
+  id uuid primary key default gen_random_uuid(),
+  trip_id uuid not null references public.trips (id) on delete cascade,
+  token_hash text not null,
+  display_number integer not null check (display_number > 0),
+  created_at timestamptz not null default now(),
+  unique (trip_id, token_hash),
+  unique (trip_id, display_number)
+);
+
+create table if not exists public.moment_comments (
+  id uuid primary key default gen_random_uuid(),
+  trip_id uuid not null references public.trips (id) on delete cascade,
+  moment_id uuid not null references public.moments (id) on delete cascade,
+  commenter_id uuid references public.trip_commenters (id) on delete set null,
+  author_id uuid references public.users (id) on delete set null,
+  body text not null check (
+    length(trim(body)) > 0
+    and length(trim(body)) <= 1000
+  ),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  check (
+    (commenter_id is not null and author_id is null)
+    or (commenter_id is null and author_id is not null)
+  )
+);
+
 create or replace function public.touch_updated_at()
 returns trigger
 language plpgsql
@@ -169,6 +197,12 @@ before update on public.moments
 for each row
 execute function public.touch_updated_at();
 
+drop trigger if exists touch_moment_comments_updated_at on public.moment_comments;
+create trigger touch_moment_comments_updated_at
+before update on public.moment_comments
+for each row
+execute function public.touch_updated_at();
+
 drop trigger if exists touch_parent_trip_from_moments on public.moments;
 create trigger touch_parent_trip_from_moments
 after insert or update or delete on public.moments
@@ -183,11 +217,17 @@ create index if not exists trips_share_slug_idx on public.trips (share_slug);
 create index if not exists trips_share_code_idx on public.trips (share_code);
 create index if not exists moments_trip_id_idx on public.moments (trip_id);
 create index if not exists moments_trip_id_taken_at_idx on public.moments (trip_id, taken_at, posted_at);
+create index if not exists trip_commenters_trip_id_idx on public.trip_commenters (trip_id);
+create index if not exists moment_comments_moment_id_created_at_idx
+  on public.moment_comments (moment_id, created_at);
+create index if not exists moment_comments_trip_id_idx on public.moment_comments (trip_id);
 
 alter table public.users enable row level security;
 alter table public.trips enable row level security;
 alter table public.trip_members enable row level security;
 alter table public.moments enable row level security;
+alter table public.trip_commenters enable row level security;
+alter table public.moment_comments enable row level security;
 
 drop policy if exists "Users can read themselves" on public.users;
 create policy "Users can read themselves"

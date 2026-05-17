@@ -58,6 +58,9 @@ Public Supabase project URL.
 `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
 Public Supabase browser key. This app also still accepts the legacy `NEXT_PUBLIC_SUPABASE_ANON_KEY` name for backward compatibility.
 
+`SUPABASE_SECRET_KEY`
+Server-only Supabase secret or service role key used by the anonymous comment API to assign stable viewer numbers. Never prefix this with `NEXT_PUBLIC_`.
+
 `NEXT_PUBLIC_CRUMBS_STORAGE_BUCKET`
 Storage bucket for uploaded photo moments. Defaults to `trip-moments`.
 

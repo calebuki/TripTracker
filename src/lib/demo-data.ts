@@ -1,12 +1,18 @@
 import { DateTime } from "luxon";
 
 import { DEFAULT_PUBLISH_DELAY_HOURS } from "@/lib/trip-sharing";
-import type { Moment, Trip, TripRecord, CrumbsUser } from "@/types/crumbs";
+import type { Moment, MomentComment, Trip, TripRecord, CrumbsUser } from "@/types/crumbs";
 
 export interface DemoDatabase {
   users: CrumbsUser[];
   trips: Trip[];
   moments: Moment[];
+  comments: MomentComment[];
+  commenters: {
+    tripId: string;
+    token: string;
+    displayNumber: number;
+  }[];
 }
 
 export const demoOwner: CrumbsUser = {
@@ -190,6 +196,8 @@ export function createDemoDatabase(): DemoDatabase {
     users: [demoOwner],
     trips: [trip],
     moments,
+    comments: [],
+    commenters: [],
   };
 }
 

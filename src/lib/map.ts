@@ -8,7 +8,6 @@ const defaultParisCenter = {
   latitude: 48.8566,
   longitude: 2.3522,
 };
-type Coordinate = [number, number];
 
 export interface MomentMarkerGroup {
   id: string;
@@ -88,12 +87,10 @@ export function buildTrailGeoJson(
     };
   }
 
-  const coordinates = softenTrailCoordinates(
-    points.map((moment) => [
-      moment.longitude as number,
-      moment.latitude as number,
-    ]),
-  );
+  const coordinates = points.map((moment) => [
+    moment.longitude as number,
+    moment.latitude as number,
+  ]);
 
   return {
     type: "FeatureCollection",
@@ -108,38 +105,6 @@ export function buildTrailGeoJson(
       },
     ],
   };
-}
-
-function interpolateCoordinate(
-  start: Coordinate,
-  end: Coordinate,
-  amount: number,
-): Coordinate {
-  return [
-    start[0] + (end[0] - start[0]) * amount,
-    start[1] + (end[1] - start[1]) * amount,
-  ];
-}
-
-function softenTrailCoordinates(coordinates: Coordinate[]): Coordinate[] {
-  if (coordinates.length < 3) {
-    return coordinates;
-  }
-
-  const softened: Coordinate[] = [coordinates[0]!];
-
-  for (let index = 1; index < coordinates.length - 1; index += 1) {
-    const previous = coordinates[index - 1]!;
-    const current = coordinates[index]!;
-    const next = coordinates[index + 1]!;
-
-    softened.push(interpolateCoordinate(current, previous, 0.14));
-    softened.push(interpolateCoordinate(current, next, 0.14));
-  }
-
-  softened.push(coordinates[coordinates.length - 1]!);
-
-  return softened;
 }
 
 export function buildMomentMarkerGroups(

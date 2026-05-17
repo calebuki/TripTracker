@@ -3,7 +3,7 @@
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { ChevronLeft, User } from "lucide-react";
+import { ChevronLeft, Images, User } from "lucide-react";
 import { toast } from "sonner";
 
 import { AddMomentButton } from "@/components/add-moment-button";
@@ -27,6 +27,8 @@ import {
   resolveInitialDayFilter,
 } from "@/lib/time";
 import type { DayFilter, Moment, RouteRole, TripRecord } from "@/types/crumbs";
+
+type MomentSheetMode = "spot" | "timeline";
 
 const AddMomentDialog = dynamic(
   () =>
@@ -106,6 +108,8 @@ export function TripExperience({
     resolveInitialDayFilter(record.trip, displayMoments),
   );
   const [selectedMomentId, setSelectedMomentId] = useState<string | null>(null);
+  const [momentSheetMode, setMomentSheetMode] =
+    useState<MomentSheetMode>("spot");
   const [editingMomentId, setEditingMomentId] = useState<string | null>(null);
   const [addMomentOpen, setAddMomentOpen] = useState(shouldAutoOpenCapture);
   const [markerGroups, setMarkerGroups] = useState<MomentMarkerGroup[]>([]);
@@ -129,13 +133,15 @@ export function TripExperience({
   const selectedMoment =
     filteredMoments.find((moment) => moment.id === activeSelectedMomentId) ?? null;
   const selectedMomentGroup =
-    activeSelectedMomentId
+    activeSelectedMomentId && momentSheetMode === "spot"
       ? markerGroups.find((group) =>
           group.momentIds.includes(activeSelectedMomentId),
         ) ?? null
       : null;
-  const selectedSheetMoments = selectedMoment
-    ? selectedMomentGroup?.moments ?? [selectedMoment]
+  const selectedSheetMoments = activeSelectedMomentId
+    ? momentSheetMode === "timeline"
+      ? filteredMoments
+      : selectedMomentGroup?.moments ?? (selectedMoment ? [selectedMoment] : [])
     : [];
   const editingMoment =
     record.moments.find((moment) => moment.id === editingMomentId) ?? null;
@@ -194,6 +200,22 @@ export function TripExperience({
     }
   }
 
+  function selectSpotMoment(momentId: string) {
+    setMomentSheetMode("spot");
+    setSelectedMomentId(momentId);
+  }
+
+  function openTimelineMoments() {
+    const nextMoment = filteredMoments[0];
+
+    if (!nextMoment) {
+      return;
+    }
+
+    setMomentSheetMode("timeline");
+    setSelectedMomentId(nextMoment.id);
+  }
+
   return (
     <div className="min-h-screen bg-[var(--paper)] px-3 py-3 sm:px-4 sm:py-4">
       <div className="mx-auto max-w-[1480px]">
@@ -202,7 +224,7 @@ export function TripExperience({
             trip={record.trip}
             moments={mapMoments}
             selectedMomentId={activeSelectedMomentId}
-            onSelectMoment={setSelectedMomentId}
+            onSelectMoment={selectSpotMoment}
             onMomentGroupsChange={setMarkerGroups}
             className="min-h-[calc(100vh-1.5rem)]"
           />
@@ -292,7 +314,7 @@ export function TripExperience({
                     <button
                       key={moment.id}
                       className="w-full rounded-[22px] bg-[var(--paper)] px-3 py-2 text-left transition hover:bg-[#f6efdf]"
-                      onClick={() => setSelectedMomentId(moment.id)}
+                      onClick={() => selectSpotMoment(moment.id)}
                       type="button"
                     >
                       <p className="text-sm font-medium text-[var(--ink)]">
@@ -317,6 +339,21 @@ export function TripExperience({
               />
             </div>
 
+            {filteredMoments.length > 0 ? (
+              <Button
+                aria-label="View all moments"
+                className="pointer-events-auto absolute right-3 top-1/2 z-20 h-12 w-12 -translate-y-1/2 border border-black/5 bg-white/92 shadow-[0_18px_50px_rgba(15,23,42,0.16)] backdrop-blur-sm hover:bg-white sm:right-4"
+                onClick={openTimelineMoments}
+                size="icon"
+                title="View all moments"
+                type="button"
+                variant="secondary"
+              >
+                <Images className="h-5 w-5" />
+                <span className="sr-only">View all moments</span>
+              </Button>
+            ) : null}
+
             {canAddMoments ? (
               <AddMomentButton onClick={() => setAddMomentOpen(true)} />
             ) : null}
@@ -327,6 +364,16 @@ export function TripExperience({
               selectedMomentId={activeSelectedMomentId}
               open={Boolean(activeSelectedMomentId)}
               canManage={role === "owner"}
+              carouselDescription={
+                momentSheetMode === "timeline"
+                  ? "Swipe left or right to follow the day oldest to newest."
+                  : undefined
+              }
+              carouselTitle={
+                momentSheetMode === "timeline"
+                  ? `${selectedSheetMoments.length} moments in this view`
+                  : undefined
+              }
               onClose={() => setSelectedMomentId(null)}
               onSelectMoment={setSelectedMomentId}
               onEdit={(moment) => setEditingMomentId(moment.id)}

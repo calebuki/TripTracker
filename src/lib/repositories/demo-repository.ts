@@ -1,6 +1,7 @@
 import { DateTime } from "luxon";
 import { nanoid } from "nanoid";
 
+import { getAnonymousCommenterToken } from "@/lib/commenter-token";
 import { hashPasscode } from "@/lib/crypto";
 import {
   createDemoDatabase,
@@ -14,8 +15,10 @@ import { generateShareCode } from "@/lib/share-code";
 import { clampPublishDelayHours } from "@/lib/trip-sharing";
 import type {
   CreateMomentInput,
+  CreateMomentCommentInput,
   CreateTripInput,
   Moment,
+  MomentComment,
   Trip,
   TripRecord,
   UpdateMomentInput,
@@ -37,6 +40,8 @@ function normalizeDatabase(database: DemoDatabase): DemoDatabase {
       ),
     })),
     moments: database.moments,
+    comments: "comments" in database ? database.comments : [],
+    commenters: "commenters" in database ? database.commenters : [],
   };
 }
 
@@ -80,6 +85,8 @@ function refreshSeedData(database: DemoDatabase): DemoDatabase {
     users: fresh.users,
     trips: [...fresh.trips, ...userTrips],
     moments: [...fresh.moments, ...userMoments],
+    comments: database.comments,
+    commenters: database.commenters,
   };
 }
 
@@ -123,6 +130,39 @@ function saveDatabase(database: DemoDatabase) {
   } catch {
     // Ignore quota failures in demo mode. The current session still renders from memory.
   }
+}
+
+function sortCommentsChronologically(comments: MomentComment[]) {
+  return [...comments].sort((left, right) =>
+    left.createdAt.localeCompare(right.createdAt),
+  );
+}
+
+function getOrCreateDemoCommenter(database: DemoDatabase, tripId: string) {
+  const token = getAnonymousCommenterToken(tripId);
+  const existing = database.commenters.find(
+    (commenter) => commenter.tripId === tripId && commenter.token === token,
+  );
+
+  if (existing) {
+    return existing;
+  }
+
+  const displayNumber =
+    Math.max(
+      0,
+      ...database.commenters
+        .filter((commenter) => commenter.tripId === tripId)
+        .map((commenter) => commenter.displayNumber),
+    ) + 1;
+  const commenter = {
+    tripId,
+    token,
+    displayNumber,
+  };
+
+  database.commenters.push(commenter);
+  return commenter;
 }
 
 function withDatabase<T>(mutator: (database: DemoDatabase) => T): T {
@@ -259,6 +299,54 @@ export function createDemoRepository(): TripRepository {
         (entry) => entry.shareCode.toUpperCase() === shareCode.toUpperCase(),
       );
       return trip?.shareSlug ?? null;
+    },
+    async listMomentComments(momentId: string) {
+      return sortCommentsChronologically(
+        loadDatabase().comments.filter((comment) => comment.momentId === momentId),
+      );
+    },
+    async createMomentComment(input: CreateMomentCommentInput) {
+      const database = loadDatabase();
+      const moment = database.moments.find((entry) => entry.id === input.momentId);
+      const trip = database.trips.find((entry) => entry.id === input.tripId);
+
+      if (!moment || !trip || moment.tripId !== trip.id) {
+        throw new Error("Moment not found.");
+      }
+
+      const body = input.body.trim();
+
+      if (!body) {
+        throw new Error("Write a comment before posting.");
+      }
+
+      if (body.length > 1000) {
+        throw new Error("Comments can be up to 1000 characters.");
+      }
+
+      const now = new Date().toISOString();
+      const commenter =
+        input.authorKind === "viewer"
+          ? getOrCreateDemoCommenter(database, trip.id)
+          : null;
+      const comment: MomentComment = {
+        id: nanoid(),
+        tripId: trip.id,
+        momentId: moment.id,
+        body,
+        authorKind: input.authorKind,
+        authorLabel:
+          input.authorKind === "traveler"
+            ? "OP"
+            : `#${commenter?.displayNumber ?? "?"}`,
+        commenterNumber: commenter?.displayNumber ?? null,
+        createdAt: now,
+        updatedAt: now,
+      };
+
+      database.comments.push(comment);
+      saveDatabase(database);
+      return comment;
     },
     async createMoment(input: CreateMomentInput) {
       const database = loadDatabase();

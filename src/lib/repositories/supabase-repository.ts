@@ -1,5 +1,6 @@
 import { nanoid } from "nanoid";
 
+import { getAnonymousCommenterToken } from "@/lib/commenter-token";
 import { hashPasscode } from "@/lib/crypto";
 import { publicEnv } from "@/lib/env";
 import type { TripRepository } from "@/lib/repositories/types";
@@ -10,8 +11,10 @@ import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import type { Database } from "@/types/database";
 import type {
   CreateMomentInput,
+  CreateMomentCommentInput,
   CreateTripInput,
   Moment,
+  MomentComment,
   Trip,
   TripRecord,
   CrumbsUser,
@@ -332,6 +335,61 @@ async function touchTripUpdatedAt(tripId: string) {
   }
 }
 
+async function getCommentAuthHeaders(
+  authorKind?: CreateMomentCommentInput["authorKind"],
+): Promise<Record<string, string>> {
+  if (authorKind !== "traveler") {
+    return {};
+  }
+
+  const { data, error } = await getSupabaseBrowserClient().auth.getSession();
+
+  if (error || !data.session?.access_token) {
+    throw new Error("Please sign in to comment as OP.");
+  }
+
+  return {
+    Authorization: `Bearer ${data.session.access_token}`,
+  };
+}
+
+async function getOptionalCommentAuthHeaders(): Promise<Record<string, string>> {
+  try {
+    const { data } = await getSupabaseBrowserClient().auth.getSession();
+
+    if (!data.session?.access_token) {
+      return {};
+    }
+
+    return {
+      Authorization: `Bearer ${data.session.access_token}`,
+    };
+  } catch {
+    return {};
+  }
+}
+
+async function parseCommentApiResponse<T>(
+  response: Response,
+  key: "comments" | "comment",
+) {
+  const payload = (await response.json().catch(() => null)) as
+    | { error?: string; comments?: MomentComment[]; comment?: MomentComment }
+    | null;
+
+  if (!response.ok) {
+    throw new Error(payload?.error ?? "Crumbs could not reach comments.");
+  }
+
+  const value = payload?.[key];
+
+  if (!value) {
+    throw new Error("Crumbs could not read the comment response.");
+  }
+
+  return value as T;
+}
+
 export function createSupabaseRepository(): TripRepository {
   return {
     mode: "supabase",
@@ -511,6 +569,34 @@ export function createSupabaseRepository(): TripRepository {
       }
 
       return data.share_slug;
+    },
+    async listMomentComments(momentId: string) {
+      const headers = await getOptionalCommentAuthHeaders();
+      const response = await fetch(`/api/moments/${momentId}/comments`, {
+        headers,
+      });
+
+      return parseCommentApiResponse<MomentComment[]>(response, "comments");
+    },
+    async createMomentComment(input: CreateMomentCommentInput) {
+      const headers = {
+        "Content-Type": "application/json",
+        ...(await getCommentAuthHeaders(input.authorKind)),
+      };
+      const response = await fetch(`/api/moments/${input.momentId}/comments`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          authorKind: input.authorKind,
+          body: input.body,
+          commenterToken:
+            input.authorKind === "viewer"
+              ? getAnonymousCommenterToken(input.tripId)
+              : undefined,
+        }),
+      });
+
+      return parseCommentApiResponse<MomentComment>(response, "comment");
     },
     async createMoment(input: CreateMomentInput) {
       const user = await requireUser();

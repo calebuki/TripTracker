@@ -1,7 +1,9 @@
 import type {
+  CreateMomentCommentInput,
   CreateMomentInput,
   CreateTripInput,
   Moment,
+  MomentComment,
   Trip,
   TripRecord,
   CrumbsUser,
@@ -22,6 +24,8 @@ export interface TripRepository {
   getTripByShareSlug(shareSlug: string): Promise<TripRecord | null>;
   getTripByShareCode(shareCode: string): Promise<TripRecord | null>;
   getShareSlugByCode(shareCode: string): Promise<string | null>;
+  listMomentComments(momentId: string): Promise<MomentComment[]>;
+  createMomentComment(input: CreateMomentCommentInput): Promise<MomentComment>;
   createMoment(input: CreateMomentInput): Promise<Moment>;
   updateMoment(momentId: string, input: UpdateMomentInput): Promise<Moment>;
   updateMomentVisibility(

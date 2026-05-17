@@ -4,6 +4,7 @@ export type MomentType = "photo" | "thought";
 export type MomentVisibility = "visible" | "hidden";
 export type LocationSource = "exif" | "browser_gps" | "manual" | "none";
 export type RouteRole = "owner" | "viewer";
+export type MomentCommentAuthorKind = "traveler" | "viewer";
 
 export interface CrumbsUser {
   id: string;
@@ -55,6 +56,18 @@ export interface Moment {
   updatedAt: string;
 }
 
+export interface MomentComment {
+  id: string;
+  tripId: string;
+  momentId: string;
+  body: string;
+  authorKind: MomentCommentAuthorKind;
+  authorLabel: string;
+  commenterNumber: number | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface TripRecord {
   trip: Trip;
   moments: Moment[];
@@ -102,6 +115,13 @@ export interface CreateMomentInput {
   accuracyMeters?: number | null;
   takenAt?: string | null;
   timezone: string;
+}
+
+export interface CreateMomentCommentInput {
+  tripId: string;
+  momentId: string;
+  body: string;
+  authorKind: MomentCommentAuthorKind;
 }
 
 export interface UpdateMomentInput {

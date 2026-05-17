@@ -178,6 +178,63 @@ export interface Database {
         };
         Relationships: [];
       };
+      trip_commenters: {
+        Row: {
+          id: string;
+          trip_id: string;
+          token_hash: string;
+          display_number: number;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          trip_id: string;
+          token_hash: string;
+          display_number: number;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          trip_id?: string;
+          token_hash?: string;
+          display_number?: number;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      moment_comments: {
+        Row: {
+          id: string;
+          trip_id: string;
+          moment_id: string;
+          commenter_id: string | null;
+          author_id: string | null;
+          body: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          trip_id: string;
+          moment_id: string;
+          commenter_id?: string | null;
+          author_id?: string | null;
+          body: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          trip_id?: string;
+          moment_id?: string;
+          commenter_id?: string | null;
+          author_id?: string | null;
+          body?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;
