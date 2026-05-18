@@ -45,10 +45,8 @@ export function CreateTripScreen() {
     authLoading: loading,
     isDemoMode,
   });
-  const [title, setTitle] = useState("Paris Maymester");
-  const [description, setDescription] = useState(
-    "A quiet map of the moments that made the trip.",
-  );
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
   const [timezone, setTimezone] = useState(() => getBrowserTimeZone());
   const [privacyMode, setPrivacyMode] = useState<TripPrivacyMode>("private_link");
   const [locationPrivacyMode, setLocationPrivacyMode] =

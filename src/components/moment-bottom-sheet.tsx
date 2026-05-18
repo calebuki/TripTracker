@@ -259,6 +259,11 @@ function MomentSheetSlide({
     trip.coverLocationName?.split(",")[0]?.trim() ||
     trip.timezone.split("/").at(-1)?.replace(/_/g, " ") ||
     "Trip";
+  const openViewerButton = (
+    <span className="absolute right-3 top-3 inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-[var(--ink)] shadow-[0_12px_30px_rgba(15,23,42,0.16)]">
+      <Maximize2 className="h-4 w-4" />
+    </span>
+  );
 
   return (
     <article className="w-full shrink-0 snap-center px-4 py-4 sm:px-5 sm:py-5">
@@ -334,13 +339,25 @@ function MomentSheetSlide({
         <div className="space-y-3">
           <div className="overflow-hidden rounded-[26px] bg-[var(--paper)]">
             {isVideoMoment ? (
-              <video
-                className="h-64 w-full bg-black object-cover sm:h-80"
-                controls
-                playsInline
-                preload="metadata"
-                src={moment.imageUrl}
-              />
+              <div className="relative">
+                <video
+                  className="h-64 w-full bg-black object-cover sm:h-80"
+                  controls
+                  playsInline
+                  preload="metadata"
+                  src={moment.imageUrl}
+                />
+                <button
+                  aria-label="Open full-screen video"
+                  className="absolute right-3 top-3 inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-[var(--ink)] shadow-[0_12px_30px_rgba(15,23,42,0.16)]"
+                  onClick={() => onOpenPhotoViewer(moment)}
+                  title="Open full-screen video"
+                  type="button"
+                >
+                  <Maximize2 className="h-4 w-4" />
+                  <span className="sr-only">Open full-screen video</span>
+                </button>
+              </div>
             ) : (
               <button
                 aria-label="Open full-screen photo"
@@ -355,9 +372,7 @@ function MomentSheetSlide({
                   className="h-64 w-full object-cover transition duration-300 group-hover:scale-[1.01] sm:h-80"
                   src={moment.imageUrl}
                 />
-                <span className="absolute right-3 top-3 inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-[var(--ink)] shadow-[0_12px_30px_rgba(15,23,42,0.16)]">
-                  <Maximize2 className="h-4 w-4" />
-                </span>
+                {openViewerButton}
               </button>
             )}
           </div>
@@ -368,9 +383,16 @@ function MomentSheetSlide({
           ) : null}
         </div>
       ) : (
-        <div className="rounded-[26px] bg-[var(--paper)] p-5 text-base leading-7 text-[var(--ink)]">
+        <button
+          aria-label="Open full-screen moment"
+          className="relative block w-full rounded-[26px] bg-[var(--paper)] p-5 text-left text-base leading-7 text-[var(--ink)]"
+          onClick={() => onOpenPhotoViewer(moment)}
+          title="Open full-screen moment"
+          type="button"
+        >
           {moment.thoughtText ?? moment.caption ?? "A quiet note from the trip."}
-        </div>
+          {openViewerButton}
+        </button>
       )}
 
       <MomentComments
@@ -382,7 +404,22 @@ function MomentSheetSlide({
   );
 }
 
-function MomentPhotoViewer({
+function getMomentLocationLabel(moment: Moment) {
+  if (moment.placeName) {
+    return moment.placeName;
+  }
+
+  if (
+    typeof moment.latitude === "number" &&
+    typeof moment.longitude === "number"
+  ) {
+    return `${moment.latitude.toFixed(4)}, ${moment.longitude.toFixed(4)}`;
+  }
+
+  return "Location not saved";
+}
+
+function MomentFullscreenViewer({
   activeMomentId,
   moments,
   onClose,
@@ -399,11 +436,12 @@ function MomentPhotoViewer({
   );
   const activeIndex = Math.max(0, activeMomentIndex);
   const moment = activeMomentIndex >= 0 ? moments[activeIndex] ?? null : null;
-  const hasMultiplePhotos = moments.length > 1;
-  const canSelectPrevious = hasMultiplePhotos && activeIndex > 0;
-  const canSelectNext = hasMultiplePhotos && activeIndex < moments.length - 1;
+  const hasMultipleMoments = moments.length > 1;
+  const canSelectPrevious = hasMultipleMoments && activeIndex > 0;
+  const canSelectNext = hasMultipleMoments && activeIndex < moments.length - 1;
+  const isVideoMoment = moment ? isMomentVideo(moment) : false;
 
-  const selectPhotoAtIndex = useCallback(
+  const selectMomentAtIndex = useCallback(
     (nextIndex: number) => {
       const nextMoment = moments[nextIndex];
 
@@ -436,11 +474,11 @@ function MomentPhotoViewer({
     }
 
     if (deltaX > 0 && canSelectPrevious) {
-      selectPhotoAtIndex(activeIndex - 1);
+      selectMomentAtIndex(activeIndex - 1);
     }
 
     if (deltaX < 0 && canSelectNext) {
-      selectPhotoAtIndex(activeIndex + 1);
+      selectMomentAtIndex(activeIndex + 1);
     }
   }
 
@@ -455,11 +493,11 @@ function MomentPhotoViewer({
       }
 
       if (event.key === "ArrowLeft" && canSelectPrevious) {
-        selectPhotoAtIndex(activeIndex - 1);
+        selectMomentAtIndex(activeIndex - 1);
       }
 
       if (event.key === "ArrowRight" && canSelectNext) {
-        selectPhotoAtIndex(activeIndex + 1);
+        selectMomentAtIndex(activeIndex + 1);
       }
     }
 
@@ -474,16 +512,16 @@ function MomentPhotoViewer({
     canSelectPrevious,
     moment,
     onClose,
-    selectPhotoAtIndex,
+    selectMomentAtIndex,
   ]);
 
-  if (!moment?.imageUrl) {
+  if (!moment) {
     return null;
   }
 
   return (
     <div
-      aria-label="Full-screen photo"
+      aria-label="Full-screen moment"
       aria-modal="true"
       className="pointer-events-auto fixed inset-0 z-50 flex items-center justify-center bg-black/95 p-3 text-white sm:p-6"
       onTouchEnd={handleTouchEnd}
@@ -503,50 +541,71 @@ function MomentPhotoViewer({
           onClose();
         }}
         size="icon"
-        title="Close full-screen photo"
+        title="Close full-screen moment"
         type="button"
         variant="ghost"
       >
         <X className="h-5 w-5" />
-        <span className="sr-only">Close full-screen photo</span>
+        <span className="sr-only">Close full-screen moment</span>
       </Button>
-      {hasMultiplePhotos ? (
+      {hasMultipleMoments ? (
         <>
           <Button
             className="absolute left-3 top-1/2 z-20 h-11 w-11 -translate-y-1/2 bg-white/10 text-white hover:bg-white/20 disabled:bg-white/5 sm:left-5 sm:h-12 sm:w-12"
             disabled={!canSelectPrevious}
-            onClick={() => selectPhotoAtIndex(activeIndex - 1)}
+            onClick={() => selectMomentAtIndex(activeIndex - 1)}
             size="icon"
-            title="Previous photo"
+            title="Previous moment"
             type="button"
             variant="ghost"
           >
             <ChevronLeft className="h-6 w-6" />
-            <span className="sr-only">Previous photo</span>
+            <span className="sr-only">Previous moment</span>
           </Button>
           <Button
             className="absolute right-3 top-1/2 z-20 h-11 w-11 -translate-y-1/2 bg-white/10 text-white hover:bg-white/20 disabled:bg-white/5 sm:right-5 sm:h-12 sm:w-12"
             disabled={!canSelectNext}
-            onClick={() => selectPhotoAtIndex(activeIndex + 1)}
+            onClick={() => selectMomentAtIndex(activeIndex + 1)}
             size="icon"
-            title="Next photo"
+            title="Next moment"
             type="button"
             variant="ghost"
           >
             <ChevronRight className="h-6 w-6" />
-            <span className="sr-only">Next photo</span>
+            <span className="sr-only">Next moment</span>
           </Button>
-          <div className="absolute bottom-[calc(env(safe-area-inset-bottom)+1rem)] left-1/2 z-20 -translate-x-1/2 rounded-full bg-white/10 px-3 py-1 text-sm font-medium text-white backdrop-blur-sm">
+          <div className="absolute left-3 top-3 z-20 rounded-full bg-white/10 px-3 py-1 text-sm font-medium text-white backdrop-blur-sm sm:left-5 sm:top-5">
             {activeIndex + 1} / {moments.length}
           </div>
         </>
       ) : null}
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        alt={moment.caption ?? moment.placeName ?? "Trip photo"}
-        className="relative z-10 max-h-[calc(100dvh-1.5rem)] max-w-[calc(100vw-1.5rem)] object-contain sm:max-h-[calc(100dvh-3rem)] sm:max-w-[calc(100vw-8rem)]"
-        src={moment.imageUrl}
-      />
+      <div className="relative z-10 flex max-h-[calc(100dvh-1.5rem)] max-w-[calc(100vw-1.5rem)] items-center justify-center sm:max-h-[calc(100dvh-3rem)] sm:max-w-[calc(100vw-8rem)]">
+        {moment.type === "photo" && moment.imageUrl ? (
+          isVideoMoment ? (
+            <video
+              className="max-h-[calc(100dvh-1.5rem)] max-w-[calc(100vw-1.5rem)] bg-black object-contain sm:max-h-[calc(100dvh-3rem)] sm:max-w-[calc(100vw-8rem)]"
+              controls
+              playsInline
+              preload="metadata"
+              src={moment.imageUrl}
+            />
+          ) : (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              alt={moment.caption ?? moment.placeName ?? "Trip photo"}
+              className="max-h-[calc(100dvh-1.5rem)] max-w-[calc(100vw-1.5rem)] object-contain sm:max-h-[calc(100dvh-3rem)] sm:max-w-[calc(100vw-8rem)]"
+              src={moment.imageUrl}
+            />
+          )
+        ) : (
+          <div className="max-w-2xl rounded-[28px] bg-white/10 p-6 text-lg leading-8 text-white backdrop-blur-sm sm:p-8 sm:text-xl">
+            {moment.thoughtText ?? moment.caption ?? "A quiet note from the trip."}
+          </div>
+        )}
+        <div className="pointer-events-none absolute inset-x-3 bottom-3 z-20 rounded-2xl bg-black/50 px-4 py-3 text-sm font-medium leading-5 text-white sm:inset-x-4 sm:bottom-4 sm:text-base">
+          {getMomentLocationLabel(moment)}
+        </div>
+      </div>
     </div>
   );
 }
@@ -565,19 +624,13 @@ export function MomentBottomSheet({
   onDelete,
 }: MomentBottomSheetProps) {
   const scrollerRef = useRef<HTMLDivElement | null>(null);
-  const [photoViewerMomentId, setPhotoViewerMomentId] = useState<string | null>(null);
+  const [fullscreenMomentId, setFullscreenMomentId] = useState<string | null>(null);
   const selectedIndex = Math.max(
     0,
     moments.findIndex((moment) => moment.id === selectedMomentId),
   );
   const activeMoment = moments[selectedIndex] ?? null;
   const hasMultipleMoments = moments.length > 1;
-  const photoViewerMoments = moments.filter(
-    (moment) =>
-      moment.type === "photo" &&
-      Boolean(moment.imageUrl) &&
-      !isMomentVideo(moment),
-  );
 
   useEffect(() => {
     const scroller = scrollerRef.current;
@@ -703,7 +756,7 @@ export function MomentBottomSheet({
                     onDelete={onDelete}
                     onEdit={onEdit}
                     onHide={onHide}
-                    onOpenPhotoViewer={(moment) => setPhotoViewerMomentId(moment.id)}
+                    onOpenPhotoViewer={(moment) => setFullscreenMomentId(moment.id)}
                     trip={trip}
                   />
                 ))}
@@ -712,11 +765,11 @@ export function MomentBottomSheet({
           ) : null}
         </div>
       </div>
-      <MomentPhotoViewer
-        activeMomentId={photoViewerMomentId}
-        moments={photoViewerMoments}
-        onClose={() => setPhotoViewerMomentId(null)}
-        onSelectMoment={setPhotoViewerMomentId}
+      <MomentFullscreenViewer
+        activeMomentId={fullscreenMomentId}
+        moments={moments}
+        onClose={() => setFullscreenMomentId(null)}
+        onSelectMoment={setFullscreenMomentId}
       />
     </>
   );

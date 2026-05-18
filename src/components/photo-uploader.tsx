@@ -17,6 +17,7 @@ import {
 import { isMomentVideo, isVideoMimeType } from "@/lib/media";
 import { getTripRepository } from "@/lib/repositories";
 import { fileToOptimizedDataUrl } from "@/lib/storage";
+import type { ExtractedPhotoMetadata } from "@/lib/exif";
 import type { LocationDraft, Moment, Trip } from "@/types/crumbs";
 
 interface PhotoUploaderProps {
@@ -52,6 +53,12 @@ interface UploadRequest {
   accuracyMeters: number | null;
   takenAt: string | null;
   metadataError: string | null;
+}
+
+interface UploadDraft {
+  file: File;
+  previewUrl: string;
+  metadata: ExtractedPhotoMetadata;
 }
 
 type UploadOrigin = "camera" | "library";
@@ -174,19 +181,17 @@ export function PhotoUploader({
 
     const repository = getTripRepository();
     let savedCount = 0;
+    const pendingIds = requests.map((request) => ({
+      id: nanoid(),
+      fileName: request.file.name,
+      fileType: request.file.type,
+      previewUrl: request.previewUrl,
+    }));
 
-    for (const request of requests) {
-      const pendingId = nanoid();
+    setPendingUploads((current) => [...pendingIds, ...current]);
 
-      setPendingUploads((current) => [
-        {
-          id: pendingId,
-          fileName: request.file.name,
-          fileType: request.file.type,
-          previewUrl: request.previewUrl,
-        },
-        ...current,
-      ]);
+    for (const [index, request] of requests.entries()) {
+      const pendingId = pendingIds[index]?.id;
 
       try {
         const createdMoment = await repository.createMoment({
@@ -234,9 +239,11 @@ export function PhotoUploader({
             : `Crumbs could not save ${request.file.name}.`,
         );
       } finally {
-        setPendingUploads((current) =>
-          current.filter((entry) => entry.id !== pendingId),
-        );
+        if (pendingId) {
+          setPendingUploads((current) =>
+            current.filter((entry) => entry.id !== pendingId),
+          );
+        }
       }
     }
 
@@ -250,43 +257,66 @@ export function PhotoUploader({
     }
   }
 
-  async function buildUploadRequest(file: File, origin: UploadOrigin) {
+  async function buildUploadDraft(file: File) {
     const metadata = await extractPhotoMetadata(file);
     const previewUrl = rememberObjectUrl(
       objectUrlsRef,
       URL.createObjectURL(file),
     );
 
-    let fallbackLocation: LocationDraft | null = null;
+    return {
+      file,
+      previewUrl,
+      metadata,
+    } satisfies UploadDraft;
+  }
 
-    if (
-      origin === "camera" &&
-      metadata.latitude === null &&
-      metadata.longitude === null
-    ) {
-      fallbackLocation = await requestCurrentLocationDraft().catch(() => null);
-    }
+  function buildUploadRequest(
+    draft: UploadDraft,
+    origin: UploadOrigin,
+    fallbackLocation: LocationDraft | null,
+  ) {
+    const { file, metadata, previewUrl } = draft;
+    const hasMetadataLocation =
+      metadata.latitude !== null && metadata.longitude !== null;
 
     return {
       file,
       previewUrl,
       latitude: metadata.latitude ?? fallbackLocation?.latitude ?? null,
       longitude: metadata.longitude ?? fallbackLocation?.longitude ?? null,
-      locationSource:
-        metadata.latitude !== null && metadata.longitude !== null
-          ? "exif"
-          : fallbackLocation?.locationSource ?? "none",
-      accuracyMeters: fallbackLocation?.accuracyMeters ?? null,
+      locationSource: hasMetadataLocation
+        ? "exif"
+        : fallbackLocation?.locationSource ?? "none",
+      accuracyMeters: hasMetadataLocation
+        ? null
+        : fallbackLocation?.accuracyMeters ?? null,
       takenAt: metadata.takenAt ?? new Date().toISOString(),
       metadataError:
         metadata.metadataError ??
         (fallbackLocation === null &&
         origin === "camera" &&
-        metadata.latitude === null &&
-        metadata.longitude === null
+        !hasMetadataLocation
           ? "Saved without GPS because current location was unavailable."
           : null),
     } satisfies UploadRequest;
+  }
+
+  async function resolveBatchFallbackLocation(
+    drafts: UploadDraft[],
+    origin: UploadOrigin,
+  ) {
+    if (
+      origin !== "camera" ||
+      drafts.every(
+        (draft) =>
+          draft.metadata.latitude !== null && draft.metadata.longitude !== null,
+      )
+    ) {
+      return null;
+    }
+
+    return requestCurrentLocationDraft().catch(() => null);
   }
 
   async function handleFileSelection(
@@ -300,8 +330,12 @@ export function PhotoUploader({
     setPreparingOrigin(origin);
 
     try {
-      const requests = await Promise.all(
-        Array.from(fileList).map((file) => buildUploadRequest(file, origin)),
+      const drafts = await Promise.all(
+        Array.from(fileList).map((file) => buildUploadDraft(file)),
+      );
+      const fallbackLocation = await resolveBatchFallbackLocation(drafts, origin);
+      const requests = drafts.map((draft) =>
+        buildUploadRequest(draft, origin, fallbackLocation),
       );
       await saveUploadRequests(requests);
     } finally {
