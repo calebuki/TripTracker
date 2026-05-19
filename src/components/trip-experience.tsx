@@ -362,6 +362,7 @@ export function TripExperience({
             <MomentBottomSheet
               trip={record.trip}
               moments={selectedSheetMoments}
+              navigationMoments={filteredMoments}
               fullscreenMoments={filteredMoments}
               selectedMomentId={activeSelectedMomentId}
               open={Boolean(activeSelectedMomentId)}

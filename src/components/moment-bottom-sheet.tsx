@@ -46,6 +46,7 @@ import type {
 interface MomentBottomSheetProps {
   trip: Trip;
   moments: Moment[];
+  navigationMoments?: Moment[];
   fullscreenMoments?: Moment[];
   selectedMomentId: string | null;
   open: boolean;
@@ -614,6 +615,7 @@ function MomentFullscreenViewer({
 export function MomentBottomSheet({
   trip,
   moments,
+  navigationMoments,
   fullscreenMoments,
   selectedMomentId,
   open,
@@ -633,6 +635,15 @@ export function MomentBottomSheet({
   );
   const activeMoment = moments[selectedIndex] ?? null;
   const hasMultipleMoments = moments.length > 1;
+  const activeNavigationMoments =
+    navigationMoments?.some((moment) => moment.id === selectedMomentId)
+      ? navigationMoments
+      : moments;
+  const selectedNavigationIndex = Math.max(
+    0,
+    activeNavigationMoments.findIndex((moment) => moment.id === selectedMomentId),
+  );
+  const hasMultipleNavigationMoments = activeNavigationMoments.length > 1;
   const activeFullscreenMoments =
     fullscreenMoments?.some((moment) => moment.id === fullscreenMomentId)
       ? fullscreenMoments
@@ -664,7 +675,7 @@ export function MomentBottomSheet({
   }, [moments.length, open, selectedIndex]);
 
   function selectMomentAtIndex(nextIndex: number) {
-    const moment = moments[nextIndex];
+    const moment = activeNavigationMoments[nextIndex];
 
     if (!moment) {
       return;
@@ -684,18 +695,19 @@ export function MomentBottomSheet({
         <div className="pointer-events-auto mx-auto max-w-xl overflow-hidden rounded-[30px] border border-black/5 bg-white shadow-[0_28px_90px_rgba(15,23,42,0.18)]">
           {activeMoment ? (
             <>
-              {hasMultipleMoments ? (
+              {hasMultipleNavigationMoments ? (
                 <div className="flex items-center justify-between border-b border-black/5 px-4 py-3 sm:px-5">
                   <div>
                     <p className="text-xs uppercase tracking-[0.18em] text-slate-500">
-                      {carouselTitle ?? `${moments.length} moments in this spot`}
+                      {carouselTitle ??
+                        `${activeNavigationMoments.length} moments in this view`}
                     </p>
                   </div>
                   <div className="flex items-center gap-1">
                     <Button
                       className="h-9 w-9"
-                      disabled={selectedIndex === 0}
-                      onClick={() => selectMomentAtIndex(selectedIndex - 1)}
+                      disabled={selectedNavigationIndex === 0}
+                      onClick={() => selectMomentAtIndex(selectedNavigationIndex - 1)}
                       size="icon"
                       type="button"
                       variant="ghost"
@@ -704,12 +716,14 @@ export function MomentBottomSheet({
                       <span className="sr-only">Previous moment</span>
                     </Button>
                     <span className="min-w-16 text-center text-sm font-medium text-[var(--ink)]">
-                      {selectedIndex + 1} / {moments.length}
+                      {selectedNavigationIndex + 1} / {activeNavigationMoments.length}
                     </span>
                     <Button
                       className="h-9 w-9"
-                      disabled={selectedIndex === moments.length - 1}
-                      onClick={() => selectMomentAtIndex(selectedIndex + 1)}
+                      disabled={
+                        selectedNavigationIndex === activeNavigationMoments.length - 1
+                      }
+                      onClick={() => selectMomentAtIndex(selectedNavigationIndex + 1)}
                       size="icon"
                       type="button"
                       variant="ghost"
