@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useCallback, useEffect, useState } from "react";
 
 import { LoadingShell } from "@/components/loading-shell";
 import { TripExperience } from "@/components/trip-experience";
@@ -17,10 +18,30 @@ export function OwnerTripScreen({
   tripId,
   autoOpenCapture = false,
 }: OwnerTripScreenProps) {
+  const [pendingAutoOpenCapture, setPendingAutoOpenCapture] =
+    useState(autoOpenCapture);
   const { record, loading, error, refresh, isDemoMode } = useTripRecord({
     role: "owner",
     tripId,
   });
+  const handleAutoOpenCaptureConsumed = useCallback(() => {
+    setPendingAutoOpenCapture(false);
+  }, []);
+
+  useEffect(() => {
+    if (!autoOpenCapture) {
+      return;
+    }
+
+    const url = new URL(window.location.href);
+
+    if (!url.searchParams.has("capture")) {
+      return;
+    }
+
+    url.searchParams.delete("capture");
+    window.history.replaceState({}, document.title, url.toString());
+  }, [autoOpenCapture]);
 
   if (loading) {
     return <LoadingShell />;
@@ -52,7 +73,8 @@ export function OwnerTripScreen({
       role="owner"
       isDemoMode={isDemoMode}
       onRefresh={refresh}
-      autoOpenCapture={autoOpenCapture}
+      autoOpenCapture={pendingAutoOpenCapture}
+      onAutoOpenCaptureConsumed={handleAutoOpenCaptureConsumed}
     />
   );
 }

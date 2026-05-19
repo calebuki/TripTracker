@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ChevronLeft, Images, User } from "lucide-react";
 import { toast } from "sonner";
 
@@ -69,6 +69,7 @@ interface TripExperienceProps {
   isDemoMode: boolean;
   onRefresh: () => Promise<void> | void;
   autoOpenCapture?: boolean;
+  onAutoOpenCaptureConsumed?: () => void;
 }
 
 export function TripExperience({
@@ -77,6 +78,7 @@ export function TripExperience({
   isDemoMode,
   onRefresh,
   autoOpenCapture = false,
+  onAutoOpenCaptureConsumed,
 }: TripExperienceProps) {
   const { user, loading: authLoading, isDemoMode: authIsDemoMode } =
     useCrumbsAuth();
@@ -112,6 +114,8 @@ export function TripExperience({
     useState<MomentSheetMode>("spot");
   const [editingMomentId, setEditingMomentId] = useState<string | null>(null);
   const [addMomentOpen, setAddMomentOpen] = useState(shouldAutoOpenCapture);
+  const [cameraFirstCapture, setCameraFirstCapture] =
+    useState(shouldAutoOpenCapture);
   const [markerGroups, setMarkerGroups] = useState<MomentMarkerGroup[]>([]);
   const filteredMoments = useMemo(
     () => filterMomentsByDay(displayMoments, record.trip.timezone, dayFilter),
@@ -158,6 +162,14 @@ export function TripExperience({
     role === "owner" &&
     (!record.trip.endDate ||
       (!travelerHome.loading && !postingLockedToActiveTrip));
+
+  useEffect(() => {
+    if (!shouldAutoOpenCapture) {
+      return;
+    }
+
+    onAutoOpenCaptureConsumed?.();
+  }, [onAutoOpenCaptureConsumed, shouldAutoOpenCapture]);
 
   const dayHeadline =
     dayFilter.kind === "all"
@@ -214,6 +226,19 @@ export function TripExperience({
 
     setMomentSheetMode("timeline");
     setSelectedMomentId(nextMoment.id);
+  }
+
+  function openAddMomentDialog() {
+    setCameraFirstCapture(false);
+    setAddMomentOpen(true);
+  }
+
+  function updateAddMomentOpen(open: boolean) {
+    setAddMomentOpen(open);
+
+    if (!open) {
+      setCameraFirstCapture(false);
+    }
   }
 
   return (
@@ -297,7 +322,7 @@ export function TripExperience({
                         : dayFilter.kind
                   }
                   canAdd={canAddMoments}
-                  onAdd={() => setAddMomentOpen(true)}
+                  onAdd={openAddMomentDialog}
                 />
               </div>
             ) : null}
@@ -356,7 +381,7 @@ export function TripExperience({
             ) : null}
 
             {canAddMoments ? (
-              <AddMomentButton onClick={() => setAddMomentOpen(true)} />
+              <AddMomentButton onClick={openAddMomentDialog} />
             ) : null}
 
             <MomentBottomSheet
@@ -388,9 +413,9 @@ export function TripExperience({
             <AddMomentDialog
               trip={record.trip}
               open
-              onOpenChange={setAddMomentOpen}
+              onOpenChange={updateAddMomentOpen}
               onSaved={onRefresh}
-              cameraFirst={autoOpenCapture}
+              cameraFirst={cameraFirstCapture}
             />
           ) : null}
           {editingMoment ? (

@@ -84,6 +84,23 @@ interface TripMapProps {
   onMomentGroupsChange?: (groups: MomentMarkerGroup[]) => void;
 }
 
+function getViewportTuning(map: MapRef | null) {
+  const width =
+    map?.getMap().getContainer().clientWidth ??
+    (typeof window === "undefined" ? 1024 : window.innerWidth);
+  const isCompact = width < 640;
+
+  return {
+    draftZoom: isCompact ? 12.25 : 13,
+    fitMaxZoom: isCompact ? 12.75 : 14,
+    fitPadding: isCompact
+      ? { top: 96, bottom: 180, left: 48, right: 48 }
+      : 64,
+    initialZoom: isCompact ? 10.5 : 11.5,
+    selectedZoom: isCompact ? 12.85 : 14.5,
+  };
+}
+
 function areMomentMarkerGroupsEqual(
   left: MomentMarkerGroup[],
   right: MomentMarkerGroup[],
@@ -168,9 +185,11 @@ export function TripMap({
     }
 
     if (draftLocation) {
+      const tuning = getViewportTuning(map);
+
       map.flyTo({
         center: [draftLocation.longitude, draftLocation.latitude],
-        zoom: 13,
+        zoom: tuning.draftZoom,
         duration: 900,
       });
       return;
@@ -178,11 +197,12 @@ export function TripMap({
 
     if (bounds) {
       const fitDuration = didFitInitialViewRef.current ? 900 : 0;
+      const tuning = getViewportTuning(map);
 
       map.fitBounds(bounds, {
-        padding: 64,
+        padding: tuning.fitPadding,
         duration: fitDuration,
-        maxZoom: 14,
+        maxZoom: tuning.fitMaxZoom,
       });
       didFitInitialViewRef.current = true;
 
@@ -214,7 +234,7 @@ export function TripMap({
 
     map.flyTo({
       center: [moment.longitude as number, moment.latitude as number],
-      zoom: 14.5,
+      zoom: getViewportTuning(map).selectedZoom,
       duration: 800,
     });
   }, [selectedMomentId, moments]);
@@ -234,7 +254,7 @@ export function TripMap({
         initialViewState={{
           longitude: center.longitude,
           latitude: center.latitude,
-          zoom: 11.5,
+          zoom: getViewportTuning(null).initialZoom,
         }}
         mapLib={maplibregl}
         mapStyle={publicEnv.mapStyleUrl}
