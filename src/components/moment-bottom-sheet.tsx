@@ -46,6 +46,7 @@ import type {
 interface MomentBottomSheetProps {
   trip: Trip;
   moments: Moment[];
+  fullscreenMoments?: Moment[];
   selectedMomentId: string | null;
   open: boolean;
   canManage?: boolean;
@@ -613,6 +614,7 @@ function MomentFullscreenViewer({
 export function MomentBottomSheet({
   trip,
   moments,
+  fullscreenMoments,
   selectedMomentId,
   open,
   canManage = false,
@@ -631,6 +633,10 @@ export function MomentBottomSheet({
   );
   const activeMoment = moments[selectedIndex] ?? null;
   const hasMultipleMoments = moments.length > 1;
+  const activeFullscreenMoments =
+    fullscreenMoments?.some((moment) => moment.id === fullscreenMomentId)
+      ? fullscreenMoments
+      : moments;
 
   useEffect(() => {
     const scroller = scrollerRef.current;
@@ -767,7 +773,7 @@ export function MomentBottomSheet({
       </div>
       <MomentFullscreenViewer
         activeMomentId={fullscreenMomentId}
-        moments={moments}
+        moments={activeFullscreenMoments}
         onClose={() => setFullscreenMomentId(null)}
         onSelectMoment={setFullscreenMomentId}
       />
