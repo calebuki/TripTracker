@@ -692,11 +692,11 @@ export function MomentBottomSheet({
           open ? "translate-y-0 opacity-100" : "translate-y-full opacity-0",
         )}
       >
-        <div className="pointer-events-auto mx-auto max-w-xl overflow-hidden rounded-[30px] border border-black/5 bg-white shadow-[0_28px_90px_rgba(15,23,42,0.18)]">
+        <div className="pointer-events-auto mx-auto max-h-[calc(100dvh_-_1.5rem_-_env(safe-area-inset-bottom))] max-w-xl overflow-y-auto overscroll-contain rounded-[30px] border border-black/5 bg-white shadow-[0_28px_90px_rgba(15,23,42,0.18)] sm:max-h-[calc(100dvh_-_2rem_-_env(safe-area-inset-bottom))]">
           {activeMoment ? (
             <>
               {hasMultipleNavigationMoments ? (
-                <div className="flex items-center justify-between border-b border-black/5 px-4 py-3 sm:px-5">
+                <div className="sticky top-0 z-20 flex items-center justify-between border-b border-black/5 bg-white/95 px-4 py-3 backdrop-blur-sm sm:px-5">
                   <div>
                     <p className="text-xs uppercase tracking-[0.18em] text-slate-500">
                       {carouselTitle ??
