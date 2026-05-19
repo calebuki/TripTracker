@@ -17,6 +17,7 @@ import {
   MessageCircle,
   MoreHorizontal,
   EyeOff,
+  Pencil,
   Send,
   Trash2,
   X,
@@ -257,6 +258,7 @@ function MomentSheetSlide({
 }) {
   const times = formatMomentTimes(moment, trip.timezone);
   const isVideoMoment = isMomentVideo(moment);
+  const momentTitle = getMomentTitle(moment);
   const tripTimeLabel =
     trip.coverLocationName?.split(",")[0]?.trim() ||
     trip.timezone.split("/").at(-1)?.replace(/_/g, " ") ||
@@ -290,11 +292,23 @@ function MomentSheetSlide({
             ) : null}
           </div>
           <div>
-            <p className="text-base font-medium text-[var(--ink)]">
-              {moment.caption ??
-                moment.thoughtText?.slice(0, 96) ??
-                "Trip moment"}
-            </p>
+            <div className="flex flex-wrap items-center gap-2">
+              <p className="text-base font-medium text-[var(--ink)]">
+                {momentTitle}
+              </p>
+              {canManage && onEdit ? (
+                <Button
+                  className="h-8 rounded-full px-2.5 text-xs"
+                  onClick={() => onEdit(moment)}
+                  size="sm"
+                  type="button"
+                  variant="secondary"
+                >
+                  <Pencil className="h-3.5 w-3.5" />
+                  Edit title
+                </Button>
+              ) : null}
+            </div>
             <div className="mt-2 space-y-1 text-sm text-slate-600">
               <p>{tripTimeLabel} time: {times.tripLabel}</p>
               {times.viewerLabel ? <p>Your time: {times.viewerLabel}</p> : null}
@@ -406,6 +420,22 @@ function MomentSheetSlide({
   );
 }
 
+function getMomentTitle(moment: Moment) {
+  const caption = moment.caption?.trim();
+
+  if (caption) {
+    return caption;
+  }
+
+  const note = moment.thoughtText?.trim();
+
+  if (note) {
+    return note.length > 96 ? `${note.slice(0, 93)}...` : note;
+  }
+
+  return "Untitled moment";
+}
+
 function getMomentLocationLabel(moment: Moment) {
   if (moment.placeName) {
     return moment.placeName;
@@ -442,6 +472,7 @@ function MomentFullscreenViewer({
   const canSelectPrevious = hasMultipleMoments && activeIndex > 0;
   const canSelectNext = hasMultipleMoments && activeIndex < moments.length - 1;
   const isVideoMoment = moment ? isMomentVideo(moment) : false;
+  const momentTitle = moment ? getMomentTitle(moment) : "";
 
   const selectMomentAtIndex = useCallback(
     (nextIndex: number) => {
@@ -604,8 +635,11 @@ function MomentFullscreenViewer({
             {moment.thoughtText ?? moment.caption ?? "A quiet note from the trip."}
           </div>
         )}
-        <div className="pointer-events-none absolute inset-x-3 bottom-3 z-20 rounded-2xl bg-black/50 px-4 py-3 text-sm font-medium leading-5 text-white sm:inset-x-4 sm:bottom-4 sm:text-base">
-          {getMomentLocationLabel(moment)}
+        <div className="pointer-events-none absolute inset-x-3 bottom-3 z-20 rounded-2xl bg-black/50 px-4 py-3 leading-5 text-white sm:inset-x-4 sm:bottom-4">
+          <p className="text-sm font-semibold sm:text-base">{momentTitle}</p>
+          <p className="mt-1 text-xs font-medium text-white/85 sm:text-sm">
+            {getMomentLocationLabel(moment)}
+          </p>
         </div>
       </div>
     </div>
