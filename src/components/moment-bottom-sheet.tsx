@@ -261,8 +261,6 @@ function MomentSheetSlide({
   moment,
   trip,
   canManage,
-  navigationControls,
-  onClose,
   onOpenPhotoViewer,
   onEdit,
   onHide,
@@ -271,8 +269,6 @@ function MomentSheetSlide({
   moment: Moment;
   trip: Trip;
   canManage: boolean;
-  navigationControls?: ReactNode;
-  onClose: () => void;
   onOpenPhotoViewer: (moment: Moment) => void;
   onEdit?: (moment: Moment) => void;
   onHide?: (moment: Moment) => void;
@@ -375,40 +371,34 @@ function MomentSheetSlide({
                   <Badge variant="subtle">{moment.placeName}</Badge>
                 ) : null}
               </div>
-              <div className="flex shrink-0 items-center gap-1">
-                {canManage && onHide && onDelete ? (
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button className="h-10 w-10" size="icon" variant="ghost">
-                        <MoreHorizontal className="h-4 w-4" />
-                        <span className="sr-only">Moment options</span>
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      {onEdit ? (
-                        <DropdownMenuItem onClick={() => onEdit(moment)}>
-                          Edit details
-                        </DropdownMenuItem>
-                      ) : null}
-                      <DropdownMenuItem onClick={() => onHide(moment)}>
-                        <EyeOff className="mr-2 h-4 w-4" />
-                        Hide from viewers
+              {canManage && onHide && onDelete ? (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button className="h-10 w-10" size="icon" variant="ghost">
+                      <MoreHorizontal className="h-4 w-4" />
+                      <span className="sr-only">Moment options</span>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    {onEdit ? (
+                      <DropdownMenuItem onClick={() => onEdit(moment)}>
+                        Edit details
                       </DropdownMenuItem>
-                      <DropdownMenuItem
-                        className="text-[#7f1d1d]"
-                        onClick={() => onDelete(moment)}
-                      >
-                        <Trash2 className="mr-2 h-4 w-4" />
-                        Delete moment
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                ) : null}
-                <Button className="h-10 w-10" onClick={onClose} size="icon" type="button" variant="ghost">
-                  <X className="h-4 w-4" />
-                  <span className="sr-only">Close moment</span>
-                </Button>
-              </div>
+                    ) : null}
+                    <DropdownMenuItem onClick={() => onHide(moment)}>
+                      <EyeOff className="mr-2 h-4 w-4" />
+                      Hide from viewers
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      className="text-[#7f1d1d]"
+                      onClick={() => onDelete(moment)}
+                    >
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      Delete moment
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              ) : null}
             </div>
 
             <div className="order-1 space-y-2">
@@ -442,9 +432,6 @@ function MomentSheetSlide({
             moment={moment}
             trip={trip}
           />
-          {navigationControls ? (
-            <div className="mt-6 lg:mt-8">{navigationControls}</div>
-          ) : null}
         </div>
       </div>
     </article>
@@ -786,19 +773,38 @@ export function MomentBottomSheet({
             <div className="hidden lg:block lg:shrink-0">{sidebarHeader}</div>
           ) : null}
           {activeMoment ? (
-            <div className={cn(sidebarHeader && "lg:flex lg:min-h-0 lg:flex-1 lg:flex-col lg:overflow-hidden")}>
-              <MomentSheetSlide
-                key={activeMoment.id}
-                canManage={canManage}
-                moment={activeMoment}
-                navigationControls={momentNavigator}
-                onClose={onClose}
-                onDelete={onDelete}
-                onEdit={onEdit}
-                onHide={onHide}
-                onOpenPhotoViewer={(moment) => setFullscreenMomentId(moment.id)}
-                trip={trip}
-              />
+            <div className={cn("relative", sidebarHeader && "lg:flex lg:min-h-0 lg:flex-1 lg:flex-col lg:overflow-hidden")}>
+              <div className={cn(sidebarHeader && "lg:min-h-0 lg:flex-1 lg:overflow-y-auto")}>
+                <MomentSheetSlide
+                  key={activeMoment.id}
+                  canManage={canManage}
+                  moment={activeMoment}
+                  onDelete={onDelete}
+                  onEdit={onEdit}
+                  onHide={onHide}
+                  onOpenPhotoViewer={(moment) => setFullscreenMomentId(moment.id)}
+                  trip={trip}
+                />
+                {momentNavigator ? (
+                  <div className="px-4 pb-4 lg:hidden">{momentNavigator}</div>
+                ) : null}
+              </div>
+              {sidebarHeader && momentNavigator ? (
+                <div className="hidden border-t border-black/5 bg-white px-8 py-5 lg:block lg:shrink-0">
+                  {momentNavigator}
+                </div>
+              ) : null}
+              <Button
+                aria-label="Close moment"
+                className="absolute right-4 top-4 z-10 h-10 w-10 bg-white/95 shadow-[0_10px_24px_rgba(15,23,42,0.1)] hover:bg-[var(--paper)] lg:right-5 lg:top-5"
+                onClick={onClose}
+                size="icon"
+                type="button"
+                variant="secondary"
+              >
+                <X className="h-4 w-4" />
+                <span className="sr-only">Close moment</span>
+              </Button>
             </div>
           ) : sidebarEmptyState ? (
             <div className="pointer-events-none hidden lg:flex lg:min-h-0 lg:flex-1 lg:items-center lg:justify-center lg:p-8">
