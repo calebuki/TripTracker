@@ -32,7 +32,7 @@ export function AccountSettingsScreen() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Button asChild>
+            <Button asChild className="!text-white">
               <Link href="/auth">Go to sign-in</Link>
             </Button>
           </CardContent>
