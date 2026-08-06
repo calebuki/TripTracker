@@ -290,7 +290,7 @@ function MomentSheetSlide({
   );
 
   return (
-    <article className="w-full shrink-0 snap-center px-4 py-4 sm:px-5 sm:py-5 lg:mx-auto lg:max-w-[34rem] lg:px-8 lg:py-6">
+    <article className="w-full shrink-0 snap-start snap-always px-4 py-4 sm:px-5 sm:py-5 lg:mx-auto lg:max-w-[34rem] lg:px-8 lg:py-6">
       <div className="mb-4 flex items-start justify-between gap-3">
         <div className="space-y-2">
           <div className="flex items-center gap-2">
@@ -731,14 +731,14 @@ export function MomentBottomSheet({
       return;
     }
 
-    const currentIndex = Math.round(scroller.scrollLeft / width);
+    const targetScrollLeft = width * selectedIndex;
 
-    if (currentIndex === selectedIndex) {
+    if (Math.abs(scroller.scrollLeft - targetScrollLeft) < 1) {
       return;
     }
 
     scroller.scrollTo({
-      left: width * selectedIndex,
+      left: targetScrollLeft,
       behavior: "smooth",
     });
   }, [moments.length, open, selectedIndex]);
@@ -861,7 +861,7 @@ export function MomentBottomSheet({
               </div>
             </div>
           ) : sidebarEmptyState ? (
-            <div className="pointer-events-none hidden lg:absolute lg:inset-0 lg:flex lg:items-center lg:justify-center lg:p-8">
+            <div className="pointer-events-none hidden lg:flex lg:min-h-0 lg:flex-1 lg:items-center lg:justify-center lg:p-8">
               {sidebarEmptyState}
             </div>
           ) : null}
