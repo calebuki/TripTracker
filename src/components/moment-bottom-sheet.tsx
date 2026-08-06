@@ -769,7 +769,7 @@ export function MomentBottomSheet({
       <div
         className={cn(
           "pointer-events-none absolute inset-x-0 bottom-0 z-30 p-3 transition duration-300 sm:p-4",
-          sidebarHeader && "lg:inset-y-0 lg:bottom-auto lg:left-0 lg:right-auto lg:w-[clamp(24rem,34vw,38rem)] lg:p-0",
+          sidebarHeader && "lg:inset-y-0 lg:left-0 lg:right-auto lg:w-[clamp(24rem,34vw,38rem)] lg:p-0",
           open || sidebarHeader
             ? "translate-y-0 opacity-100"
             : "translate-y-full opacity-0",
