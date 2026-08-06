@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { EmailOtpType } from "@supabase/supabase-js";
 
 import { demoOwner } from "@/lib/demo-data";
@@ -122,6 +122,18 @@ export function useCrumbsAuth() {
     hasSupabase && getAuthCallbackState().hasCallbackParams,
   );
   const [error, setError] = useState<string | null>(null);
+  const [retryKey, setRetryKey] = useState(0);
+
+  const retry = useCallback(() => {
+    if (!hasSupabase) {
+      return;
+    }
+
+    setLoading(true);
+    setProcessingCallback(getAuthCallbackState().hasCallbackParams);
+    setError(null);
+    setRetryKey((currentRetryKey) => currentRetryKey + 1);
+  }, []);
 
   useEffect(() => {
     if (!hasSupabase) {
@@ -265,7 +277,7 @@ export function useCrumbsAuth() {
       mounted = false;
       subscription.unsubscribe();
     };
-  }, []);
+  }, [retryKey]);
 
   return {
     user,
@@ -273,5 +285,6 @@ export function useCrumbsAuth() {
     isDemoMode,
     processingCallback,
     error,
+    retry,
   };
 }
