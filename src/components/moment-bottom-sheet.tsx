@@ -55,7 +55,7 @@ interface MomentBottomSheetProps {
   canManage?: boolean;
   carouselTitle?: string;
   sidebarHeader?: ReactNode;
-  sidebarFooter?: ReactNode;
+  sidebarEmptyState?: ReactNode;
   onClose: () => void;
   onSelectMoment?: (momentId: string) => void;
   onEdit?: (moment: Moment) => void;
@@ -689,7 +689,7 @@ export function MomentBottomSheet({
   canManage = false,
   carouselTitle,
   sidebarHeader,
-  sidebarFooter,
+  sidebarEmptyState,
   onClose,
   onSelectMoment,
   onEdit,
@@ -860,9 +860,10 @@ export function MomentBottomSheet({
                 ))}
               </div>
             </div>
-          ) : null}
-          {sidebarFooter ? (
-            <div className="hidden lg:block lg:shrink-0">{sidebarFooter}</div>
+          ) : sidebarEmptyState ? (
+            <div className="hidden lg:flex lg:min-h-0 lg:flex-1 lg:items-center lg:justify-center lg:p-8">
+              {sidebarEmptyState}
+            </div>
           ) : null}
         </div>
       </div>

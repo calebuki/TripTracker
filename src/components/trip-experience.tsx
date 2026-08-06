@@ -254,7 +254,7 @@ export function TripExperience({
         </Link>
         <div className="min-w-0 flex-1">
           <div className="flex min-w-0 flex-wrap items-center gap-2">
-            <h1 className="min-w-0 font-serif text-3xl leading-tight tracking-tight text-[var(--ink)]">
+            <h1 className="min-w-0 font-serif text-4xl leading-[0.95] tracking-tight text-[var(--ink)] xl:text-5xl">
               {record.trip.title}
             </h1>
             {isDemoMode ? <Badge variant="accent">Demo mode</Badge> : null}
@@ -280,15 +280,6 @@ export function TripExperience({
           </Button>
         ) : null}
       </div>
-    </div>
-  );
-
-  const tripSidebarFooter = (
-    <div className="border-t border-black/5 bg-white px-4 py-4 sm:px-5">
-      <p className="mb-2 text-xs font-medium uppercase tracking-[0.16em] text-slate-500">
-        View moments from
-      </p>
-      <DaySelector options={dayOptions} value={dayFilter} onChange={setDayFilter} />
     </div>
   );
 
@@ -408,7 +399,7 @@ export function TripExperience({
               </div>
             ) : null}
 
-            <div className="pointer-events-auto absolute inset-x-0 bottom-4 flex justify-center px-3 lg:hidden">
+            <div className="pointer-events-auto absolute inset-x-0 bottom-4 flex justify-center px-3 lg:left-[clamp(24rem,34vw,38rem)] lg:right-0 lg:justify-center">
               <DaySelector
                 options={dayOptions}
                 value={dayFilter}
@@ -441,7 +432,11 @@ export function TripExperience({
               navigationMoments={filteredMoments}
               fullscreenMoments={filteredMoments}
               sidebarHeader={tripSidebarHeader}
-              sidebarFooter={tripSidebarFooter}
+              sidebarEmptyState={
+                <p className="text-center font-serif text-2xl text-slate-500">
+                  Select a moment
+                </p>
+              }
               selectedMomentId={activeSelectedMomentId}
               open={Boolean(activeSelectedMomentId)}
               canManage={role === "owner"}
