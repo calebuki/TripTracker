@@ -292,7 +292,8 @@ function MomentSheetSlide({
   return (
     <article className="w-full shrink-0 snap-start snap-always lg:flex lg:min-h-full lg:flex-col">
       <div className="px-4 py-4 sm:px-5 sm:py-5 lg:mx-auto lg:flex lg:min-h-full lg:w-full lg:max-w-[34rem] lg:flex-1 lg:flex-col lg:justify-between lg:px-8 lg:py-6">
-        <div className="mb-4 flex items-start justify-between gap-3">
+        <div className="space-y-6 lg:space-y-8">
+        <div className="flex items-start justify-between gap-3">
         <div className="space-y-2">
           <div className="flex items-center gap-2">
             <Badge variant="accent">
@@ -432,11 +433,14 @@ function MomentSheetSlide({
         </button>
       )}
 
+        </div>
+        <div className="lg:pt-10">
         <MomentComments
           authorKind={canManage ? "traveler" : "viewer"}
           moment={moment}
           trip={trip}
         />
+        </div>
       </div>
     </article>
   );
