@@ -44,6 +44,8 @@ after update of email, raw_user_meta_data on auth.users
 for each row
 execute function public.sync_auth_user_to_public_user();
 
+revoke execute on function public.sync_auth_user_to_public_user() from public, anon, authenticated;
+
 insert into public.users (id, email, display_name, created_at)
 select
   id,
@@ -134,6 +136,14 @@ create table if not exists public.moments (
   updated_at timestamptz not null default now()
 );
 
+create table if not exists public.trip_watches (
+  trip_id uuid not null references public.trips (id) on delete cascade,
+  user_id uuid not null references public.users (id) on delete cascade,
+  created_at timestamptz not null default now(),
+  last_viewed_at timestamptz not null default now(),
+  primary key (trip_id, user_id)
+);
+
 create table if not exists public.trip_commenters (
   id uuid primary key default gen_random_uuid(),
   trip_id uuid not null references public.trips (id) on delete cascade,
@@ -165,6 +175,7 @@ create table if not exists public.moment_comments (
 create or replace function public.touch_updated_at()
 returns trigger
 language plpgsql
+set search_path = ''
 as $$
 begin
   new.updated_at = now();
@@ -175,6 +186,7 @@ $$;
 create or replace function public.touch_parent_trip_updated_at()
 returns trigger
 language plpgsql
+set search_path = ''
 as $$
 begin
   update public.trips
@@ -218,6 +230,8 @@ create index if not exists trips_share_code_idx on public.trips (share_code);
 create index if not exists moments_trip_id_idx on public.moments (trip_id);
 create index if not exists moments_trip_id_taken_at_idx on public.moments (trip_id, taken_at, posted_at);
 create index if not exists trip_commenters_trip_id_idx on public.trip_commenters (trip_id);
+create index if not exists trip_watches_user_id_last_viewed_at_idx
+  on public.trip_watches (user_id, last_viewed_at desc);
 create index if not exists moment_comments_moment_id_created_at_idx
   on public.moment_comments (moment_id, created_at);
 create index if not exists moment_comments_trip_id_idx on public.moment_comments (trip_id);
@@ -225,6 +239,7 @@ create index if not exists moment_comments_trip_id_idx on public.moment_comments
 alter table public.users enable row level security;
 alter table public.trips enable row level security;
 alter table public.trip_members enable row level security;
+alter table public.trip_watches enable row level security;
 alter table public.moments enable row level security;
 alter table public.trip_commenters enable row level security;
 alter table public.moment_comments enable row level security;
@@ -281,6 +296,13 @@ with check (
       and trips.owner_id = auth.uid()
   )
 );
+
+drop policy if exists "Users can manage their own trip watches" on public.trip_watches;
+create policy "Users can manage their own trip watches"
+on public.trip_watches
+for all
+using ((select auth.uid()) = user_id)
+with check ((select auth.uid()) = user_id);
 
 drop policy if exists "Owners can manage moments" on public.moments;
 create policy "Owners can manage moments"

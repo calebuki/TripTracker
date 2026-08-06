@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import {
   type FormEvent,
   type ReactNode,
@@ -34,6 +35,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { useCrumbsAuth } from "@/hooks/use-crumbs-auth";
 import { isMomentVideo } from "@/lib/media";
 import { getTripRepository } from "@/lib/repositories";
 import { formatLastUpdated, formatMomentTimes } from "@/lib/time";
@@ -121,12 +123,24 @@ function MomentComments({
   }));
   const [draft, setDraft] = useState("");
   const [saving, setSaving] = useState(false);
+  const { user } = useCrumbsAuth();
   const trimmedDraft = draft.trim();
   const comments =
     commentsResult.momentId === moment.id ? commentsResult.comments : null;
   const visibleComments = comments ?? [];
   const loading = comments === null;
   const isViewer = variant === "viewer";
+  const isTripOwner = user?.id === trip.ownerId;
+  const needsDisplayName = Boolean(
+    user && !isTripOwner && !user.displayName?.trim(),
+  );
+  const postingLabel = isTripOwner || authorKind === "traveler"
+    ? "Posting as OP"
+    : user?.displayName
+      ? `Posting as @${user.displayName}`
+      : user
+        ? "Choose a display name to comment"
+        : "Posting anonymously";
 
   function isMissingCommentsTableError(error: unknown) {
     return (
@@ -243,7 +257,17 @@ function MomentComments({
                   className="font-mono"
                   variant={comment.authorKind === "traveler" ? "accent" : "subtle"}
                 >
-                  {comment.authorLabel}
+                  {comment.authorEmail ? (
+                    <span
+                      aria-label={`@${comment.authorLabel}. Email: ${comment.authorEmail}`}
+                      tabIndex={0}
+                      title={comment.authorEmail}
+                    >
+                      @{comment.authorLabel}
+                    </span>
+                  ) : (
+                    comment.authorLabel
+                  )}
                 </Badge>
                 <span className={cn("text-xs", isViewer ? "text-white/60" : "text-slate-500")}>
                   {formatLastUpdated(comment.createdAt)}
@@ -275,9 +299,19 @@ function MomentComments({
         />
         <div className="flex items-center justify-between gap-3">
           <p className={cn("text-xs", isViewer ? "text-white/60" : "text-slate-500")}>
-            {authorKind === "traveler" ? "Posting as OP" : "Posting anonymously"}
+            {needsDisplayName ? (
+              <Link className="underline underline-offset-4" href="/settings">
+                Set your display name to comment
+              </Link>
+            ) : (
+              postingLabel
+            )}
           </p>
-          <Button disabled={saving || !trimmedDraft} size="sm" type="submit">
+          <Button
+            disabled={saving || !trimmedDraft || needsDisplayName}
+            size="sm"
+            type="submit"
+          >
             {saving ? (
               <LoaderCircle className="h-4 w-4 animate-spin" />
             ) : (

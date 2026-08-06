@@ -13,6 +13,12 @@ export interface DemoDatabase {
     token: string;
     displayNumber: number;
   }[];
+  watches: {
+    tripId: string;
+    userId: string;
+    createdAt: string;
+    lastViewedAt: string;
+  }[];
 }
 
 export const demoOwner: CrumbsUser = {
@@ -198,6 +204,7 @@ export function createDemoDatabase(): DemoDatabase {
     moments,
     comments: [],
     commenters: [],
+    watches: [],
   };
 }
 

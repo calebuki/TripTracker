@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Lock } from "lucide-react";
 import { toast } from "sonner";
 
@@ -10,8 +10,10 @@ import { TripExperience } from "@/components/trip-experience";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { useCrumbsAuth } from "@/hooks/use-crumbs-auth";
 import { useTripRecord } from "@/hooks/use-trip-record";
 import { hashPasscode } from "@/lib/crypto";
+import { getTripRepository } from "@/lib/repositories";
 
 interface ViewerTripScreenProps {
   shareSlug: string;
@@ -24,6 +26,36 @@ export function ViewerTripScreen({ shareSlug }: ViewerTripScreenProps) {
   });
   const [passcode, setPasscode] = useState("");
   const [verifiedOverride, setVerifiedOverride] = useState(false);
+  const { user, loading: authLoading } = useCrumbsAuth();
+  const storedVerification =
+    typeof window !== "undefined" && record?.trip.viewerPasscodeHash
+      ? window.sessionStorage.getItem(
+          `crumbs-passcode:${record.trip.shareSlug}`,
+        ) === record.trip.viewerPasscodeHash
+      : false;
+  const verified = Boolean(
+    record &&
+      (!record.trip.viewerPasscodeHash || storedVerification || verifiedOverride),
+  );
+  const watchedTripId = record?.trip.id;
+  const watchedTripOwnerId = record?.trip.ownerId;
+  const currentUserId = user?.id;
+
+  useEffect(() => {
+    if (
+      authLoading ||
+      !currentUserId ||
+      !watchedTripId ||
+      !verified ||
+      watchedTripOwnerId === currentUserId
+    ) {
+      return;
+    }
+
+    void getTripRepository().watchTrip(watchedTripId).catch(() => {
+      // Viewing a shared trip remains available even if saving the watchlist fails.
+    });
+  }, [authLoading, currentUserId, verified, watchedTripId, watchedTripOwnerId]);
 
   if (loading) {
     return <LoadingShell label="Opening the shared trip…" />;
@@ -51,15 +83,6 @@ export function ViewerTripScreen({ shareSlug }: ViewerTripScreenProps) {
       </main>
     );
   }
-
-  const storedVerification =
-    typeof window !== "undefined" && record.trip.viewerPasscodeHash
-      ? window.sessionStorage.getItem(
-          `crumbs-passcode:${record.trip.shareSlug}`,
-        ) === record.trip.viewerPasscodeHash
-      : false;
-  const verified =
-    !record.trip.viewerPasscodeHash || storedVerification || verifiedOverride;
 
   if (!verified && record.trip.viewerPasscodeHash) {
     return (

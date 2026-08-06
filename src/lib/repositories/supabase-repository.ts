@@ -2,6 +2,7 @@ import { nanoid } from "nanoid";
 
 import { getAnonymousCommenterToken } from "@/lib/commenter-token";
 import { hashPasscode } from "@/lib/crypto";
+import { normalizeDisplayName, validateDisplayName } from "@/lib/display-name";
 import { publicEnv } from "@/lib/env";
 import type { TripRepository } from "@/lib/repositories/types";
 import { generateShareCode } from "@/lib/share-code";
@@ -20,10 +21,12 @@ import type {
   CrumbsUser,
   UpdateMomentInput,
   UpdateTripSettingsInput,
+  WatchedTrip,
 } from "@/types/crumbs";
 
 type TripRow = Database["public"]["Tables"]["trips"]["Row"];
 type MomentRow = Database["public"]["Tables"]["moments"]["Row"];
+type TripWatchRow = Database["public"]["Tables"]["trip_watches"]["Row"];
 type TripWithMomentsRow = TripRow & {
   moments?: MomentRow[] | null;
 };
@@ -127,6 +130,14 @@ function mapTripRecord(row: TripWithMomentsRow): TripRecord {
   return {
     trip: mapTrip(row),
     moments: sortMomentsChronologically((row.moments ?? []).map(mapMoment)),
+  };
+}
+
+function mapWatchedTrip(row: TripWatchRow, trip: Trip): WatchedTrip {
+  return {
+    trip,
+    watchedAt: row.created_at,
+    lastViewedAt: row.last_viewed_at,
   };
 }
 
@@ -335,22 +346,50 @@ async function touchTripUpdatedAt(tripId: string) {
   }
 }
 
-async function getCommentAuthHeaders(
-  authorKind?: CreateMomentCommentInput["authorKind"],
-): Promise<Record<string, string>> {
-  if (authorKind !== "traveler") {
-    return {};
+async function listWatchedTripsForUser(userId: string) {
+  const supabase = getSupabaseBrowserClient();
+  const { data: watchRows, error: watchError } = await withQueryTimeout((signal) =>
+    supabase
+      .from("trip_watches")
+      .select("trip_id, user_id, created_at, last_viewed_at")
+      .eq("user_id", userId)
+      .order("last_viewed_at", { ascending: false })
+      .abortSignal(signal),
+  );
+
+  if (watchError) {
+    throw new Error(formatSupabaseError(watchError));
   }
 
-  const { data, error } = await getSupabaseBrowserClient().auth.getSession();
+  const watches = (watchRows ?? []) as TripWatchRow[];
 
-  if (error || !data.session?.access_token) {
-    throw new Error("Please sign in to comment as OP.");
+  if (watches.length === 0) {
+    return [];
   }
 
-  return {
-    Authorization: `Bearer ${data.session.access_token}`,
-  };
+  const { data: tripRows, error: tripError } = await withQueryTimeout((signal) =>
+    supabase
+      .from("trips")
+      .select("*")
+      .in(
+        "id",
+        watches.map((watch) => watch.trip_id),
+      )
+      .abortSignal(signal),
+  );
+
+  if (tripError) {
+    throw new Error(formatSupabaseError(tripError));
+  }
+
+  const tripsById = new Map(
+    (tripRows ?? []).map((trip) => [trip.id, mapTrip(trip)]),
+  );
+
+  return watches.flatMap((watch) => {
+    const trip = tripsById.get(watch.trip_id);
+    return trip ? [mapWatchedTrip(watch, trip)] : [];
+  });
 }
 
 async function getOptionalCommentAuthHeaders(): Promise<Record<string, string>> {
@@ -427,6 +466,34 @@ export function createSupabaseRepository(): TripRepository {
         throw new Error(formatSupabaseError(error));
       }
     },
+    async updateCurrentUserDisplayName(displayName: string) {
+      const validationError = validateDisplayName(displayName);
+
+      if (validationError) {
+        throw new Error(validationError);
+      }
+
+      const normalizedDisplayName = normalizeDisplayName(displayName);
+      const supabase = getSupabaseBrowserClient();
+      const { data, error } = await supabase.auth.updateUser({
+        data: { display_name: normalizedDisplayName },
+      });
+
+      if (error || !data.user) {
+        throw new Error(formatSupabaseError(error));
+      }
+
+      const { error: profileError } = await supabase
+        .from("users")
+        .update({ display_name: normalizedDisplayName })
+        .eq("id", data.user.id);
+
+      if (profileError) {
+        throw new Error(formatSupabaseError(profileError));
+      }
+
+      return mapUser(data.user);
+    },
     async createTrip(input: CreateTripInput) {
       const user = await requireUser();
       const shareSlug = nanoid(18);
@@ -498,6 +565,45 @@ export function createSupabaseRepository(): TripRepository {
     async listTripsForCurrentUser() {
       const user = await requireUser();
       return listOwnedTripsForUser(user.id);
+    },
+    async listWatchedTripsForCurrentUser() {
+      const user = await requireUser();
+      return listWatchedTripsForUser(user.id);
+    },
+    async watchTrip(tripId: string) {
+      const user = await requireUser();
+      const { error } = await withQueryTimeout((signal) =>
+        getSupabaseBrowserClient()
+          .from("trip_watches")
+          .upsert(
+            {
+              trip_id: tripId,
+              user_id: user.id,
+              last_viewed_at: new Date().toISOString(),
+            },
+            { onConflict: "trip_id,user_id" },
+          )
+          .abortSignal(signal),
+      );
+
+      if (error) {
+        throw new Error(formatSupabaseError(error));
+      }
+    },
+    async unwatchTrip(tripId: string) {
+      const user = await requireUser();
+      const { error } = await withQueryTimeout((signal) =>
+        getSupabaseBrowserClient()
+          .from("trip_watches")
+          .delete()
+          .eq("trip_id", tripId)
+          .eq("user_id", user.id)
+          .abortSignal(signal),
+      );
+
+      if (error) {
+        throw new Error(formatSupabaseError(error));
+      }
     },
     async getTripById(tripId: string) {
       const user = await requireUser();
@@ -581,7 +687,7 @@ export function createSupabaseRepository(): TripRepository {
     async createMomentComment(input: CreateMomentCommentInput) {
       const headers = {
         "Content-Type": "application/json",
-        ...(await getCommentAuthHeaders(input.authorKind)),
+        ...(await getOptionalCommentAuthHeaders()),
       };
       const response = await fetch(`/api/moments/${input.momentId}/comments`, {
         method: "POST",
@@ -589,10 +695,7 @@ export function createSupabaseRepository(): TripRepository {
         body: JSON.stringify({
           authorKind: input.authorKind,
           body: input.body,
-          commenterToken:
-            input.authorKind === "viewer"
-              ? getAnonymousCommenterToken(input.tripId)
-              : undefined,
+          commenterToken: getAnonymousCommenterToken(input.tripId),
         }),
       });
 
