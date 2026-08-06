@@ -290,8 +290,8 @@ function MomentSheetSlide({
   );
 
   return (
-    <article className="w-full shrink-0 snap-start snap-always">
-      <div className="px-4 py-4 sm:px-5 sm:py-5 lg:mx-auto lg:max-w-[34rem] lg:px-8 lg:py-6">
+    <article className="w-full shrink-0 snap-start snap-always lg:flex lg:min-h-full lg:flex-col">
+      <div className="px-4 py-4 sm:px-5 sm:py-5 lg:mx-auto lg:flex lg:min-h-full lg:w-full lg:max-w-[34rem] lg:flex-1 lg:flex-col lg:justify-between lg:px-8 lg:py-6">
         <div className="mb-4 flex items-start justify-between gap-3">
         <div className="space-y-2">
           <div className="flex items-center gap-2">
@@ -783,9 +783,9 @@ export function MomentBottomSheet({
             <div className="hidden lg:block lg:shrink-0">{sidebarHeader}</div>
           ) : null}
           {activeMoment ? (
-            <div className={cn(sidebarHeader && "lg:min-h-0 lg:flex-1 lg:overflow-y-auto")}>
+            <div className={cn(sidebarHeader && "lg:flex lg:min-h-0 lg:flex-1 lg:flex-col lg:overflow-hidden")}>
               {hasMultipleNavigationMoments ? (
-                <div className="sticky top-0 z-20 flex items-center justify-between border-b border-black/5 bg-white/95 px-4 py-3 backdrop-blur-sm sm:px-5">
+                <div className="sticky top-0 z-20 flex items-center justify-between border-b border-black/5 bg-white/95 px-4 py-3 backdrop-blur-sm sm:px-5 lg:shrink-0">
                   <div>
                     <p className="text-xs uppercase tracking-[0.18em] text-slate-500">
                       {carouselTitle ??
@@ -826,7 +826,7 @@ export function MomentBottomSheet({
 
               <div
                 ref={scrollerRef}
-                className="flex snap-x snap-mandatory overflow-x-auto scroll-smooth [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                className="flex snap-x snap-mandatory overflow-x-auto scroll-smooth [scrollbar-width:none] [&::-webkit-scrollbar]:hidden lg:min-h-0 lg:flex-1 lg:overflow-y-auto"
                 onScroll={(event) => {
                   if (!hasMultipleMoments) {
                     return;
