@@ -73,6 +73,34 @@ type MobileSwipeTransition = {
 
 const momentCommentsCache = new Map<string, MomentComment[]>();
 const pendingMomentComments = new Map<string, Promise<MomentComment[]>>();
+const loadedPhotoUrls = new Set<string>();
+const pendingPhotoPreloads = new Set<string>();
+
+function markPhotoReady(imageUrl: string) {
+  loadedPhotoUrls.add(imageUrl);
+  pendingPhotoPreloads.delete(imageUrl);
+}
+
+function preloadPhoto(imageUrl: string) {
+  if (loadedPhotoUrls.has(imageUrl) || pendingPhotoPreloads.has(imageUrl)) {
+    return;
+  }
+
+  pendingPhotoPreloads.add(imageUrl);
+
+  const image = new Image();
+  image.onload = () => markPhotoReady(imageUrl);
+  image.onerror = () => pendingPhotoPreloads.delete(imageUrl);
+  image.src = imageUrl;
+
+  if (image.complete) {
+    if (image.naturalWidth > 0) {
+      markPhotoReady(imageUrl);
+    } else {
+      pendingPhotoPreloads.delete(imageUrl);
+    }
+  }
+}
 
 function loadMomentComments(momentId: string) {
   const cachedComments = momentCommentsCache.get(momentId);
@@ -359,7 +387,10 @@ function MomentSheetSlide({
   const isVideoMoment = isMomentVideo(moment);
   const momentTitle = getMomentTitle(moment);
   const hasMediaToLoad = moment.type === "photo" && Boolean(moment.imageUrl);
-  const [mediaReady, setMediaReady] = useState(!hasMediaToLoad);
+  const [mediaReady, setMediaReady] = useState(
+    !hasMediaToLoad ||
+      (!isVideoMoment && Boolean(moment.imageUrl && loadedPhotoUrls.has(moment.imageUrl))),
+  );
   const [commentsReady, setCommentsReady] = useState(false);
   const hasReportedReadyRef = useRef(false);
   const markCommentsReady = useCallback(() => {
@@ -427,7 +458,12 @@ function MomentSheetSlide({
                       alt={moment.caption ?? moment.placeName ?? "Trip photo"}
                       className="h-64 w-full object-cover transition duration-300 group-hover:scale-[1.01] sm:h-80"
                       onError={() => setMediaReady(true)}
-                      onLoad={() => setMediaReady(true)}
+                      onLoad={() => {
+                        if (moment.imageUrl) {
+                          markPhotoReady(moment.imageUrl);
+                        }
+                        setMediaReady(true);
+                      }}
                       src={moment.imageUrl}
                     />
                     {openViewerButton}
@@ -581,7 +617,10 @@ function FullscreenMomentMedia({
   isVideoMoment: boolean;
 }) {
   const hasMediaToLoad = moment.type === "photo" && Boolean(moment.imageUrl);
-  const [mediaReady, setMediaReady] = useState(!hasMediaToLoad);
+  const [mediaReady, setMediaReady] = useState(
+    !hasMediaToLoad ||
+      (!isVideoMoment && Boolean(moment.imageUrl && loadedPhotoUrls.has(moment.imageUrl))),
+  );
 
   return (
     <div
@@ -611,7 +650,12 @@ function FullscreenMomentMedia({
               !mediaReady && "opacity-0",
             )}
             onError={() => setMediaReady(true)}
-            onLoad={() => setMediaReady(true)}
+            onLoad={() => {
+              if (moment.imageUrl) {
+                markPhotoReady(moment.imageUrl);
+              }
+              setMediaReady(true);
+            }}
             src={moment.imageUrl}
           />
         )
@@ -741,8 +785,7 @@ function MomentFullscreenViewer({
     [moments[activeIndex - 1], moments[activeIndex + 1]].forEach(
       (nearbyMoment) => {
         if (nearbyMoment?.type === "photo" && nearbyMoment.imageUrl) {
-          const image = new Image();
-          image.src = nearbyMoment.imageUrl;
+          preloadPhoto(nearbyMoment.imageUrl);
         }
       },
     );
@@ -1084,8 +1127,7 @@ export function MomentBottomSheet({
 
     nearbyMoments.forEach((moment) => {
       if (moment.type === "photo" && moment.imageUrl) {
-        const image = new Image();
-        image.src = moment.imageUrl;
+        preloadPhoto(moment.imageUrl);
       }
 
       void loadMomentComments(moment.id).catch(() => undefined);
