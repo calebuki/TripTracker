@@ -261,6 +261,7 @@ function MomentSheetSlide({
   moment,
   trip,
   canManage,
+  navigationControls,
   onClose,
   onOpenPhotoViewer,
   onEdit,
@@ -270,6 +271,7 @@ function MomentSheetSlide({
   moment: Moment;
   trip: Trip;
   canManage: boolean;
+  navigationControls?: ReactNode;
   onClose: () => void;
   onOpenPhotoViewer: (moment: Moment) => void;
   onEdit?: (moment: Moment) => void;
@@ -293,146 +295,148 @@ function MomentSheetSlide({
     <article className="w-full shrink-0 snap-start snap-always lg:flex lg:min-h-full lg:flex-col">
       <div className="px-4 py-4 sm:px-5 sm:py-5 lg:mx-auto lg:flex lg:min-h-full lg:w-full lg:max-w-[34rem] lg:flex-1 lg:flex-col lg:justify-center lg:px-8 lg:py-6">
         <div className="space-y-6 lg:space-y-8">
-        <div className="flex items-start justify-between gap-3">
-        <div className="space-y-2">
-          <div className="flex items-center gap-2">
-            <Badge variant="accent">
-              {moment.type === "photo"
-                ? isVideoMoment
-                  ? "Video"
-                  : "Photo"
-                : "Thought"}
-            </Badge>
-            {isVideoMoment ? (
-              <Badge variant="subtle">
-                <Film className="mr-1 h-3 w-3" />
-                Captured media
-              </Badge>
-            ) : null}
-            {moment.placeName ? (
-              <Badge variant="subtle">{moment.placeName}</Badge>
-            ) : null}
-          </div>
-          <div>
-            <div className="flex flex-wrap items-center gap-2">
-              <p className="text-base font-medium text-[var(--ink)]">
-                {momentTitle}
-              </p>
-              {canManage && onEdit ? (
-                <Button
-                  className="h-8 rounded-full px-2.5 text-xs"
-                  onClick={() => onEdit(moment)}
-                  size="sm"
-                  type="button"
-                  variant="secondary"
-                >
-                  <Pencil className="h-3.5 w-3.5" />
-                  Edit title
-                </Button>
+          {moment.type === "photo" && moment.imageUrl ? (
+            <div className="space-y-3">
+              <div className="overflow-hidden rounded-[26px] bg-[var(--paper)]">
+                {isVideoMoment ? (
+                  <div className="relative">
+                    <video
+                      className="h-64 w-full bg-black object-cover sm:h-80"
+                      controls
+                      playsInline
+                      preload="metadata"
+                      src={moment.imageUrl}
+                    />
+                    <button
+                      aria-label="Open full-screen video"
+                      className="absolute right-3 top-3 inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-[var(--ink)] shadow-[0_12px_30px_rgba(15,23,42,0.16)]"
+                      onClick={() => onOpenPhotoViewer(moment)}
+                      title="Open full-screen video"
+                      type="button"
+                    >
+                      <Maximize2 className="h-4 w-4" />
+                      <span className="sr-only">Open full-screen video</span>
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    aria-label="Open full-screen photo"
+                    className="group relative block w-full overflow-hidden text-left"
+                    onClick={() => onOpenPhotoViewer(moment)}
+                    title="Open full-screen photo"
+                    type="button"
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      alt={moment.caption ?? moment.placeName ?? "Trip photo"}
+                      className="h-64 w-full object-cover transition duration-300 group-hover:scale-[1.01] sm:h-80"
+                      src={moment.imageUrl}
+                    />
+                    {openViewerButton}
+                  </button>
+                )}
+              </div>
+              {moment.thoughtText ? (
+                <div className="rounded-[24px] bg-[var(--paper)] p-4 text-sm leading-7 text-[var(--ink)]">
+                  {moment.thoughtText}
+                </div>
               ) : null}
             </div>
-            <div className="mt-2 space-y-1 text-sm text-slate-600">
-              <p>{tripTimeLabel} time: {times.tripLabel}</p>
-              {times.viewerLabel ? <p>Your time: {times.viewerLabel}</p> : null}
-            </div>
-          </div>
-        </div>
-        <div className="flex items-center gap-1">
-          {canManage && onHide && onDelete ? (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button size="icon" variant="ghost" className="h-10 w-10">
-                  <MoreHorizontal className="h-4 w-4" />
-                  <span className="sr-only">Moment options</span>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                {onEdit ? (
-                  <DropdownMenuItem onClick={() => onEdit(moment)}>
-                    Edit details
-                  </DropdownMenuItem>
+          ) : (
+            <button
+              aria-label="Open full-screen moment"
+              className="relative block w-full rounded-[26px] bg-[var(--paper)] p-5 text-left text-base leading-7 text-[var(--ink)]"
+              onClick={() => onOpenPhotoViewer(moment)}
+              title="Open full-screen moment"
+              type="button"
+            >
+              {moment.thoughtText ?? moment.caption ?? "A quiet note from the trip."}
+              {openViewerButton}
+            </button>
+          )}
+
+          <div className="space-y-4">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge variant="accent">
+                  {moment.type === "photo"
+                    ? isVideoMoment
+                      ? "Video"
+                      : "Photo"
+                    : "Thought"}
+                </Badge>
+                {isVideoMoment ? (
+                  <Badge variant="subtle">
+                    <Film className="mr-1 h-3 w-3" />
+                    Captured media
+                  </Badge>
                 ) : null}
-                <DropdownMenuItem onClick={() => onHide(moment)}>
-                  <EyeOff className="mr-2 h-4 w-4" />
-                  Hide from viewers
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  className="text-[#7f1d1d]"
-                  onClick={() => onDelete(moment)}
-                >
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  Delete moment
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          ) : null}
-          <Button size="icon" variant="ghost" className="h-10 w-10" onClick={onClose}>
-            <X className="h-4 w-4" />
-            <span className="sr-only">Close moment</span>
-          </Button>
-        </div>
-      </div>
-
-      {moment.type === "photo" && moment.imageUrl ? (
-        <div className="space-y-3">
-          <div className="overflow-hidden rounded-[26px] bg-[var(--paper)]">
-            {isVideoMoment ? (
-              <div className="relative">
-                <video
-                  className="h-64 w-full bg-black object-cover sm:h-80"
-                  controls
-                  playsInline
-                  preload="metadata"
-                  src={moment.imageUrl}
-                />
-                <button
-                  aria-label="Open full-screen video"
-                  className="absolute right-3 top-3 inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-[var(--ink)] shadow-[0_12px_30px_rgba(15,23,42,0.16)]"
-                  onClick={() => onOpenPhotoViewer(moment)}
-                  title="Open full-screen video"
-                  type="button"
-                >
-                  <Maximize2 className="h-4 w-4" />
-                  <span className="sr-only">Open full-screen video</span>
-                </button>
+                {moment.placeName ? (
+                  <Badge variant="subtle">{moment.placeName}</Badge>
+                ) : null}
               </div>
-            ) : (
-              <button
-                aria-label="Open full-screen photo"
-                className="group relative block w-full overflow-hidden text-left"
-                onClick={() => onOpenPhotoViewer(moment)}
-                title="Open full-screen photo"
-                type="button"
-              >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  alt={moment.caption ?? moment.placeName ?? "Trip photo"}
-                  className="h-64 w-full object-cover transition duration-300 group-hover:scale-[1.01] sm:h-80"
-                  src={moment.imageUrl}
-                />
-                {openViewerButton}
-              </button>
-            )}
-          </div>
-          {moment.thoughtText ? (
-            <div className="rounded-[24px] bg-[var(--paper)] p-4 text-sm leading-7 text-[var(--ink)]">
-              {moment.thoughtText}
+              <div className="flex shrink-0 items-center gap-1">
+                {canManage && onHide && onDelete ? (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button className="h-10 w-10" size="icon" variant="ghost">
+                        <MoreHorizontal className="h-4 w-4" />
+                        <span className="sr-only">Moment options</span>
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      {onEdit ? (
+                        <DropdownMenuItem onClick={() => onEdit(moment)}>
+                          Edit details
+                        </DropdownMenuItem>
+                      ) : null}
+                      <DropdownMenuItem onClick={() => onHide(moment)}>
+                        <EyeOff className="mr-2 h-4 w-4" />
+                        Hide from viewers
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        className="text-[#7f1d1d]"
+                        onClick={() => onDelete(moment)}
+                      >
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Delete moment
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                ) : null}
+                <Button className="h-10 w-10" onClick={onClose} size="icon" type="button" variant="ghost">
+                  <X className="h-4 w-4" />
+                  <span className="sr-only">Close moment</span>
+                </Button>
+              </div>
             </div>
-          ) : null}
-        </div>
-      ) : (
-        <button
-          aria-label="Open full-screen moment"
-          className="relative block w-full rounded-[26px] bg-[var(--paper)] p-5 text-left text-base leading-7 text-[var(--ink)]"
-          onClick={() => onOpenPhotoViewer(moment)}
-          title="Open full-screen moment"
-          type="button"
-        >
-          {moment.thoughtText ?? moment.caption ?? "A quiet note from the trip."}
-          {openViewerButton}
-        </button>
-      )}
 
+            {navigationControls}
+
+            <div className="space-y-2">
+              <div className="flex flex-wrap items-center gap-3">
+                <p className="font-serif text-3xl leading-tight tracking-tight text-[var(--ink)] sm:text-4xl">
+                  {momentTitle}
+                </p>
+                {canManage && onEdit ? (
+                  <Button
+                    className="h-8 rounded-full px-2.5 text-xs"
+                    onClick={() => onEdit(moment)}
+                    size="sm"
+                    type="button"
+                    variant="secondary"
+                  >
+                    <Pencil className="h-3.5 w-3.5" />
+                    Edit title
+                  </Button>
+                ) : null}
+              </div>
+              <div className="space-y-1 text-sm text-slate-600">
+                <p>{tripTimeLabel} time: {times.tripLabel}</p>
+                {times.viewerLabel ? <p>Your time: {times.viewerLabel}</p> : null}
+              </div>
+            </div>
+          </div>
         </div>
         <div className="lg:pt-10">
         <MomentComments
@@ -768,6 +772,39 @@ export function MomentBottomSheet({
     onSelectMoment?.(moment.id);
   }
 
+  const momentNavigator = hasMultipleNavigationMoments ? (
+    <div
+      aria-label={carouselTitle ?? `${activeNavigationMoments.length} moments in this view`}
+      className="flex items-center justify-center gap-4"
+    >
+      <Button
+        className="h-12 w-12 rounded-full border border-black/5 bg-white shadow-[0_10px_24px_rgba(15,23,42,0.1)] hover:bg-[var(--paper)]"
+        disabled={selectedNavigationIndex === 0}
+        onClick={() => selectMomentAtIndex(selectedNavigationIndex - 1)}
+        size="icon"
+        type="button"
+        variant="secondary"
+      >
+        <ChevronLeft className="h-5 w-5" />
+        <span className="sr-only">Previous moment</span>
+      </Button>
+      <span className="min-w-16 text-center text-sm font-medium text-[var(--ink)]">
+        {selectedNavigationIndex + 1} / {activeNavigationMoments.length}
+      </span>
+      <Button
+        className="h-12 w-12 rounded-full border border-black/5 bg-white shadow-[0_10px_24px_rgba(15,23,42,0.1)] hover:bg-[var(--paper)]"
+        disabled={selectedNavigationIndex === activeNavigationMoments.length - 1}
+        onClick={() => selectMomentAtIndex(selectedNavigationIndex + 1)}
+        size="icon"
+        type="button"
+        variant="secondary"
+      >
+        <ChevronRight className="h-5 w-5" />
+        <span className="sr-only">Next moment</span>
+      </Button>
+    </div>
+  ) : null;
+
   return (
     <>
       <div
@@ -788,46 +825,6 @@ export function MomentBottomSheet({
           ) : null}
           {activeMoment ? (
             <div className={cn(sidebarHeader && "lg:flex lg:min-h-0 lg:flex-1 lg:flex-col lg:overflow-hidden")}>
-              {hasMultipleNavigationMoments ? (
-                <div className="sticky top-0 z-20 flex items-center justify-between border-b border-black/5 bg-white/95 px-4 py-3 backdrop-blur-sm sm:px-5 lg:shrink-0">
-                  <div>
-                    <p className="text-xs uppercase tracking-[0.18em] text-slate-500">
-                      {carouselTitle ??
-                        `${activeNavigationMoments.length} moments in this view`}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <Button
-                      className="h-9 w-9"
-                      disabled={selectedNavigationIndex === 0}
-                      onClick={() => selectMomentAtIndex(selectedNavigationIndex - 1)}
-                      size="icon"
-                      type="button"
-                      variant="ghost"
-                    >
-                      <ChevronLeft className="h-4 w-4" />
-                      <span className="sr-only">Previous moment</span>
-                    </Button>
-                    <span className="min-w-16 text-center text-sm font-medium text-[var(--ink)]">
-                      {selectedNavigationIndex + 1} / {activeNavigationMoments.length}
-                    </span>
-                    <Button
-                      className="h-9 w-9"
-                      disabled={
-                        selectedNavigationIndex === activeNavigationMoments.length - 1
-                      }
-                      onClick={() => selectMomentAtIndex(selectedNavigationIndex + 1)}
-                      size="icon"
-                      type="button"
-                      variant="ghost"
-                    >
-                      <ChevronRight className="h-4 w-4" />
-                      <span className="sr-only">Next moment</span>
-                    </Button>
-                  </div>
-                </div>
-              ) : null}
-
               <div
                 ref={scrollerRef}
                 className="flex snap-x snap-mandatory overflow-x-auto scroll-smooth [scrollbar-width:none] [&::-webkit-scrollbar]:hidden lg:min-h-0 lg:flex-1 lg:overflow-y-auto"
@@ -875,6 +872,7 @@ export function MomentBottomSheet({
                     onHide={onHide}
                     onOpenPhotoViewer={(moment) => setFullscreenMomentId(moment.id)}
                     trip={trip}
+                    navigationControls={momentNavigator}
                   />
                 ))}
               </div>
