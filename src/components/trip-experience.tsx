@@ -241,6 +241,48 @@ export function TripExperience({
     }
   }
 
+  const tripSidebarHeader = (
+    <div className="border-b border-black/5 px-4 py-4 sm:px-5">
+      <div className="flex items-start gap-3">
+        <Link
+          aria-label="Back to Crumbs home"
+          className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[var(--paper)] text-[var(--ink)] transition hover:bg-[#f6efdf]"
+          href="/"
+          title="Back to Crumbs home"
+        >
+          <ChevronLeft className="h-4 w-4" />
+        </Link>
+        <div className="min-w-0 flex-1">
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
+            <h1 className="min-w-0 font-serif text-3xl leading-tight tracking-tight text-[var(--ink)]">
+              {record.trip.title}
+            </h1>
+            {isDemoMode ? <Badge variant="accent">Demo mode</Badge> : null}
+          </div>
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            <p className="text-sm leading-6 text-slate-600">{dayHeadline}</p>
+            <Badge className="font-mono uppercase tracking-[0.12em]" variant="subtle">
+              {record.trip.shareCode}
+            </Badge>
+          </div>
+          {postingLockedToActiveTrip ? (
+            <p className="mt-2 text-sm leading-6 text-slate-600">
+              This past trip is view-only for new moments while {activeOwnerTrip?.title ?? "your active trip"} is running.
+            </p>
+          ) : null}
+        </div>
+        {role === "owner" ? (
+          <Button asChild className="shrink-0" size="icon" variant="secondary">
+            <Link href="/profile">
+              <User className="h-4 w-4" />
+              <span className="sr-only">Open profile</span>
+            </Link>
+          </Button>
+        ) : null}
+      </div>
+    </div>
+  );
+
   return (
     <div className="h-[100dvh] overflow-hidden bg-[var(--paper)]">
       <div className="h-full w-full">
@@ -252,11 +294,11 @@ export function TripExperience({
             onSelectMoment={selectSpotMoment}
             onMomentGroupsChange={setMarkerGroups}
             heightClassName="h-[100dvh] min-h-[100dvh]"
-            className="rounded-none border-0"
+            className="rounded-none border-0 lg:absolute lg:inset-y-3 lg:right-3 lg:left-[calc(clamp(20rem,29vw,28rem)+1.5rem)] lg:rounded-[24px] lg:border"
           />
 
           <div className="pointer-events-none absolute inset-0">
-            <div className="pointer-events-auto absolute inset-x-0 top-0 p-3 sm:p-4">
+            <div className="pointer-events-auto absolute inset-x-0 top-0 p-3 sm:p-4 lg:hidden">
               <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-2 sm:gap-3">
                 <Link
                   aria-label="Back to Crumbs home"
@@ -389,6 +431,7 @@ export function TripExperience({
               moments={selectedSheetMoments}
               navigationMoments={filteredMoments}
               fullscreenMoments={filteredMoments}
+              sidebarHeader={tripSidebarHeader}
               selectedMomentId={activeSelectedMomentId}
               open={Boolean(activeSelectedMomentId)}
               canManage={role === "owner"}

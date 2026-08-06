@@ -2,6 +2,7 @@
 
 import {
   type FormEvent,
+  type ReactNode,
   type TouchEvent,
   useCallback,
   useEffect,
@@ -53,6 +54,7 @@ interface MomentBottomSheetProps {
   open: boolean;
   canManage?: boolean;
   carouselTitle?: string;
+  sidebarHeader?: ReactNode;
   onClose: () => void;
   onSelectMoment?: (momentId: string) => void;
   onEdit?: (moment: Moment) => void;
@@ -685,6 +687,7 @@ export function MomentBottomSheet({
   open,
   canManage = false,
   carouselTitle,
+  sidebarHeader,
   onClose,
   onSelectMoment,
   onEdit,
@@ -753,12 +756,21 @@ export function MomentBottomSheet({
       <div
         className={cn(
           "pointer-events-none absolute inset-x-0 bottom-0 z-30 p-3 transition duration-300 sm:p-4",
-          open ? "translate-y-0 opacity-100" : "translate-y-full opacity-0",
+          sidebarHeader && "lg:inset-y-3 lg:bottom-auto lg:left-3 lg:right-auto lg:w-[clamp(20rem,29vw,28rem)] lg:p-0",
+          open || sidebarHeader
+            ? "translate-y-0 opacity-100"
+            : "translate-y-full opacity-0",
         )}
       >
-        <div className="pointer-events-auto mx-auto max-h-[calc(100dvh_-_1.5rem_-_env(safe-area-inset-bottom))] max-w-xl overflow-y-auto overscroll-contain rounded-[30px] border border-black/5 bg-white shadow-[0_28px_90px_rgba(15,23,42,0.18)] sm:max-h-[calc(100dvh_-_2rem_-_env(safe-area-inset-bottom))]">
+        <div className={cn(
+          "pointer-events-auto mx-auto max-h-[calc(100dvh_-_1.5rem_-_env(safe-area-inset-bottom))] max-w-xl overflow-y-auto overscroll-contain rounded-[30px] border border-black/5 bg-white shadow-[0_28px_90px_rgba(15,23,42,0.18)] sm:max-h-[calc(100dvh_-_2rem_-_env(safe-area-inset-bottom))]",
+          sidebarHeader && "lg:flex lg:h-full lg:max-h-none lg:max-w-none lg:flex-col lg:overflow-hidden",
+        )}>
+          {sidebarHeader ? (
+            <div className="hidden lg:block lg:shrink-0">{sidebarHeader}</div>
+          ) : null}
           {activeMoment ? (
-            <>
+            <div className={cn(sidebarHeader && "lg:min-h-0 lg:flex-1 lg:overflow-y-auto")}>
               {hasMultipleNavigationMoments ? (
                 <div className="sticky top-0 z-20 flex items-center justify-between border-b border-black/5 bg-white/95 px-4 py-3 backdrop-blur-sm sm:px-5">
                   <div>
@@ -845,7 +857,7 @@ export function MomentBottomSheet({
                   />
                 ))}
               </div>
-            </>
+            </div>
           ) : null}
         </div>
       </div>
