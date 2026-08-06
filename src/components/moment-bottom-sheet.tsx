@@ -292,11 +292,11 @@ function MomentSheetSlide({
   );
 
   return (
-    <article className="w-full shrink-0 snap-start snap-always lg:flex lg:min-h-full lg:flex-col">
+    <article className="w-full lg:flex lg:min-h-full lg:flex-col">
       <div className="px-4 py-4 sm:px-5 sm:py-5 lg:mx-auto lg:flex lg:min-h-full lg:w-full lg:max-w-[34rem] lg:flex-1 lg:flex-col lg:justify-center lg:px-8 lg:py-6">
-        <div className="space-y-6 lg:space-y-8">
+        <div className="flex flex-col gap-6 lg:gap-8">
           {moment.type === "photo" && moment.imageUrl ? (
-            <div className="space-y-3">
+            <div className="order-3 space-y-3">
               <div className="overflow-hidden rounded-[26px] bg-[var(--paper)]">
                 {isVideoMoment ? (
                   <div className="relative">
@@ -345,7 +345,7 @@ function MomentSheetSlide({
           ) : (
             <button
               aria-label="Open full-screen moment"
-              className="relative block w-full rounded-[26px] bg-[var(--paper)] p-5 text-left text-base leading-7 text-[var(--ink)]"
+              className="order-3 relative block w-full rounded-[26px] bg-[var(--paper)] p-5 text-left text-base leading-7 text-[var(--ink)]"
               onClick={() => onOpenPhotoViewer(moment)}
               title="Open full-screen moment"
               type="button"
@@ -355,8 +355,8 @@ function MomentSheetSlide({
             </button>
           )}
 
-          <div className="space-y-4">
-            <div className="flex items-start justify-between gap-3">
+          <div className="contents">
+            <div className="order-4 flex items-start justify-between gap-3">
               <div className="flex flex-wrap items-center gap-2">
                 <Badge variant="accent">
                   {moment.type === "photo"
@@ -411,9 +411,9 @@ function MomentSheetSlide({
               </div>
             </div>
 
-            {navigationControls}
+            <div className="order-1">{navigationControls}</div>
 
-            <div className="space-y-2">
+            <div className="order-2 space-y-2">
               <div className="flex flex-wrap items-center gap-3">
                 <p className="font-serif text-3xl leading-tight tracking-tight text-[var(--ink)] sm:text-4xl">
                   {momentTitle}
@@ -706,15 +706,9 @@ export function MomentBottomSheet({
   onHide,
   onDelete,
 }: MomentBottomSheetProps) {
-  const scrollerRef = useRef<HTMLDivElement | null>(null);
-  const scrollSettleTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [fullscreenMomentId, setFullscreenMomentId] = useState<string | null>(null);
-  const selectedIndex = Math.max(
-    0,
-    moments.findIndex((moment) => moment.id === selectedMomentId),
-  );
-  const activeMoment = moments[selectedIndex] ?? null;
-  const hasMultipleMoments = moments.length > 1;
+  const activeMoment =
+    moments.find((moment) => moment.id === selectedMomentId) ?? moments[0] ?? null;
   const activeNavigationMoments =
     navigationMoments?.some((moment) => moment.id === selectedMomentId)
       ? navigationMoments
@@ -728,39 +722,6 @@ export function MomentBottomSheet({
     fullscreenMoments?.some((moment) => moment.id === fullscreenMomentId)
       ? fullscreenMoments
       : moments;
-
-  useEffect(() => {
-    const scroller = scrollerRef.current;
-
-    if (!scroller || !open || moments.length === 0) {
-      return;
-    }
-
-    const width = scroller.clientWidth;
-
-    if (!width) {
-      return;
-    }
-
-    const targetScrollLeft = width * selectedIndex;
-
-    if (Math.abs(scroller.scrollLeft - targetScrollLeft) < 1) {
-      return;
-    }
-
-    scroller.scrollTo({
-      left: targetScrollLeft,
-      behavior: "smooth",
-    });
-  }, [moments.length, open, selectedIndex]);
-
-  useEffect(() => {
-    return () => {
-      if (scrollSettleTimeoutRef.current) {
-        clearTimeout(scrollSettleTimeoutRef.current);
-      }
-    };
-  }, []);
 
   function selectMomentAtIndex(nextIndex: number) {
     const moment = activeNavigationMoments[nextIndex];
@@ -825,57 +786,18 @@ export function MomentBottomSheet({
           ) : null}
           {activeMoment ? (
             <div className={cn(sidebarHeader && "lg:flex lg:min-h-0 lg:flex-1 lg:flex-col lg:overflow-hidden")}>
-              <div
-                ref={scrollerRef}
-                className="flex snap-x snap-mandatory overflow-x-auto scroll-smooth [scrollbar-width:none] [&::-webkit-scrollbar]:hidden lg:min-h-0 lg:flex-1 lg:overflow-y-auto"
-                onScroll={(event) => {
-                  if (!hasMultipleMoments) {
-                    return;
-                  }
-
-                  const target = event.currentTarget;
-
-                  if (scrollSettleTimeoutRef.current) {
-                    clearTimeout(scrollSettleTimeoutRef.current);
-                  }
-
-                  scrollSettleTimeoutRef.current = setTimeout(() => {
-                    const width = target.clientWidth;
-
-                    if (!width) {
-                      return;
-                    }
-
-                    const nextIndex = Math.max(
-                      0,
-                      Math.min(
-                        moments.length - 1,
-                        Math.round(target.scrollLeft / width),
-                      ),
-                    );
-                    const nextMoment = moments[nextIndex];
-
-                    if (nextMoment && nextMoment.id !== selectedMomentId) {
-                      onSelectMoment?.(nextMoment.id);
-                    }
-                  }, 150);
-                }}
-              >
-                {moments.map((moment) => (
-                  <MomentSheetSlide
-                    key={moment.id}
-                    canManage={canManage}
-                    moment={moment}
-                    onClose={onClose}
-                    onDelete={onDelete}
-                    onEdit={onEdit}
-                    onHide={onHide}
-                    onOpenPhotoViewer={(moment) => setFullscreenMomentId(moment.id)}
-                    trip={trip}
-                    navigationControls={momentNavigator}
-                  />
-                ))}
-              </div>
+              <MomentSheetSlide
+                key={activeMoment.id}
+                canManage={canManage}
+                moment={activeMoment}
+                navigationControls={momentNavigator}
+                onClose={onClose}
+                onDelete={onDelete}
+                onEdit={onEdit}
+                onHide={onHide}
+                onOpenPhotoViewer={(moment) => setFullscreenMomentId(moment.id)}
+                trip={trip}
+              />
             </div>
           ) : sidebarEmptyState ? (
             <div className="pointer-events-none hidden lg:flex lg:min-h-0 lg:flex-1 lg:items-center lg:justify-center lg:p-8">
