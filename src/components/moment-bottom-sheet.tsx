@@ -290,8 +290,9 @@ function MomentSheetSlide({
   );
 
   return (
-    <article className="w-full shrink-0 snap-start snap-always px-4 py-4 sm:px-5 sm:py-5 lg:mx-auto lg:max-w-[34rem] lg:px-8 lg:py-6">
-      <div className="mb-4 flex items-start justify-between gap-3">
+    <article className="w-full shrink-0 snap-start snap-always">
+      <div className="px-4 py-4 sm:px-5 sm:py-5 lg:mx-auto lg:max-w-[34rem] lg:px-8 lg:py-6">
+        <div className="mb-4 flex items-start justify-between gap-3">
         <div className="space-y-2">
           <div className="flex items-center gap-2">
             <Badge variant="accent">
@@ -431,11 +432,12 @@ function MomentSheetSlide({
         </button>
       )}
 
-      <MomentComments
-        authorKind={canManage ? "traveler" : "viewer"}
-        moment={moment}
-        trip={trip}
-      />
+        <MomentComments
+          authorKind={canManage ? "traveler" : "viewer"}
+          moment={moment}
+          trip={trip}
+        />
+      </div>
     </article>
   );
 }
@@ -697,6 +699,7 @@ export function MomentBottomSheet({
   onDelete,
 }: MomentBottomSheetProps) {
   const scrollerRef = useRef<HTMLDivElement | null>(null);
+  const scrollSettleTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [fullscreenMomentId, setFullscreenMomentId] = useState<string | null>(null);
   const selectedIndex = Math.max(
     0,
@@ -742,6 +745,14 @@ export function MomentBottomSheet({
       behavior: "smooth",
     });
   }, [moments.length, open, selectedIndex]);
+
+  useEffect(() => {
+    return () => {
+      if (scrollSettleTimeoutRef.current) {
+        clearTimeout(scrollSettleTimeoutRef.current);
+      }
+    };
+  }, []);
 
   function selectMomentAtIndex(nextIndex: number) {
     const moment = activeNavigationMoments[nextIndex];
@@ -822,27 +833,31 @@ export function MomentBottomSheet({
                   }
 
                   const target = event.currentTarget;
-                  const width = target.clientWidth;
 
-                  if (!width) {
-                    return;
+                  if (scrollSettleTimeoutRef.current) {
+                    clearTimeout(scrollSettleTimeoutRef.current);
                   }
 
-                  const nextIndex = Math.max(
-                    0,
-                    Math.min(
-                      moments.length - 1,
-                      Math.round(target.scrollLeft / width),
-                    ),
-                  );
-                  const nextMoment = moments[nextIndex];
+                  scrollSettleTimeoutRef.current = setTimeout(() => {
+                    const width = target.clientWidth;
 
-                  if (
-                    nextMoment &&
-                    nextMoment.id !== selectedMomentId
-                  ) {
-                    onSelectMoment?.(nextMoment.id);
-                  }
+                    if (!width) {
+                      return;
+                    }
+
+                    const nextIndex = Math.max(
+                      0,
+                      Math.min(
+                        moments.length - 1,
+                        Math.round(target.scrollLeft / width),
+                      ),
+                    );
+                    const nextMoment = moments[nextIndex];
+
+                    if (nextMoment && nextMoment.id !== selectedMomentId) {
+                      onSelectMoment?.(nextMoment.id);
+                    }
+                  }, 150);
                 }}
               >
                 {moments.map((moment) => (
