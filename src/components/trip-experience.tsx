@@ -242,8 +242,8 @@ export function TripExperience({
   }
 
   const tripSidebarHeader = (
-    <div className="border-b border-black/5 px-4 py-4 sm:px-5">
-      <div className="flex items-start gap-3">
+    <div className="border-b border-black/5 px-6 pb-6 pt-8 sm:px-8">
+      <div className="flex items-start gap-3 lg:mx-auto lg:max-w-[34rem]">
         <Link
           aria-label="Back to Crumbs home"
           className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[var(--paper)] text-[var(--ink)] transition hover:bg-[#f6efdf]"

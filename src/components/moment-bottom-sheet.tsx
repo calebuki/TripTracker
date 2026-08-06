@@ -290,7 +290,7 @@ function MomentSheetSlide({
   );
 
   return (
-    <article className="w-full shrink-0 snap-center px-4 py-4 sm:px-5 sm:py-5">
+    <article className="w-full shrink-0 snap-center px-4 py-4 sm:px-5 sm:py-5 lg:mx-auto lg:max-w-[34rem] lg:px-8 lg:py-6">
       <div className="mb-4 flex items-start justify-between gap-3">
         <div className="space-y-2">
           <div className="flex items-center gap-2">
@@ -766,7 +766,7 @@ export function MomentBottomSheet({
       >
         <div className={cn(
           "pointer-events-auto mx-auto max-h-[calc(100dvh_-_1.5rem_-_env(safe-area-inset-bottom))] max-w-xl overflow-y-auto overscroll-contain rounded-[30px] border border-black/5 bg-white shadow-[0_28px_90px_rgba(15,23,42,0.18)] sm:max-h-[calc(100dvh_-_2rem_-_env(safe-area-inset-bottom))]",
-          sidebarHeader && "lg:flex lg:h-full lg:max-h-none lg:max-w-none lg:flex-col lg:overflow-hidden lg:rounded-none lg:border-x-0 lg:border-y-0 lg:border-r",
+          sidebarHeader && "lg:relative lg:flex lg:h-full lg:max-h-none lg:max-w-none lg:flex-col lg:overflow-hidden lg:rounded-none lg:border-x-0 lg:border-y-0 lg:border-r",
         )}>
           {sidebarHeader ? (
             <div className="hidden lg:block lg:shrink-0">{sidebarHeader}</div>
@@ -861,7 +861,7 @@ export function MomentBottomSheet({
               </div>
             </div>
           ) : sidebarEmptyState ? (
-            <div className="hidden lg:flex lg:min-h-0 lg:flex-1 lg:items-center lg:justify-center lg:p-8">
+            <div className="pointer-events-none hidden lg:absolute lg:inset-0 lg:flex lg:items-center lg:justify-center lg:p-8">
               {sidebarEmptyState}
             </div>
           ) : null}
