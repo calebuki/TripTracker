@@ -64,10 +64,12 @@ function MomentComments({
   authorKind,
   moment,
   trip,
+  variant = "sheet",
 }: {
   authorKind: MomentCommentAuthorKind;
   moment: Moment;
   trip: Trip;
+  variant?: "sheet" | "viewer";
 }) {
   const [commentsResult, setCommentsResult] = useState<{
     momentId: string;
@@ -83,6 +85,7 @@ function MomentComments({
     commentsResult.momentId === moment.id ? commentsResult.comments : null;
   const visibleComments = comments ?? [];
   const loading = comments === null;
+  const isViewer = variant === "viewer";
 
   function isMissingCommentsTableError(error: unknown) {
     return (
@@ -164,11 +167,11 @@ function MomentComments({
   }
 
   return (
-    <section className="mt-4 space-y-3 border-t border-black/5 pt-4">
+    <section className={cn("space-y-3", isViewer ? "border-t border-white/15 pt-4" : "mt-4 border-t border-black/5 pt-4")}>
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-2">
-          <MessageCircle className="h-4 w-4 text-slate-500" />
-          <p className="text-sm font-medium text-[var(--ink)]">Comments</p>
+          <MessageCircle className={cn("h-4 w-4", isViewer ? "text-white/60" : "text-slate-500")} />
+          <p className={cn("text-sm font-medium", isViewer ? "text-white" : "text-[var(--ink)]")}>Comments</p>
         </div>
         {visibleComments.length > 0 ? (
           <Badge variant="subtle">{visibleComments.length}</Badge>
@@ -177,14 +180,14 @@ function MomentComments({
 
       <div className="space-y-3">
         {loading ? (
-          <div className="flex items-center gap-2 rounded-[22px] bg-[var(--paper)] px-4 py-3 text-sm text-slate-600">
+          <div className={cn("flex items-center gap-2 rounded-[22px] px-4 py-3 text-sm", isViewer ? "bg-white/10 text-white/70" : "bg-[var(--paper)] text-slate-600")}>
             <LoaderCircle className="h-4 w-4 animate-spin" />
             Loading comments...
           </div>
         ) : visibleComments.length > 0 ? (
           visibleComments.map((comment) => (
             <div
-              className="rounded-[22px] bg-[var(--paper)] px-4 py-3"
+              className={cn("rounded-[22px] px-4 py-3", isViewer ? "bg-white/10" : "bg-[var(--paper)]")}
               key={comment.id}
             >
               <div className="flex flex-wrap items-center gap-2">
@@ -194,23 +197,23 @@ function MomentComments({
                 >
                   {comment.authorLabel}
                 </Badge>
-                <span className="text-xs text-slate-500">
+                <span className={cn("text-xs", isViewer ? "text-white/60" : "text-slate-500")}>
                   {formatLastUpdated(comment.createdAt)}
                 </span>
               </div>
-              <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-[var(--ink)]">
+              <p className={cn("mt-2 whitespace-pre-wrap text-sm leading-6", isViewer ? "text-white" : "text-[var(--ink)]")}>
                 {comment.body}
               </p>
             </div>
           ))
         ) : (
-          <p className="rounded-[22px] bg-[var(--paper)] px-4 py-3 text-sm text-slate-600">
-            No comments yet.
+          <p className={cn("rounded-[22px] px-4 py-3 text-sm", isViewer ? "bg-white/10 text-white/70" : "bg-[var(--paper)] text-slate-600")}>
+            {isViewer ? "No comments." : "No comments yet."}
           </p>
         )}
       </div>
 
-      <form className="space-y-2" onSubmit={(event) => void handleSubmit(event)}>
+      {!isViewer ? <form className="space-y-2" onSubmit={(event) => void handleSubmit(event)}>
         <Textarea
           className="min-h-20 rounded-[22px]"
           maxLength={1000}
@@ -232,9 +235,20 @@ function MomentComments({
             Post
           </Button>
         </div>
-      </form>
+      </form> : null}
     </section>
   );
+}
+
+function formatPostedAt(timestamp: string) {
+  const postedAt = new Date(timestamp);
+
+  if (Number.isNaN(postedAt.getTime())) return "just now";
+
+  return new Intl.DateTimeFormat(undefined, {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(postedAt);
 }
 
 function MomentSheetSlide({
@@ -454,11 +468,13 @@ function getMomentLocationLabel(moment: Moment) {
 function MomentFullscreenViewer({
   activeMomentId,
   moments,
+  trip,
   onClose,
   onSelectMoment,
 }: {
   activeMomentId: string | null;
   moments: Moment[];
+  trip: Trip;
   onClose: () => void;
   onSelectMoment: (momentId: string) => void;
 }) {
@@ -612,35 +628,44 @@ function MomentFullscreenViewer({
           </div>
         </>
       ) : null}
-      <div className="relative z-10 flex max-h-[calc(100dvh-1.5rem)] max-w-[calc(100vw-1.5rem)] items-center justify-center sm:max-h-[calc(100dvh-3rem)] sm:max-w-[calc(100vw-8rem)]">
-        {moment.type === "photo" && moment.imageUrl ? (
-          isVideoMoment ? (
-            <video
-              className="max-h-[calc(100dvh-1.5rem)] max-w-[calc(100vw-1.5rem)] bg-black object-contain sm:max-h-[calc(100dvh-3rem)] sm:max-w-[calc(100vw-8rem)]"
-              controls
-              playsInline
-              preload="metadata"
-              src={moment.imageUrl}
-            />
+      <div className="relative z-10 flex h-full w-full max-w-[1500px] flex-col justify-center gap-3 lg:flex-row lg:items-center lg:gap-6">
+        <div className="relative flex min-h-0 flex-1 items-center justify-center">
+          {moment.type === "photo" && moment.imageUrl ? (
+            isVideoMoment ? (
+              <video
+                className="max-h-[calc(100dvh-22rem)] max-w-full bg-black object-contain lg:max-h-[calc(100dvh-3rem)]"
+                controls
+                playsInline
+                preload="metadata"
+                src={moment.imageUrl}
+              />
+            ) : (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                alt={moment.caption ?? moment.placeName ?? "Trip photo"}
+                className="max-h-[calc(100dvh-22rem)] max-w-full object-contain lg:max-h-[calc(100dvh-3rem)]"
+                src={moment.imageUrl}
+              />
+            )
           ) : (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              alt={moment.caption ?? moment.placeName ?? "Trip photo"}
-              className="max-h-[calc(100dvh-1.5rem)] max-w-[calc(100vw-1.5rem)] object-contain sm:max-h-[calc(100dvh-3rem)] sm:max-w-[calc(100vw-8rem)]"
-              src={moment.imageUrl}
-            />
-          )
-        ) : (
-          <div className="max-w-2xl rounded-[28px] bg-white/10 p-6 text-lg leading-8 text-white backdrop-blur-sm sm:p-8 sm:text-xl">
-            {moment.thoughtText ?? moment.caption ?? "A quiet note from the trip."}
-          </div>
-        )}
-        <div className="pointer-events-none absolute inset-x-3 bottom-3 z-20 rounded-2xl bg-black/50 px-4 py-3 leading-5 text-white sm:inset-x-4 sm:bottom-4">
-          <p className="text-sm font-semibold sm:text-base">{momentTitle}</p>
-          <p className="mt-1 text-xs font-medium text-white/85 sm:text-sm">
-            {getMomentLocationLabel(moment)}
-          </p>
+            <div className="max-w-2xl rounded-[28px] bg-white/10 p-6 text-lg leading-8 text-white backdrop-blur-sm sm:p-8 sm:text-xl">
+              {moment.thoughtText ?? moment.caption ?? "A quiet note from the trip."}
+            </div>
+          )}
         </div>
+        <aside className="max-h-[32dvh] w-full shrink-0 overflow-y-auto rounded-[26px] bg-white/10 p-4 backdrop-blur-sm lg:max-h-[calc(100dvh-3rem)] lg:w-[360px]">
+          <div className="space-y-1">
+            <p className="whitespace-pre-wrap text-sm leading-6 text-white">{momentTitle}</p>
+            <p className="text-xs text-white/60">Posted {formatPostedAt(moment.postedAt)}</p>
+            <p className="text-xs text-white/60">{getMomentLocationLabel(moment)}</p>
+          </div>
+          <MomentComments
+            authorKind="viewer"
+            moment={moment}
+            trip={trip}
+            variant="viewer"
+          />
+        </aside>
       </div>
     </div>
   );
@@ -822,6 +847,7 @@ export function MomentBottomSheet({
       <MomentFullscreenViewer
         activeMomentId={fullscreenMomentId}
         moments={activeFullscreenMoments}
+        trip={trip}
         onClose={() => setFullscreenMomentId(null)}
         onSelectMoment={setFullscreenMomentId}
       />

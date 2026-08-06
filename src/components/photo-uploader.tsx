@@ -1,7 +1,16 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Camera, Film, Images, LoaderCircle, LocateFixed, MapPinned } from "lucide-react";
+import {
+  Camera,
+  ChevronLeft,
+  ChevronRight,
+  Film,
+  Images,
+  LoaderCircle,
+  LocateFixed,
+  MapPinned,
+} from "lucide-react";
 import { nanoid } from "nanoid";
 import { toast } from "sonner";
 
@@ -9,6 +18,7 @@ import { TripMap } from "@/components/trip-map";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Textarea } from "@/components/ui/textarea";
 import { extractPhotoMetadata } from "@/lib/exif";
 import {
   requestCurrentLocationDraft,
@@ -53,6 +63,7 @@ interface UploadRequest {
   accuracyMeters: number | null;
   takenAt: string | null;
   metadataError: string | null;
+  caption: string;
 }
 
 interface UploadDraft {
@@ -123,6 +134,9 @@ export function PhotoUploader({
   const [recentMoments, setRecentMoments] = useState<SavedMomentEntry[]>([]);
   const [pickerMomentId, setPickerMomentId] = useState<string | null>(null);
   const [preparingOrigin, setPreparingOrigin] = useState<UploadOrigin | null>(null);
+  const [draftUploads, setDraftUploads] = useState<UploadRequest[]>([]);
+  const [draftIndex, setDraftIndex] = useState(0);
+  const swipeStartX = useRef<number | null>(null);
 
   useEffect(() => {
     const objectUrls = objectUrlsRef.current;
@@ -202,7 +216,7 @@ export function PhotoUploader({
             repository.mode === "demo"
               ? await fileToOptimizedDataUrl(request.file)
               : null,
-          caption: null,
+          caption: request.caption.trim() || null,
           thoughtText: null,
           latitude: request.latitude,
           longitude: request.longitude,
@@ -299,6 +313,7 @@ export function PhotoUploader({
         !hasMetadataLocation
           ? "Saved without GPS because current location was unavailable."
           : null),
+      caption: "",
     } satisfies UploadRequest;
   }
 
@@ -337,7 +352,13 @@ export function PhotoUploader({
       const requests = drafts.map((draft) =>
         buildUploadRequest(draft, origin, fallbackLocation),
       );
-      await saveUploadRequests(requests);
+
+      if (origin === "library" && requests.length > 1) {
+        setDraftUploads(requests);
+        setDraftIndex(0);
+      } else {
+        await saveUploadRequests(requests);
+      }
     } finally {
       setPreparingOrigin(null);
     }
@@ -393,6 +414,28 @@ export function PhotoUploader({
     }
   }
 
+  function updateDraftCaption(caption: string) {
+    setDraftUploads((current) =>
+      current.map((upload, index) =>
+        index === draftIndex ? { ...upload, caption } : upload,
+      ),
+    );
+  }
+
+  async function saveDraftUploads() {
+    const uploads = draftUploads;
+    setDraftUploads([]);
+    setDraftIndex(0);
+    await saveUploadRequests(uploads);
+  }
+
+  function discardDraftUploads() {
+    setDraftUploads([]);
+    setDraftIndex(0);
+  }
+
+  const activeDraft = draftUploads[draftIndex] ?? null;
+
   return (
     <div className="space-y-5">
       <input
@@ -418,6 +461,109 @@ export function PhotoUploader({
         type="file"
       />
 
+      {activeDraft ? (
+        <section className="space-y-4" aria-label="Bulk upload draft">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="text-sm font-medium text-[var(--ink)]">Review your photos</p>
+            </div>
+            <span className="shrink-0 text-sm font-medium text-slate-600">
+              {draftIndex + 1} of {draftUploads.length}
+            </span>
+          </div>
+
+          <div
+            className="relative overflow-hidden rounded-[28px] bg-slate-100"
+            onTouchEnd={(event) => {
+              if (swipeStartX.current === null) return;
+              const distance = event.changedTouches[0].clientX - swipeStartX.current;
+              if (Math.abs(distance) > 40) {
+                setDraftIndex((current) =>
+                  Math.max(0, Math.min(draftUploads.length - 1, current + (distance < 0 ? 1 : -1))),
+                );
+              }
+              swipeStartX.current = null;
+            }}
+            onTouchStart={(event) => {
+              swipeStartX.current = event.touches[0].clientX;
+            }}
+          >
+            <MediaPreview
+              alt={activeDraft.file.name}
+              className="aspect-[4/3] w-full object-cover"
+              fileType={activeDraft.file.type}
+              src={activeDraft.previewUrl}
+            />
+            {draftIndex > 0 ? (
+              <Button
+                aria-label="Previous photo"
+                className="absolute left-3 top-1/2 -translate-y-1/2 rounded-full bg-white/90 shadow-sm"
+                onClick={() => setDraftIndex((current) => current - 1)}
+                size="icon"
+                type="button"
+                variant="secondary"
+              >
+                <ChevronLeft className="h-5 w-5" />
+              </Button>
+            ) : null}
+            {draftIndex < draftUploads.length - 1 ? (
+              <Button
+                aria-label="Next photo"
+                className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full bg-white/90 shadow-sm"
+                onClick={() => setDraftIndex((current) => current + 1)}
+                size="icon"
+                type="button"
+                variant="secondary"
+              >
+                <ChevronRight className="h-5 w-5" />
+              </Button>
+            ) : null}
+          </div>
+
+          <div className="flex gap-2 overflow-x-auto pb-1" aria-label="Choose a photo">
+            {draftUploads.map((upload, index) => (
+              <button
+                aria-label={`Photo ${index + 1}`}
+                className={`shrink-0 overflow-hidden rounded-xl ring-offset-2 transition ${
+                  index === draftIndex ? "ring-2 ring-[var(--ink)]" : "opacity-60"
+                }`}
+                key={upload.previewUrl}
+                onClick={() => setDraftIndex(index)}
+                type="button"
+              >
+                <MediaPreview
+                  alt=""
+                  className="h-14 w-14 bg-slate-100 object-contain"
+                  fileType={upload.file.type}
+                  src={upload.previewUrl}
+                />
+              </button>
+            ))}
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-[var(--ink)]" htmlFor="bulk-photo-caption">
+              Caption (optional)
+            </label>
+            <Textarea
+              id="bulk-photo-caption"
+              onChange={(event) => updateDraftCaption(event.target.value)}
+              placeholder="What happened here?"
+              value={activeDraft.caption}
+            />
+          </div>
+
+          <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-between">
+            <Button onClick={discardDraftUploads} type="button" variant="ghost">
+              Discard drafts
+            </Button>
+            <Button onClick={() => void saveDraftUploads()} type="button">
+              Post {draftUploads.length} photos
+            </Button>
+          </div>
+        </section>
+      ) : (
+        <>
       <div className={libraryOnly ? "grid gap-3" : "grid gap-3 sm:grid-cols-2"}>
         {!libraryOnly ? (
           <Button
@@ -441,6 +587,8 @@ export function PhotoUploader({
           {preparingOrigin === "library" ? "Opening..." : "Open library"}
         </Button>
       </div>
+        </>
+      )}
 
       {pendingUploads.length > 0 ? (
         <div className="space-y-3">
