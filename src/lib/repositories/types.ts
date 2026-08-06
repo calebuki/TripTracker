@@ -15,7 +15,11 @@ import type {
 export interface TripRepository {
   mode: "demo" | "supabase";
   getSessionUser(): Promise<CrumbsUser | null>;
-  signInWithEmail(email: string, redirectTo: string): Promise<void>;
+  signInWithPassword(
+    email: string,
+    password: string,
+    rememberMe: boolean,
+  ): Promise<void>;
   signOut(): Promise<void>;
   updateCurrentUserDisplayName(displayName: string): Promise<CrumbsUser>;
   createTrip(input: CreateTripInput): Promise<Trip>;

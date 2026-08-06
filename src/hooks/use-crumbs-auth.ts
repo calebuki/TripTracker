@@ -209,7 +209,7 @@ export function useCrumbsAuth() {
         setUser(resolvedUser ? mapAuthUser(resolvedUser) : null);
         setError(
           callbackState.hasCallbackParams && !resolvedUser
-            ? "Crumbs couldn't finish signing you in. Try the magic link again."
+            ? "Crumbs couldn't finish signing you in. Please try again."
             : null,
         );
       } catch (authError) {
