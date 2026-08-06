@@ -283,6 +283,15 @@ export function TripExperience({
     </div>
   );
 
+  const tripSidebarFooter = (
+    <div className="border-t border-black/5 bg-white px-4 py-4 sm:px-5">
+      <p className="mb-2 text-xs font-medium uppercase tracking-[0.16em] text-slate-500">
+        View moments from
+      </p>
+      <DaySelector options={dayOptions} value={dayFilter} onChange={setDayFilter} />
+    </div>
+  );
+
   return (
     <div className="h-[100dvh] overflow-hidden bg-[var(--paper)]">
       <div className="h-full w-full">
@@ -294,7 +303,7 @@ export function TripExperience({
             onSelectMoment={selectSpotMoment}
             onMomentGroupsChange={setMarkerGroups}
             heightClassName="h-[100dvh] min-h-[100dvh]"
-            className="rounded-none border-0 lg:absolute lg:inset-y-3 lg:right-3 lg:left-[calc(clamp(20rem,29vw,28rem)+1.5rem)] lg:rounded-[24px] lg:border"
+            className="rounded-none border-0 lg:absolute lg:inset-y-0 lg:right-0 lg:left-[clamp(24rem,34vw,38rem)] lg:rounded-none lg:border-l"
           />
 
           <div className="pointer-events-none absolute inset-0">
@@ -399,7 +408,7 @@ export function TripExperience({
               </div>
             ) : null}
 
-            <div className="pointer-events-auto absolute inset-x-0 bottom-4 flex justify-center px-3">
+            <div className="pointer-events-auto absolute inset-x-0 bottom-4 flex justify-center px-3 lg:hidden">
               <DaySelector
                 options={dayOptions}
                 value={dayFilter}
@@ -432,6 +441,7 @@ export function TripExperience({
               navigationMoments={filteredMoments}
               fullscreenMoments={filteredMoments}
               sidebarHeader={tripSidebarHeader}
+              sidebarFooter={tripSidebarFooter}
               selectedMomentId={activeSelectedMomentId}
               open={Boolean(activeSelectedMomentId)}
               canManage={role === "owner"}

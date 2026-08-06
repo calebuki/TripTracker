@@ -55,6 +55,7 @@ interface MomentBottomSheetProps {
   canManage?: boolean;
   carouselTitle?: string;
   sidebarHeader?: ReactNode;
+  sidebarFooter?: ReactNode;
   onClose: () => void;
   onSelectMoment?: (momentId: string) => void;
   onEdit?: (moment: Moment) => void;
@@ -688,6 +689,7 @@ export function MomentBottomSheet({
   canManage = false,
   carouselTitle,
   sidebarHeader,
+  sidebarFooter,
   onClose,
   onSelectMoment,
   onEdit,
@@ -756,7 +758,7 @@ export function MomentBottomSheet({
       <div
         className={cn(
           "pointer-events-none absolute inset-x-0 bottom-0 z-30 p-3 transition duration-300 sm:p-4",
-          sidebarHeader && "lg:inset-y-3 lg:bottom-auto lg:left-3 lg:right-auto lg:w-[clamp(20rem,29vw,28rem)] lg:p-0",
+          sidebarHeader && "lg:inset-y-0 lg:bottom-auto lg:left-0 lg:right-auto lg:w-[clamp(24rem,34vw,38rem)] lg:p-0",
           open || sidebarHeader
             ? "translate-y-0 opacity-100"
             : "translate-y-full opacity-0",
@@ -764,7 +766,7 @@ export function MomentBottomSheet({
       >
         <div className={cn(
           "pointer-events-auto mx-auto max-h-[calc(100dvh_-_1.5rem_-_env(safe-area-inset-bottom))] max-w-xl overflow-y-auto overscroll-contain rounded-[30px] border border-black/5 bg-white shadow-[0_28px_90px_rgba(15,23,42,0.18)] sm:max-h-[calc(100dvh_-_2rem_-_env(safe-area-inset-bottom))]",
-          sidebarHeader && "lg:flex lg:h-full lg:max-h-none lg:max-w-none lg:flex-col lg:overflow-hidden",
+          sidebarHeader && "lg:flex lg:h-full lg:max-h-none lg:max-w-none lg:flex-col lg:overflow-hidden lg:rounded-none lg:border-x-0 lg:border-y-0 lg:border-r",
         )}>
           {sidebarHeader ? (
             <div className="hidden lg:block lg:shrink-0">{sidebarHeader}</div>
@@ -858,6 +860,9 @@ export function MomentBottomSheet({
                 ))}
               </div>
             </div>
+          ) : null}
+          {sidebarFooter ? (
+            <div className="hidden lg:block lg:shrink-0">{sidebarFooter}</div>
           ) : null}
         </div>
       </div>
