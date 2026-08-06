@@ -19,6 +19,7 @@ import { TripCodeEntry } from "@/components/trip-code-entry";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { getTripRepository } from "@/lib/repositories";
+import { cn } from "@/lib/utils";
 import type { CrumbsUser, Trip, WatchedTrip } from "@/types/crumbs";
 
 interface AccountDashboardScreenProps {
@@ -199,131 +200,143 @@ export function AccountDashboardScreen({
           </Card>
         ) : null}
 
-        <Card className="rounded-[30px] bg-[#f9f5ee]">
-          <CardContent className="p-5 sm:p-6">
-            <div className="mb-4">
-              <h2 className="text-2xl font-medium text-[var(--ink)]">
-                Follow a friend&apos;s trip
-              </h2>
-              <p className="mt-1 text-sm leading-6 text-slate-600">
-                Enter their crumb code or open a shared link. Trips you open are saved in Watching.
-              </p>
-            </div>
+        <div className="grid gap-5 lg:grid-cols-2 lg:items-start">
+          <DashboardPanel
+            className="bg-[#f9f5ee]"
+            description="Enter their crumb code or open a shared link. Trips you open are saved in Watching."
+            title="Follow a friend&apos;s trip"
+          >
             <TripCodeEntry compact />
-          </CardContent>
-        </Card>
+          </DashboardPanel>
 
-        <section className="space-y-4">
-          <div>
-            <h2 className="text-2xl font-medium text-[var(--ink)]">Watching</h2>
-            <p className="mt-1 text-sm leading-6 text-slate-600">
-              Friends&apos; trips you&apos;ve opened while signed in.
-            </p>
-          </div>
-          {loading ? (
-            <div className="grid gap-4">
+          <DashboardPanel
+            description="Friends&apos; trips you&apos;ve opened while signed in."
+            title="Watching"
+          >
+            {loading ? (
               <TripCardSkeleton />
-            </div>
-          ) : watchedTrips.length > 0 ? (
-            <div className="grid gap-4">
-              {watchedTrips.map((watchedTrip) => (
-                <WatchedTripCard
-                  key={watchedTrip.trip.id}
-                  watchedTrip={watchedTrip}
-                  isUnwatching={unwatchingTripId === watchedTrip.trip.id}
-                  onUnwatch={handleUnwatchTrip}
-                />
-              ))}
-            </div>
-          ) : (
-            <Card className="rounded-[30px]">
-              <CardContent className="p-5 text-sm text-slate-600">
+            ) : watchedTrips.length > 0 ? (
+              <div className="max-h-[21rem] space-y-3 overflow-y-auto pr-1">
+                {watchedTrips.map((watchedTrip) => (
+                  <WatchedTripCard
+                    key={watchedTrip.trip.id}
+                    watchedTrip={watchedTrip}
+                    isUnwatching={unwatchingTripId === watchedTrip.trip.id}
+                    onUnwatch={handleUnwatchTrip}
+                  />
+                ))}
+              </div>
+            ) : (
+              <PanelEmptyState>
                 Open a friend&apos;s shared trip and it will appear here.
-              </CardContent>
-            </Card>
-          )}
-        </section>
+              </PanelEmptyState>
+            )}
+          </DashboardPanel>
 
-        <section className="space-y-4">
-          <div>
-            <h2 className="text-2xl font-medium text-[var(--ink)]">Your active trip</h2>
-          </div>
-          {loading ? (
-            <TripCardSkeleton />
-          ) : activeTrip ? (
-            <OwnedTripCard
-              primaryActionHref={`/trips/${activeTrip.id}?capture=1`}
-              primaryActionLabel="Open trip"
-              trip={activeTrip}
-            />
-          ) : (
-            <Card className="rounded-[30px]">
-              <CardContent className="p-5 text-sm text-slate-600">
-                No active trip right now.
-              </CardContent>
-            </Card>
-          )}
-        </section>
+          <DashboardPanel title="Your active trip">
+            {loading ? (
+              <TripCardSkeleton />
+            ) : activeTrip ? (
+              <OwnedTripCard
+                primaryActionHref={`/trips/${activeTrip.id}?capture=1`}
+                primaryActionLabel="Open trip"
+                trip={activeTrip}
+              />
+            ) : (
+              <PanelEmptyState>No active trip right now.</PanelEmptyState>
+            )}
+          </DashboardPanel>
 
-        <section className="space-y-4">
-          <div>
-            <h2 className="text-2xl font-medium text-[var(--ink)]">Your past trips</h2>
-            <p className="mt-1 text-sm leading-6 text-slate-600">
-              Ended trips stay editable and can be resumed when you have no active trip.
-            </p>
-          </div>
-          {loading ? (
-            <div className="grid gap-4">
-              <TripCardSkeleton />
-              <TripCardSkeleton />
-            </div>
-          ) : pastTrips.length > 0 ? (
-            <div className="grid gap-4">
-              {pastTrips.map((trip) => (
-                <OwnedTripCard
-                  key={trip.id}
-                  primaryActionHref={`/trips/${trip.id}`}
-                  primaryActionLabel="View trip"
-                  trip={trip}
-                  extraAction={
-                    activeTrip ? (
-                      <p className="text-sm text-slate-500">
-                        End your active trip before resuming this one.
-                      </p>
-                    ) : (
-                      <Button
-                        disabled={workingTripId === trip.id}
-                        onClick={() => void handleResumeTrip(trip)}
-                        type="button"
-                        variant="soft"
-                      >
-                        {workingTripId === trip.id ? (
-                          <>
-                            <LoaderCircle className="h-4 w-4 animate-spin" />
-                            Resuming...
-                          </>
-                        ) : (
-                          <>
-                            <Play className="h-4 w-4" />
-                            Resume trip
-                          </>
-                        )}
-                      </Button>
-                    )
-                  }
-                />
-              ))}
-            </div>
-          ) : (
-            <Card className="rounded-[30px]">
-              <CardContent className="p-5 text-sm text-slate-600">
-                No past trips yet.
-              </CardContent>
-            </Card>
-          )}
-        </section>
+          <DashboardPanel
+            description="Ended trips stay editable and can be resumed when you have no active trip."
+            title="Your past trips"
+          >
+            {loading ? (
+              <div className="space-y-3">
+                <TripCardSkeleton />
+                <TripCardSkeleton />
+              </div>
+            ) : pastTrips.length > 0 ? (
+              <div className="max-h-[21rem] space-y-3 overflow-y-auto pr-1">
+                {pastTrips.map((trip) => (
+                  <OwnedTripCard
+                    key={trip.id}
+                    primaryActionHref={`/trips/${trip.id}`}
+                    primaryActionLabel="View trip"
+                    trip={trip}
+                    extraAction={
+                      activeTrip ? (
+                        <p className="text-sm text-slate-500">
+                          End your active trip before resuming this one.
+                        </p>
+                      ) : (
+                        <Button
+                          disabled={workingTripId === trip.id}
+                          onClick={() => void handleResumeTrip(trip)}
+                          type="button"
+                          variant="soft"
+                        >
+                          {workingTripId === trip.id ? (
+                            <>
+                              <LoaderCircle className="h-4 w-4 animate-spin" />
+                              Resuming...
+                            </>
+                          ) : (
+                            <>
+                              <Play className="h-4 w-4" />
+                              Resume trip
+                            </>
+                          )}
+                        </Button>
+                      )
+                    }
+                  />
+                ))}
+              </div>
+            ) : (
+              <PanelEmptyState>No past trips yet.</PanelEmptyState>
+            )}
+          </DashboardPanel>
+        </div>
       </div>
     </main>
+  );
+}
+
+function DashboardPanel({
+  title,
+  description,
+  children,
+  className,
+}: {
+  title: ReactNode;
+  description?: ReactNode;
+  children: ReactNode;
+  className?: string;
+}) {
+  return (
+    <section
+      className={cn(
+        "flex min-h-[20rem] flex-col rounded-[32px] border border-black/5 bg-white p-5 shadow-[0_20px_60px_rgba(15,23,42,0.08)] sm:p-6",
+        className,
+      )}
+    >
+      <div>
+        <h2 className="text-2xl font-medium text-[var(--ink)]">{title}</h2>
+        {description ? (
+          <p className="mt-1 text-sm leading-6 text-slate-600">{description}</p>
+        ) : null}
+      </div>
+      <div className="mt-5 min-h-0 flex-1">{children}</div>
+    </section>
+  );
+}
+
+function PanelEmptyState({ children }: { children: ReactNode }) {
+  return (
+    <div className="flex min-h-28 items-center rounded-[24px] bg-[var(--paper)] p-5 text-sm leading-6 text-slate-600">
+      {children}
+    </div>
   );
 }
 
