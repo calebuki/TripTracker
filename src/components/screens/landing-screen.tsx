@@ -4,12 +4,17 @@ import Link from "next/link";
 import { LogIn } from "lucide-react";
 
 import { AccountDashboardScreen } from "@/components/screens/account-dashboard-screen";
+import { LoadingShell } from "@/components/loading-shell";
 import { TripCodeEntry } from "@/components/trip-code-entry";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useCrumbsAuth } from "@/hooks/use-crumbs-auth";
 
 export function LandingScreen() {
-  const { user, isDemoMode } = useCrumbsAuth();
+  const { user, loading, isDemoMode } = useCrumbsAuth();
+
+  if (loading && !isDemoMode) {
+    return <LoadingShell label="Opening your Crumbs..." />;
+  }
 
   if (user || isDemoMode) {
     if (!user) {
