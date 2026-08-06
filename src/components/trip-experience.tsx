@@ -402,6 +402,8 @@ export function TripExperience({
             <div className="pointer-events-auto absolute inset-x-0 bottom-4 flex justify-center px-3 lg:left-[clamp(24rem,34vw,38rem)] lg:right-0 lg:justify-center">
               <DaySelector
                 options={dayOptions}
+                moments={displayMoments}
+                timezone={record.trip.timezone}
                 value={dayFilter}
                 onChange={setDayFilter}
               />
