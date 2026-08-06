@@ -2,6 +2,7 @@
 
 import {
   type FormEvent,
+  type ReactNode,
   type TouchEvent,
   useCallback,
   useEffect,
@@ -53,6 +54,8 @@ interface MomentBottomSheetProps {
   open: boolean;
   canManage?: boolean;
   carouselTitle?: string;
+  sidebarHeader?: ReactNode;
+  sidebarEmptyState?: ReactNode;
   onClose: () => void;
   onSelectMoment?: (momentId: string) => void;
   onEdit?: (moment: Moment) => void;
@@ -287,7 +290,7 @@ function MomentSheetSlide({
   );
 
   return (
-    <article className="w-full shrink-0 snap-center px-4 py-4 sm:px-5 sm:py-5">
+    <article className="w-full shrink-0 snap-start snap-always px-4 py-4 sm:px-5 sm:py-5 lg:mx-auto lg:max-w-[34rem] lg:px-8 lg:py-6">
       <div className="mb-4 flex items-start justify-between gap-3">
         <div className="space-y-2">
           <div className="flex items-center gap-2">
@@ -685,6 +688,8 @@ export function MomentBottomSheet({
   open,
   canManage = false,
   carouselTitle,
+  sidebarHeader,
+  sidebarEmptyState,
   onClose,
   onSelectMoment,
   onEdit,
@@ -726,14 +731,14 @@ export function MomentBottomSheet({
       return;
     }
 
-    const currentIndex = Math.round(scroller.scrollLeft / width);
+    const targetScrollLeft = width * selectedIndex;
 
-    if (currentIndex === selectedIndex) {
+    if (Math.abs(scroller.scrollLeft - targetScrollLeft) < 1) {
       return;
     }
 
     scroller.scrollTo({
-      left: width * selectedIndex,
+      left: targetScrollLeft,
       behavior: "smooth",
     });
   }, [moments.length, open, selectedIndex]);
@@ -753,12 +758,21 @@ export function MomentBottomSheet({
       <div
         className={cn(
           "pointer-events-none absolute inset-x-0 bottom-0 z-30 p-3 transition duration-300 sm:p-4",
-          open ? "translate-y-0 opacity-100" : "translate-y-full opacity-0",
+          sidebarHeader && "lg:inset-y-0 lg:bottom-auto lg:left-0 lg:right-auto lg:w-[clamp(24rem,34vw,38rem)] lg:p-0",
+          open || sidebarHeader
+            ? "translate-y-0 opacity-100"
+            : "translate-y-full opacity-0",
         )}
       >
-        <div className="pointer-events-auto mx-auto max-h-[calc(100dvh_-_1.5rem_-_env(safe-area-inset-bottom))] max-w-xl overflow-y-auto overscroll-contain rounded-[30px] border border-black/5 bg-white shadow-[0_28px_90px_rgba(15,23,42,0.18)] sm:max-h-[calc(100dvh_-_2rem_-_env(safe-area-inset-bottom))]">
+        <div className={cn(
+          "pointer-events-auto mx-auto max-h-[calc(100dvh_-_1.5rem_-_env(safe-area-inset-bottom))] max-w-xl overflow-y-auto overscroll-contain rounded-[30px] border border-black/5 bg-white shadow-[0_28px_90px_rgba(15,23,42,0.18)] sm:max-h-[calc(100dvh_-_2rem_-_env(safe-area-inset-bottom))]",
+          sidebarHeader && "lg:relative lg:flex lg:h-full lg:max-h-none lg:max-w-none lg:flex-col lg:overflow-hidden lg:rounded-none lg:border-x-0 lg:border-y-0 lg:border-r",
+        )}>
+          {sidebarHeader ? (
+            <div className="hidden lg:block lg:shrink-0">{sidebarHeader}</div>
+          ) : null}
           {activeMoment ? (
-            <>
+            <div className={cn(sidebarHeader && "lg:min-h-0 lg:flex-1 lg:overflow-y-auto")}>
               {hasMultipleNavigationMoments ? (
                 <div className="sticky top-0 z-20 flex items-center justify-between border-b border-black/5 bg-white/95 px-4 py-3 backdrop-blur-sm sm:px-5">
                   <div>
@@ -845,7 +859,11 @@ export function MomentBottomSheet({
                   />
                 ))}
               </div>
-            </>
+            </div>
+          ) : sidebarEmptyState ? (
+            <div className="pointer-events-none hidden lg:flex lg:min-h-0 lg:flex-1 lg:items-center lg:justify-center lg:p-8">
+              {sidebarEmptyState}
+            </div>
           ) : null}
         </div>
       </div>
