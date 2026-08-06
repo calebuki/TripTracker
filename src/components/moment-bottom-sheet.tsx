@@ -794,15 +794,18 @@ export function MomentBottomSheet({
     );
   }, []);
 
-  function selectMomentAtIndex(nextIndex: number) {
-    const moment = activeNavigationMoments[nextIndex];
+  const selectMomentAtIndex = useCallback(
+    (nextIndex: number) => {
+      const moment = activeNavigationMoments[nextIndex];
 
-    if (!moment) {
-      return;
-    }
+      if (!moment) {
+        return;
+      }
 
-    onSelectMoment?.(moment.id);
-  }
+      onSelectMoment?.(moment.id);
+    },
+    [activeNavigationMoments, onSelectMoment],
+  );
 
   function startMobileSwipeTransition(direction: -1 | 1) {
     const targetMoment = activeNavigationMoments[selectedNavigationIndex + direction];
@@ -891,6 +894,61 @@ export function MomentBottomSheet({
       }
     };
   }, []);
+
+  useEffect(() => {
+    if (
+      !open ||
+      fullscreenMomentId ||
+      !hasMultipleNavigationMoments ||
+      !onSelectMoment
+    ) {
+      return;
+    }
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (!window.matchMedia("(min-width: 1024px)").matches) {
+        return;
+      }
+
+      if (
+        event.defaultPrevented ||
+        event.altKey ||
+        event.ctrlKey ||
+        event.metaKey ||
+        (event.target instanceof Element &&
+          event.target.closest("input, textarea, select, [contenteditable='true']"))
+      ) {
+        return;
+      }
+
+      if (event.key === "ArrowLeft" && selectedNavigationIndex > 0) {
+        event.preventDefault();
+        selectMomentAtIndex(selectedNavigationIndex - 1);
+      }
+
+      if (
+        event.key === "ArrowRight" &&
+        selectedNavigationIndex < activeNavigationMoments.length - 1
+      ) {
+        event.preventDefault();
+        selectMomentAtIndex(selectedNavigationIndex + 1);
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [
+    activeNavigationMoments.length,
+    fullscreenMomentId,
+    hasMultipleNavigationMoments,
+    onSelectMoment,
+    open,
+    selectMomentAtIndex,
+    selectedNavigationIndex,
+  ]);
 
   useEffect(() => {
     if (

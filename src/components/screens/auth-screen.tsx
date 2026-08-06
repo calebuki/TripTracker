@@ -16,7 +16,7 @@ import { resolveSiteUrl } from "@/lib/utils";
 
 export function AuthScreen() {
   const router = useRouter();
-  const { user, loading: authLoading, isDemoMode, processingCallback, error } =
+  const { user, loading: authLoading, isDemoMode, processingCallback, error: authError, retry } =
     useCrumbsAuth();
   const isOpeningTrip = Boolean(user || processingCallback || authLoading);
   const travelerHome = useTravelerHomeTarget({
@@ -26,6 +26,8 @@ export function AuthScreen() {
   });
   const [email, setEmail] = useState("");
   const [sending, setSending] = useState(false);
+  const [sendError, setSendError] = useState<string | null>(null);
+  const error = authError ?? sendError;
 
   useEffect(() => {
     if (!user || travelerHome.loading || !travelerHome.targetPath) {
@@ -42,6 +44,7 @@ export function AuthScreen() {
     }
 
     setSending(true);
+    setSendError(null);
 
     try {
       await getTripRepository().signInWithEmail(
@@ -49,12 +52,14 @@ export function AuthScreen() {
         `${resolveSiteUrl()}/auth`,
       );
       toast.success("Magic link sent. Check your inbox.");
-    } catch (error) {
-      toast.error(
-        error instanceof Error
-          ? error.message
-          : "Crumbs could not send the sign-in link.",
-      );
+    } catch (sendLinkError) {
+      const message =
+        sendLinkError instanceof Error
+          ? sendLinkError.message
+          : "Crumbs could not send the sign-in link.";
+
+      setSendError(message);
+      toast.error(message);
     } finally {
       setSending(false);
     }
@@ -110,8 +115,24 @@ export function AuthScreen() {
           ) : (
             <>
               {error ? (
-                <div className="rounded-[24px] border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-                  {error}
+                <div className="flex flex-wrap items-center justify-between gap-3 rounded-[24px] border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                  <p>{error}</p>
+                  <Button
+                    disabled={sending}
+                    onClick={() => {
+                      if (authError) {
+                        retry();
+                        return;
+                      }
+
+                      void handleSendLink();
+                    }}
+                    size="sm"
+                    type="button"
+                    variant="secondary"
+                  >
+                    Retry
+                  </Button>
                 </div>
               ) : null}
               <Input

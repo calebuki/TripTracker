@@ -39,7 +39,10 @@ export function ViewerTripScreen({ shareSlug }: ViewerTripScreenProps) {
               {error ?? "The link may have changed or expired."}
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="flex flex-wrap gap-3">
+            <Button onClick={() => void refresh()} type="button">
+              Retry
+            </Button>
             <Button asChild variant="secondary">
               <Link href="/">Back to Crumbs</Link>
             </Button>
