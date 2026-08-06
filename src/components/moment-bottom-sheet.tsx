@@ -63,6 +63,12 @@ interface MomentBottomSheetProps {
   onDelete?: (moment: Moment) => void;
 }
 
+type MobileSwipeTransition = {
+  direction: -1 | 1;
+  phase: "leaving" | "waiting" | "entering";
+  targetMomentId: string;
+};
+
 const momentCommentsCache = new Map<string, MomentComment[]>();
 const pendingMomentComments = new Map<string, Promise<MomentComment[]>>();
 
@@ -760,7 +766,11 @@ export function MomentBottomSheet({
 }: MomentBottomSheetProps) {
   const [fullscreenMomentId, setFullscreenMomentId] = useState<string | null>(null);
   const [readyMomentId, setReadyMomentId] = useState<string | null>(null);
+  const [mobileSwipeTransition, setMobileSwipeTransition] =
+    useState<MobileSwipeTransition | null>(null);
   const mobileSwipeStartRef = useRef<{ x: number; y: number } | null>(null);
+  const mobileSwipeTransitionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const mobileSwipeTransitioningRef = useRef(false);
   const activeMoment =
     moments.find((moment) => moment.id === selectedMomentId) ?? moments[0] ?? null;
   const activeNavigationMoments =
@@ -792,6 +802,30 @@ export function MomentBottomSheet({
     }
 
     onSelectMoment?.(moment.id);
+  }
+
+  function startMobileSwipeTransition(direction: -1 | 1) {
+    const targetMoment = activeNavigationMoments[selectedNavigationIndex + direction];
+
+    if (!targetMoment || !onSelectMoment || mobileSwipeTransitioningRef.current) {
+      return;
+    }
+
+    mobileSwipeTransitioningRef.current = true;
+    setMobileSwipeTransition({
+      direction,
+      phase: "leaving",
+      targetMomentId: targetMoment.id,
+    });
+
+    mobileSwipeTransitionTimerRef.current = setTimeout(() => {
+      setMobileSwipeTransition((currentTransition) =>
+        currentTransition?.targetMomentId === targetMoment.id
+          ? { ...currentTransition, phase: "waiting" }
+          : currentTransition,
+      );
+      onSelectMoment(targetMoment.id);
+    }, 180);
   }
 
   function handleMobileSwipeStart(event: TouchEvent<HTMLDivElement>) {
@@ -847,10 +881,53 @@ export function MomentBottomSheet({
     }
 
     event.preventDefault();
-    selectMomentAtIndex(
-      selectedNavigationIndex + (horizontalDistance > 0 ? -1 : 1),
-    );
+    startMobileSwipeTransition(horizontalDistance > 0 ? -1 : 1);
   }
+
+  useEffect(() => {
+    return () => {
+      if (mobileSwipeTransitionTimerRef.current) {
+        clearTimeout(mobileSwipeTransitionTimerRef.current);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (
+      mobileSwipeTransition?.phase !== "waiting" ||
+      !activeMomentReady ||
+      activeMoment?.id !== mobileSwipeTransition.targetMomentId
+    ) {
+      return;
+    }
+
+    const animationFrame = window.requestAnimationFrame(() => {
+      setMobileSwipeTransition((currentTransition) =>
+        currentTransition?.phase === "waiting"
+          ? { ...currentTransition, phase: "entering" }
+          : currentTransition,
+      );
+    });
+
+    return () => {
+      window.cancelAnimationFrame(animationFrame);
+    };
+  }, [activeMoment?.id, activeMomentReady, mobileSwipeTransition]);
+
+  useEffect(() => {
+    if (mobileSwipeTransition?.phase !== "entering") {
+      return;
+    }
+
+    const transitionTimer = window.setTimeout(() => {
+      mobileSwipeTransitioningRef.current = false;
+      setMobileSwipeTransition(null);
+    }, 200);
+
+    return () => {
+      window.clearTimeout(transitionTimer);
+    };
+  }, [mobileSwipeTransition]);
 
   useEffect(() => {
     const nearbyMoments = [
@@ -900,6 +977,18 @@ export function MomentBottomSheet({
       </Button>
     </div>
   ) : null;
+  const mobileSlideClass =
+    mobileSwipeTransition?.phase === "leaving"
+      ? mobileSwipeTransition.direction === 1
+        ? "-translate-x-full transition-transform duration-200 ease-out"
+        : "translate-x-full transition-transform duration-200 ease-out"
+      : mobileSwipeTransition?.phase === "waiting"
+        ? mobileSwipeTransition.direction === 1
+          ? "translate-x-full transition-none"
+          : "-translate-x-full transition-none"
+        : mobileSwipeTransition?.phase === "entering"
+          ? "translate-x-0 transition-transform duration-200 ease-out"
+          : "translate-x-0";
 
   return (
     <>
@@ -913,7 +1002,7 @@ export function MomentBottomSheet({
         )}
       >
         <div className={cn(
-          "pointer-events-auto mx-auto max-h-[calc(100dvh_-_1.5rem_-_env(safe-area-inset-bottom))] max-w-xl overflow-y-auto overscroll-contain rounded-[30px] border border-black/5 bg-white shadow-[0_28px_90px_rgba(15,23,42,0.18)] sm:max-h-[calc(100dvh_-_2rem_-_env(safe-area-inset-bottom))]",
+          "pointer-events-auto mx-auto max-h-[calc(100dvh_-_1.5rem_-_env(safe-area-inset-bottom))] max-w-xl overflow-x-hidden overflow-y-auto overscroll-contain rounded-[30px] border border-black/5 bg-white shadow-[0_28px_90px_rgba(15,23,42,0.18)] sm:max-h-[calc(100dvh_-_2rem_-_env(safe-area-inset-bottom))]",
           sidebarHeader && "lg:relative lg:flex lg:h-full lg:max-h-none lg:max-w-none lg:flex-col lg:overflow-hidden lg:rounded-none lg:border-x-0 lg:border-y-0 lg:border-r",
         )}>
           {sidebarHeader ? (
@@ -938,7 +1027,11 @@ export function MomentBottomSheet({
           {activeMoment ? (
             <div
               aria-busy={!activeMomentReady}
-              className={cn("relative [touch-action:pan-y]", sidebarHeader && "lg:flex lg:min-h-0 lg:flex-1 lg:flex-col lg:overflow-hidden")}
+              className={cn(
+                "relative overflow-x-hidden [touch-action:pan-y] lg:translate-x-0 lg:transition-none",
+                mobileSlideClass,
+                sidebarHeader && "lg:flex lg:min-h-0 lg:flex-1 lg:flex-col lg:overflow-hidden",
+              )}
               onTouchCancel={() => {
                 mobileSwipeStartRef.current = null;
               }}
