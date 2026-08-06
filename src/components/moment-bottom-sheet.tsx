@@ -296,7 +296,7 @@ function MomentSheetSlide({
       <div className="px-4 py-4 sm:px-5 sm:py-5 lg:mx-auto lg:flex lg:min-h-full lg:w-full lg:max-w-[34rem] lg:flex-1 lg:flex-col lg:justify-center lg:px-8 lg:py-6">
         <div className="flex flex-col gap-6 lg:gap-8">
           {moment.type === "photo" && moment.imageUrl ? (
-            <div className="order-3 space-y-3">
+            <div className="order-2 space-y-3">
               <div className="overflow-hidden rounded-[26px] bg-[var(--paper)]">
                 {isVideoMoment ? (
                   <div className="relative">
@@ -345,7 +345,7 @@ function MomentSheetSlide({
           ) : (
             <button
               aria-label="Open full-screen moment"
-              className="order-3 relative block w-full rounded-[26px] bg-[var(--paper)] p-5 text-left text-base leading-7 text-[var(--ink)]"
+              className="order-2 relative block w-full rounded-[26px] bg-[var(--paper)] p-5 text-left text-base leading-7 text-[var(--ink)]"
               onClick={() => onOpenPhotoViewer(moment)}
               title="Open full-screen moment"
               type="button"
@@ -356,7 +356,7 @@ function MomentSheetSlide({
           )}
 
           <div className="contents">
-            <div className="order-4 flex items-start justify-between gap-3">
+            <div className="order-3 flex items-start justify-between gap-3">
               <div className="flex flex-wrap items-center gap-2">
                 <Badge variant="accent">
                   {moment.type === "photo"
@@ -411,9 +411,7 @@ function MomentSheetSlide({
               </div>
             </div>
 
-            <div className="order-1">{navigationControls}</div>
-
-            <div className="order-2 space-y-2">
+            <div className="order-1 space-y-2">
               <div className="flex flex-wrap items-center gap-3">
                 <p className="font-serif text-3xl leading-tight tracking-tight text-[var(--ink)] sm:text-4xl">
                   {momentTitle}
@@ -439,11 +437,14 @@ function MomentSheetSlide({
           </div>
         </div>
         <div className="lg:pt-10">
-        <MomentComments
-          authorKind={canManage ? "traveler" : "viewer"}
-          moment={moment}
-          trip={trip}
-        />
+          <MomentComments
+            authorKind={canManage ? "traveler" : "viewer"}
+            moment={moment}
+            trip={trip}
+          />
+          {navigationControls ? (
+            <div className="mt-6 lg:mt-8">{navigationControls}</div>
+          ) : null}
         </div>
       </div>
     </article>
