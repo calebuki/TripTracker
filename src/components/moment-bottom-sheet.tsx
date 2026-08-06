@@ -63,24 +63,56 @@ interface MomentBottomSheetProps {
   onDelete?: (moment: Moment) => void;
 }
 
+const momentCommentsCache = new Map<string, MomentComment[]>();
+const pendingMomentComments = new Map<string, Promise<MomentComment[]>>();
+
+function loadMomentComments(momentId: string) {
+  const cachedComments = momentCommentsCache.get(momentId);
+
+  if (cachedComments) {
+    return Promise.resolve(cachedComments);
+  }
+
+  const pendingRequest = pendingMomentComments.get(momentId);
+
+  if (pendingRequest) {
+    return pendingRequest;
+  }
+
+  const request = getTripRepository()
+    .listMomentComments(momentId)
+    .then((comments) => {
+      momentCommentsCache.set(momentId, comments);
+      return comments;
+    })
+    .finally(() => {
+      pendingMomentComments.delete(momentId);
+    });
+
+  pendingMomentComments.set(momentId, request);
+  return request;
+}
+
 function MomentComments({
   authorKind,
   moment,
   trip,
   variant = "sheet",
+  onLoaded,
 }: {
   authorKind: MomentCommentAuthorKind;
   moment: Moment;
   trip: Trip;
   variant?: "sheet" | "viewer";
+  onLoaded?: () => void;
 }) {
   const [commentsResult, setCommentsResult] = useState<{
     momentId: string;
     comments: MomentComment[] | null;
-  }>({
+  }>(() => ({
     momentId: moment.id,
-    comments: null,
-  });
+    comments: momentCommentsCache.get(moment.id) ?? null,
+  }));
   const [draft, setDraft] = useState("");
   const [saving, setSaving] = useState(false);
   const trimmedDraft = draft.trim();
@@ -101,14 +133,14 @@ function MomentComments({
   useEffect(() => {
     let mounted = true;
 
-    void getTripRepository()
-      .listMomentComments(moment.id)
+    void loadMomentComments(moment.id)
       .then((nextComments) => {
         if (mounted) {
           setCommentsResult({
             momentId: moment.id,
             comments: nextComments,
           });
+          onLoaded?.();
         }
       })
       .catch((error) => {
@@ -117,6 +149,7 @@ function MomentComments({
             momentId: moment.id,
             comments: [],
           });
+          onLoaded?.();
 
           if (!isMissingCommentsTableError(error)) {
             toast.error(
@@ -131,7 +164,7 @@ function MomentComments({
     return () => {
       mounted = false;
     };
-  }, [moment.id]);
+  }, [moment.id, onLoaded]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -151,13 +184,19 @@ function MomentComments({
         body: trimmedDraft,
       });
 
-      setCommentsResult((current) => ({
-        momentId: moment.id,
-        comments:
+      setCommentsResult((current) => {
+        const nextComments =
           current.momentId === moment.id && current.comments
             ? [...current.comments, comment]
-            : [comment],
-      }));
+            : [comment];
+
+        momentCommentsCache.set(moment.id, nextComments);
+
+        return {
+          momentId: moment.id,
+          comments: nextComments,
+        };
+      });
       setDraft("");
       toast.success("Comment posted.");
     } catch (error) {
@@ -262,6 +301,7 @@ function MomentSheetSlide({
   trip,
   canManage,
   onOpenPhotoViewer,
+  onMomentReady,
   onEdit,
   onHide,
   onDelete,
@@ -270,6 +310,7 @@ function MomentSheetSlide({
   trip: Trip;
   canManage: boolean;
   onOpenPhotoViewer: (moment: Moment) => void;
+  onMomentReady?: (momentId: string) => void;
   onEdit?: (moment: Moment) => void;
   onHide?: (moment: Moment) => void;
   onDelete?: (moment: Moment) => void;
@@ -277,6 +318,13 @@ function MomentSheetSlide({
   const times = formatMomentTimes(moment, trip.timezone);
   const isVideoMoment = isMomentVideo(moment);
   const momentTitle = getMomentTitle(moment);
+  const hasMediaToLoad = moment.type === "photo" && Boolean(moment.imageUrl);
+  const [mediaReady, setMediaReady] = useState(!hasMediaToLoad);
+  const [commentsReady, setCommentsReady] = useState(false);
+  const hasReportedReadyRef = useRef(false);
+  const markCommentsReady = useCallback(() => {
+    setCommentsReady(true);
+  }, []);
   const tripTimeLabel =
     trip.coverLocationName?.split(",")[0]?.trim() ||
     trip.timezone.split("/").at(-1)?.replace(/_/g, " ") ||
@@ -286,6 +334,15 @@ function MomentSheetSlide({
       <Maximize2 className="h-4 w-4" />
     </span>
   );
+
+  useEffect(() => {
+    if (!mediaReady || !commentsReady || hasReportedReadyRef.current) {
+      return;
+    }
+
+    hasReportedReadyRef.current = true;
+    onMomentReady?.(moment.id);
+  }, [commentsReady, mediaReady, moment.id, onMomentReady]);
 
   return (
     <article className="w-full lg:flex lg:min-h-full lg:flex-col">
@@ -299,6 +356,8 @@ function MomentSheetSlide({
                     <video
                       className="h-64 w-full bg-black object-cover sm:h-80"
                       controls
+                      onError={() => setMediaReady(true)}
+                      onLoadedData={() => setMediaReady(true)}
                       playsInline
                       preload="metadata"
                       src={moment.imageUrl}
@@ -318,6 +377,7 @@ function MomentSheetSlide({
                   <button
                     aria-label="Open full-screen photo"
                     className="group relative block w-full overflow-hidden text-left"
+                    data-moment-media
                     onClick={() => onOpenPhotoViewer(moment)}
                     title="Open full-screen photo"
                     type="button"
@@ -326,6 +386,8 @@ function MomentSheetSlide({
                     <img
                       alt={moment.caption ?? moment.placeName ?? "Trip photo"}
                       className="h-64 w-full object-cover transition duration-300 group-hover:scale-[1.01] sm:h-80"
+                      onError={() => setMediaReady(true)}
+                      onLoad={() => setMediaReady(true)}
                       src={moment.imageUrl}
                     />
                     {openViewerButton}
@@ -342,6 +404,7 @@ function MomentSheetSlide({
             <button
               aria-label="Open full-screen moment"
               className="order-2 relative block w-full rounded-[26px] bg-[var(--paper)] p-5 text-left text-base leading-7 text-[var(--ink)]"
+              data-moment-media
               onClick={() => onOpenPhotoViewer(moment)}
               title="Open full-screen moment"
               type="button"
@@ -430,6 +493,7 @@ function MomentSheetSlide({
           <MomentComments
             authorKind={canManage ? "traveler" : "viewer"}
             moment={moment}
+            onLoaded={markCommentsReady}
             trip={trip}
           />
         </div>
@@ -695,6 +759,8 @@ export function MomentBottomSheet({
   onDelete,
 }: MomentBottomSheetProps) {
   const [fullscreenMomentId, setFullscreenMomentId] = useState<string | null>(null);
+  const [readyMomentId, setReadyMomentId] = useState<string | null>(null);
+  const mobileSwipeStartRef = useRef<{ x: number; y: number } | null>(null);
   const activeMoment =
     moments.find((moment) => moment.id === selectedMomentId) ?? moments[0] ?? null;
   const activeNavigationMoments =
@@ -710,6 +776,13 @@ export function MomentBottomSheet({
     fullscreenMoments?.some((moment) => moment.id === fullscreenMomentId)
       ? fullscreenMoments
       : moments;
+  const activeMomentReady = activeMoment?.id === readyMomentId;
+
+  const handleMomentReady = useCallback((momentId: string) => {
+    setReadyMomentId((currentMomentId) =>
+      currentMomentId === momentId ? currentMomentId : momentId,
+    );
+  }, []);
 
   function selectMomentAtIndex(nextIndex: number) {
     const moment = activeNavigationMoments[nextIndex];
@@ -720,6 +793,80 @@ export function MomentBottomSheet({
 
     onSelectMoment?.(moment.id);
   }
+
+  function handleMobileSwipeStart(event: TouchEvent<HTMLDivElement>) {
+    if (
+      window.matchMedia("(min-width: 1024px)").matches ||
+      event.touches.length !== 1 ||
+      (event.target instanceof Element &&
+        event.target.closest(
+          "textarea, input, select, form, video, [data-swipe-exempt], button:not([data-moment-media])",
+        ))
+    ) {
+      mobileSwipeStartRef.current = null;
+      return;
+    }
+
+    const touch = event.touches[0];
+    mobileSwipeStartRef.current = { x: touch.clientX, y: touch.clientY };
+  }
+
+  function handleMobileSwipeMove(event: TouchEvent<HTMLDivElement>) {
+    const start = mobileSwipeStartRef.current;
+    const touch = event.touches[0];
+
+    if (!start || !touch) {
+      return;
+    }
+
+    const horizontalDistance = Math.abs(touch.clientX - start.x);
+    const verticalDistance = Math.abs(touch.clientY - start.y);
+
+    if (horizontalDistance > 8 && horizontalDistance > verticalDistance) {
+      event.preventDefault();
+    }
+  }
+
+  function handleMobileSwipeEnd(event: TouchEvent<HTMLDivElement>) {
+    const start = mobileSwipeStartRef.current;
+    const touch = event.changedTouches[0];
+    mobileSwipeStartRef.current = null;
+
+    if (!start || !touch) {
+      return;
+    }
+
+    const horizontalDistance = touch.clientX - start.x;
+    const verticalDistance = touch.clientY - start.y;
+
+    if (
+      Math.abs(horizontalDistance) < 48 ||
+      Math.abs(horizontalDistance) <= Math.abs(verticalDistance)
+    ) {
+      return;
+    }
+
+    event.preventDefault();
+    selectMomentAtIndex(
+      selectedNavigationIndex + (horizontalDistance > 0 ? -1 : 1),
+    );
+  }
+
+  useEffect(() => {
+    const nearbyMoments = [
+      activeNavigationMoments[selectedNavigationIndex - 1],
+      activeNavigationMoments[selectedNavigationIndex + 1],
+    ].filter((moment): moment is Moment => Boolean(moment));
+
+    nearbyMoments.forEach((moment) => {
+      if (moment.type === "photo" && moment.imageUrl) {
+        const image = new Image();
+        image.src = moment.imageUrl;
+      }
+
+      void loadMomentComments(moment.id).catch(() => undefined);
+    });
+  }, [activeNavigationMoments, selectedNavigationIndex]);
 
   const momentNavigator = hasMultipleNavigationMoments ? (
     <div
@@ -773,30 +920,11 @@ export function MomentBottomSheet({
             <div className="hidden lg:block lg:shrink-0">{sidebarHeader}</div>
           ) : null}
           {activeMoment ? (
-            <div className={cn("relative", sidebarHeader && "lg:flex lg:min-h-0 lg:flex-1 lg:flex-col lg:overflow-hidden")}>
-              <div className={cn(sidebarHeader && "lg:min-h-0 lg:flex-1 lg:overflow-y-auto")}>
-                <MomentSheetSlide
-                  key={activeMoment.id}
-                  canManage={canManage}
-                  moment={activeMoment}
-                  onDelete={onDelete}
-                  onEdit={onEdit}
-                  onHide={onHide}
-                  onOpenPhotoViewer={(moment) => setFullscreenMomentId(moment.id)}
-                  trip={trip}
-                />
-                {momentNavigator ? (
-                  <div className="px-4 pb-4 lg:hidden">{momentNavigator}</div>
-                ) : null}
-              </div>
-              {sidebarHeader && momentNavigator ? (
-                <div className="hidden border-t border-black/5 bg-white px-8 py-5 lg:block lg:shrink-0">
-                  {momentNavigator}
-                </div>
-              ) : null}
+            <div className="sticky top-0 z-30 h-0 lg:hidden">
               <Button
                 aria-label="Close moment"
-                className="absolute right-4 top-4 z-10 h-10 w-10 bg-white/95 shadow-[0_10px_24px_rgba(15,23,42,0.1)] hover:bg-[var(--paper)] lg:right-5 lg:top-5"
+                className="absolute right-4 top-4 h-10 w-10 bg-white/95 shadow-[0_10px_24px_rgba(15,23,42,0.1)] hover:bg-[var(--paper)]"
+                data-swipe-exempt
                 onClick={onClose}
                 size="icon"
                 type="button"
@@ -805,6 +933,57 @@ export function MomentBottomSheet({
                 <X className="h-4 w-4" />
                 <span className="sr-only">Close moment</span>
               </Button>
+            </div>
+          ) : null}
+          {activeMoment ? (
+            <div
+              aria-busy={!activeMomentReady}
+              className={cn("relative [touch-action:pan-y]", sidebarHeader && "lg:flex lg:min-h-0 lg:flex-1 lg:flex-col lg:overflow-hidden")}
+              onTouchCancel={() => {
+                mobileSwipeStartRef.current = null;
+              }}
+              onTouchEnd={handleMobileSwipeEnd}
+              onTouchMove={handleMobileSwipeMove}
+              onTouchStart={handleMobileSwipeStart}
+            >
+              <div className={cn(sidebarHeader && "lg:min-h-0 lg:flex-1 lg:overflow-y-auto")}>
+                <MomentSheetSlide
+                  key={activeMoment.id}
+                  canManage={canManage}
+                  moment={activeMoment}
+                  onDelete={onDelete}
+                  onEdit={onEdit}
+                  onHide={onHide}
+                  onMomentReady={handleMomentReady}
+                  onOpenPhotoViewer={(moment) => setFullscreenMomentId(moment.id)}
+                  trip={trip}
+                />
+              </div>
+              {sidebarHeader && momentNavigator ? (
+                <div className="hidden border-t border-black/5 bg-white px-8 py-5 lg:block lg:shrink-0">
+                  {momentNavigator}
+                </div>
+              ) : null}
+              <Button
+                aria-label="Close moment"
+                className="absolute right-5 top-5 z-30 hidden h-10 w-10 bg-white/95 shadow-[0_10px_24px_rgba(15,23,42,0.1)] hover:bg-[var(--paper)] lg:inline-flex"
+                data-swipe-exempt
+                onClick={onClose}
+                size="icon"
+                type="button"
+                variant="secondary"
+              >
+                <X className="h-4 w-4" />
+                <span className="sr-only">Close moment</span>
+              </Button>
+              {!activeMomentReady ? (
+                <div className="pointer-events-none absolute inset-0 z-20 flex items-start justify-center bg-white/95 pt-28 lg:items-center lg:pt-0">
+                  <div className="flex items-center gap-2 rounded-full bg-[var(--paper)] px-4 py-2 text-sm text-slate-600">
+                    <LoaderCircle className="h-4 w-4 animate-spin" />
+                    Loading moment...
+                  </div>
+                </div>
+              ) : null}
             </div>
           ) : sidebarEmptyState ? (
             <div className="pointer-events-none hidden lg:flex lg:min-h-0 lg:flex-1 lg:items-center lg:justify-center lg:p-8">
