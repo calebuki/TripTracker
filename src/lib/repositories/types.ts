@@ -7,6 +7,7 @@ import type {
   Trip,
   TripRecord,
   CrumbsUser,
+  WatchedTrip,
   UpdateMomentInput,
   UpdateTripSettingsInput,
 } from "@/types/crumbs";
@@ -16,10 +17,14 @@ export interface TripRepository {
   getSessionUser(): Promise<CrumbsUser | null>;
   signInWithEmail(email: string, redirectTo: string): Promise<void>;
   signOut(): Promise<void>;
+  updateCurrentUserDisplayName(displayName: string): Promise<CrumbsUser>;
   createTrip(input: CreateTripInput): Promise<Trip>;
   getActiveTripForCurrentUser(): Promise<Trip | null>;
   getLatestOwnedTripForCurrentUser(): Promise<Trip | null>;
   listTripsForCurrentUser(): Promise<Trip[]>;
+  listWatchedTripsForCurrentUser(): Promise<WatchedTrip[]>;
+  watchTrip(tripId: string): Promise<void>;
+  unwatchTrip(tripId: string): Promise<void>;
   getTripById(tripId: string): Promise<TripRecord | null>;
   getTripByShareSlug(shareSlug: string): Promise<TripRecord | null>;
   getTripByShareCode(shareCode: string): Promise<TripRecord | null>;

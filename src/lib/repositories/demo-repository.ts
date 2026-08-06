@@ -3,6 +3,7 @@ import { nanoid } from "nanoid";
 
 import { getAnonymousCommenterToken } from "@/lib/commenter-token";
 import { hashPasscode } from "@/lib/crypto";
+import { normalizeDisplayName, validateDisplayName } from "@/lib/display-name";
 import {
   createDemoDatabase,
   demoOwner,
@@ -21,8 +22,10 @@ import type {
   MomentComment,
   Trip,
   TripRecord,
+  CrumbsUser,
   UpdateMomentInput,
   UpdateTripSettingsInput,
+  WatchedTrip,
 } from "@/types/crumbs";
 
 const storageKey = "crumbs-demo-db-v2";
@@ -42,6 +45,7 @@ function normalizeDatabase(database: DemoDatabase): DemoDatabase {
     moments: database.moments,
     comments: "comments" in database ? database.comments : [],
     commenters: "commenters" in database ? database.commenters : [],
+    watches: "watches" in database ? database.watches : [],
   };
 }
 
@@ -87,6 +91,7 @@ function refreshSeedData(database: DemoDatabase): DemoDatabase {
     moments: [...fresh.moments, ...userMoments],
     comments: database.comments,
     commenters: database.commenters,
+    watches: database.watches,
   };
 }
 
@@ -209,6 +214,26 @@ function listOwnedTrips(database: DemoDatabase, ownerId: string) {
     .sort((left, right) => right.updatedAt.localeCompare(left.updatedAt));
 }
 
+function listWatchedTrips(database: DemoDatabase, userId: string): WatchedTrip[] {
+  const tripsById = new Map(database.trips.map((trip) => [trip.id, trip]));
+
+  return database.watches
+    .filter((watch) => watch.userId === userId)
+    .sort((left, right) => right.lastViewedAt.localeCompare(left.lastViewedAt))
+    .flatMap((watch) => {
+      const trip = tripsById.get(watch.tripId);
+      return trip
+        ? [
+            {
+              trip,
+              watchedAt: watch.createdAt,
+              lastViewedAt: watch.lastViewedAt,
+            },
+          ]
+        : [];
+    });
+}
+
 export function createDemoRepository(): TripRepository {
   return {
     mode: "demo",
@@ -220,6 +245,26 @@ export function createDemoRepository(): TripRepository {
     },
     async signOut() {
       return;
+    },
+    async updateCurrentUserDisplayName(displayName: string): Promise<CrumbsUser> {
+      const validationError = validateDisplayName(displayName);
+
+      if (validationError) {
+        throw new Error(validationError);
+      }
+
+      const normalizedDisplayName = normalizeDisplayName(displayName);
+      demoOwner.displayName = normalizedDisplayName;
+
+      withDatabase((database) => {
+        database.users = database.users.map((user) =>
+          user.id === demoOwner.id
+            ? { ...user, displayName: normalizedDisplayName }
+            : user,
+        );
+      });
+
+      return { ...demoOwner };
     },
     async createTrip(input: CreateTripInput) {
       const activeTrip = getActiveTripForOwner(loadDatabase(), demoOwner.id);
@@ -276,6 +321,42 @@ export function createDemoRepository(): TripRepository {
     async listTripsForCurrentUser() {
       return listOwnedTrips(loadDatabase(), demoOwner.id);
     },
+    async listWatchedTripsForCurrentUser() {
+      return listWatchedTrips(loadDatabase(), demoOwner.id);
+    },
+    async watchTrip(tripId: string) {
+      withDatabase((database) => {
+        const trip = database.trips.find((entry) => entry.id === tripId);
+
+        if (!trip || trip.ownerId === demoOwner.id) {
+          return;
+        }
+
+        const now = new Date().toISOString();
+        const existing = database.watches.find(
+          (watch) => watch.tripId === tripId && watch.userId === demoOwner.id,
+        );
+
+        if (existing) {
+          existing.lastViewedAt = now;
+          return;
+        }
+
+        database.watches.push({
+          tripId,
+          userId: demoOwner.id,
+          createdAt: now,
+          lastViewedAt: now,
+        });
+      });
+    },
+    async unwatchTrip(tripId: string) {
+      withDatabase((database) => {
+        database.watches = database.watches.filter(
+          (watch) => !(watch.tripId === tripId && watch.userId === demoOwner.id),
+        );
+      });
+    },
     async getTripById(tripId: string) {
       const database = loadDatabase();
       const trip = database.trips.find((entry) => entry.id === tripId);
@@ -325,20 +406,19 @@ export function createDemoRepository(): TripRepository {
       }
 
       const now = new Date().toISOString();
-      const commenter =
-        input.authorKind === "viewer"
-          ? getOrCreateDemoCommenter(database, trip.id)
-          : null;
+      const isTraveler = trip.ownerId === demoOwner.id;
+      const commenter = isTraveler
+        ? null
+        : getOrCreateDemoCommenter(database, trip.id);
       const comment: MomentComment = {
         id: nanoid(),
         tripId: trip.id,
         momentId: moment.id,
         body,
-        authorKind: input.authorKind,
+        authorKind: isTraveler ? "traveler" : "viewer",
         authorLabel:
-          input.authorKind === "traveler"
-            ? "OP"
-            : `#${commenter?.displayNumber ?? "?"}`,
+          isTraveler ? "OP" : `#${commenter?.displayNumber ?? "?"}`,
+        authorEmail: null,
         commenterNumber: commenter?.displayNumber ?? null,
         createdAt: now,
         updatedAt: now,

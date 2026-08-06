@@ -63,9 +63,16 @@ export interface MomentComment {
   body: string;
   authorKind: MomentCommentAuthorKind;
   authorLabel: string;
+  authorEmail: string | null;
   commenterNumber: number | null;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface WatchedTrip {
+  trip: Trip;
+  watchedAt: string;
+  lastViewedAt: string;
 }
 
 export interface TripRecord {

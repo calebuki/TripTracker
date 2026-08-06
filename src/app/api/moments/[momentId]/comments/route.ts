@@ -16,8 +16,13 @@ type CommenterRow = Pick<
   Database["public"]["Tables"]["trip_commenters"]["Row"],
   "id" | "display_number"
 >;
+type CommentAuthorRow = Pick<
+  Database["public"]["Tables"]["users"]["Row"],
+  "email" | "display_name"
+>;
 type CommentRow = Database["public"]["Tables"]["moment_comments"]["Row"] & {
   trip_commenters?: CommenterRow | CommenterRow[] | null;
+  users?: CommentAuthorRow | CommentAuthorRow[] | null;
 };
 
 const maxCommentLength = 1000;
@@ -46,9 +51,31 @@ function getCommenterNumber(row: CommentRow) {
   return commenter?.display_number ?? null;
 }
 
+function getCommentAuthor(row: CommentRow) {
+  const author = Array.isArray(row.users) ? row.users[0] : row.users;
+
+  return author ?? null;
+}
+
 function mapComment(row: CommentRow, trip: TripRow): MomentComment {
   const isTraveler = row.author_id === trip.owner_id;
+  const signedInAuthor = getCommentAuthor(row);
   const commenterNumber = isTraveler ? null : getCommenterNumber(row);
+
+  if (!isTraveler && signedInAuthor) {
+    return {
+      id: row.id,
+      tripId: row.trip_id,
+      momentId: row.moment_id,
+      body: row.body,
+      authorKind: "viewer",
+      authorLabel: signedInAuthor.display_name?.trim() || "Crumbs friend",
+      authorEmail: signedInAuthor.email,
+      commenterNumber: null,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+    };
+  }
 
   return {
     id: row.id,
@@ -57,6 +84,7 @@ function mapComment(row: CommentRow, trip: TripRow): MomentComment {
     body: row.body,
     authorKind: isTraveler ? "traveler" : "viewer",
     authorLabel: isTraveler ? "OP" : `#${commenterNumber ?? "?"}`,
+    authorEmail: null,
     commenterNumber,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -115,6 +143,21 @@ async function getAuthenticatedUserId(request: Request) {
   }
 
   return data.user.id;
+}
+
+async function getPublicUser(userId: string) {
+  const supabase = getSupabaseServerClient();
+  const { data, error } = await supabase
+    .from("users")
+    .select("email, display_name")
+    .eq("id", userId)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return data as CommentAuthorRow | null;
 }
 
 async function canAccessMoment(
@@ -220,7 +263,7 @@ export async function GET(
     const supabase = getSupabaseServerClient();
     const { data, error } = await supabase
       .from("moment_comments")
-      .select("*, trip_commenters (id, display_number)")
+      .select("*, trip_commenters (id, display_number), users (email, display_name)")
       .eq("moment_id", moment.id)
       .order("created_at", { ascending: true });
 
@@ -271,15 +314,27 @@ export async function POST(
     const supabase = getSupabaseServerClient();
     let authorId: string | null = null;
     let commenterId: string | null = null;
+    const authenticatedUserId = await getAuthenticatedUserId(request);
 
     if (requestedAuthorKind === "traveler") {
-      const userId = await getAuthenticatedUserId(request);
-
-      if (userId !== trip.owner_id) {
+      if (authenticatedUserId !== trip.owner_id) {
         return createError("Only the traveler can post as OP.", 403);
       }
 
       authorId = trip.owner_id;
+    } else if (authenticatedUserId) {
+      if (authenticatedUserId !== trip.owner_id) {
+        const commenterProfile = await getPublicUser(authenticatedUserId);
+
+        if (!commenterProfile?.display_name?.trim()) {
+          return createError(
+            "Choose a display name in Account settings before posting a named comment.",
+            422,
+          );
+        }
+      }
+
+      authorId = authenticatedUserId;
     } else {
       if (trip.privacy_mode !== "private_link" || moment.visibility !== "visible") {
         return createError("Comments are not available for this moment.", 403);
@@ -302,7 +357,7 @@ export async function POST(
         author_id: authorId,
         body,
       })
-      .select("*, trip_commenters (id, display_number)")
+      .select("*, trip_commenters (id, display_number), users (email, display_name)")
       .single();
 
     if (error || !data) {

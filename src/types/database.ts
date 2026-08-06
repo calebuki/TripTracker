@@ -178,6 +178,27 @@ export interface Database {
         };
         Relationships: [];
       };
+      trip_watches: {
+        Row: {
+          trip_id: string;
+          user_id: string;
+          created_at: string;
+          last_viewed_at: string;
+        };
+        Insert: {
+          trip_id: string;
+          user_id: string;
+          created_at?: string;
+          last_viewed_at?: string;
+        };
+        Update: {
+          trip_id?: string;
+          user_id?: string;
+          created_at?: string;
+          last_viewed_at?: string;
+        };
+        Relationships: [];
+      };
       trip_commenters: {
         Row: {
           id: string;
