@@ -92,15 +92,11 @@ function DisplayNameForm({ user }: { user: NonNullable<ReturnType<typeof useCrum
         </Button>
 
         <Card className="rounded-[34px]">
-          <CardHeader className="space-y-3">
+          <CardHeader>
             <div className="text-sm uppercase tracking-[0.18em] text-slate-500">
               Personal settings
             </div>
             <CardTitle className="text-4xl">Your public display name</CardTitle>
-            <CardDescription className="text-base leading-7">
-              This is the name shown when you comment on a friend&apos;s trip. Display
-              names can repeat.
-            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
             <form className="space-y-5" onSubmit={(event) => void handleSave(event)}>
@@ -113,10 +109,6 @@ function DisplayNameForm({ user }: { user: NonNullable<ReturnType<typeof useCrum
                   placeholder="Your name"
                   value={displayName}
                 />
-                <p className="text-sm leading-6 text-slate-600">
-                  Your comment label will appear as @{normalizeDisplayName(displayName) || "name"}.
-                  Hovering or focusing it currently reveals your email address.
-                </p>
               </div>
               <Button disabled={saving} type="submit">
                 {saving ? (
