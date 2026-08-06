@@ -97,8 +97,58 @@ function getViewportTuning(map: MapRef | null) {
       ? { top: 96, bottom: 180, left: 48, right: 48 }
       : 64,
     initialZoom: isCompact ? 10.5 : 11.5,
-    selectedZoom: isCompact ? 12.85 : 14.5,
   };
+}
+
+function getDistanceInKilometers(
+  latitudeA: number,
+  longitudeA: number,
+  latitudeB: number,
+  longitudeB: number,
+) {
+  const toRadians = (degrees: number) => (degrees * Math.PI) / 180;
+  const latitudeDelta = toRadians(latitudeB - latitudeA);
+  const longitudeDelta = toRadians(longitudeB - longitudeA);
+  const latitudeARadians = toRadians(latitudeA);
+  const latitudeBRadians = toRadians(latitudeB);
+  const distanceFactor =
+    Math.sin(latitudeDelta / 2) ** 2 +
+    Math.cos(latitudeARadians) *
+      Math.cos(latitudeBRadians) *
+      Math.sin(longitudeDelta / 2) ** 2;
+
+  return 6371 * 2 * Math.atan2(Math.sqrt(distanceFactor), Math.sqrt(1 - distanceFactor));
+}
+
+function getSelectedMomentZoom(map: MapRef, moment: Moment, moments: Moment[]) {
+  const latitude = moment.latitude as number;
+  const longitude = moment.longitude as number;
+  const nearestDistance = moments
+    .filter((entry) => entry.id !== moment.id && hasCoordinates(entry))
+    .reduce((closestDistance, entry) => {
+      const distance = getDistanceInKilometers(
+        latitude,
+        longitude,
+        entry.latitude as number,
+        entry.longitude as number,
+      );
+
+      return Math.min(closestDistance, distance);
+    }, Number.POSITIVE_INFINITY);
+  const viewportWidth = map.getMap().getContainer().clientWidth;
+  const isCompact = viewportWidth < 640;
+  const zoom =
+    nearestDistance <= 0.1
+      ? 17
+      : nearestDistance <= 0.5
+        ? 16.25
+        : nearestDistance <= 2
+          ? 15.5
+          : nearestDistance <= 10
+            ? 14.5
+            : 13.75;
+
+  return isCompact ? Math.min(15.75, zoom) : zoom;
 }
 
 function areMomentMarkerGroupsEqual(
@@ -234,7 +284,7 @@ export function TripMap({
 
     map.flyTo({
       center: [moment.longitude as number, moment.latitude as number],
-      zoom: getViewportTuning(map).selectedZoom,
+      zoom: getSelectedMomentZoom(map, moment, moments),
       duration: 800,
     });
   }, [selectedMomentId, moments]);
