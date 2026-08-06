@@ -573,6 +573,69 @@ function getMomentLocationLabel(moment: Moment) {
   return "Location not saved";
 }
 
+function FullscreenMomentMedia({
+  moment,
+  isVideoMoment,
+}: {
+  moment: Moment;
+  isVideoMoment: boolean;
+}) {
+  const hasMediaToLoad = moment.type === "photo" && Boolean(moment.imageUrl);
+  const [mediaReady, setMediaReady] = useState(!hasMediaToLoad);
+
+  return (
+    <div
+      aria-busy={!mediaReady}
+      className="relative flex min-h-0 flex-1 items-center justify-center"
+    >
+      {moment.type === "photo" && moment.imageUrl ? (
+        isVideoMoment ? (
+          <video
+            className={cn(
+              "max-h-[calc(100dvh-22rem)] max-w-full bg-black object-contain transition-opacity duration-200 lg:max-h-[calc(100dvh-3rem)]",
+              !mediaReady && "opacity-0",
+            )}
+            controls
+            onError={() => setMediaReady(true)}
+            onLoadedData={() => setMediaReady(true)}
+            playsInline
+            preload="metadata"
+            src={moment.imageUrl}
+          />
+        ) : (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            alt={moment.caption ?? moment.placeName ?? "Trip photo"}
+            className={cn(
+              "max-h-[calc(100dvh-22rem)] max-w-full object-contain transition-opacity duration-200 lg:max-h-[calc(100dvh-3rem)]",
+              !mediaReady && "opacity-0",
+            )}
+            onError={() => setMediaReady(true)}
+            onLoad={() => setMediaReady(true)}
+            src={moment.imageUrl}
+          />
+        )
+      ) : (
+        <div className="max-w-2xl rounded-[28px] bg-white/10 p-6 text-lg leading-8 text-white backdrop-blur-sm sm:p-8 sm:text-xl">
+          {moment.thoughtText ?? moment.caption ?? "A quiet note from the trip."}
+        </div>
+      )}
+      {!mediaReady ? (
+        <div
+          aria-live="polite"
+          className="absolute inset-0 flex items-center justify-center"
+          role="status"
+        >
+          <div className="flex items-center gap-2 rounded-full bg-white/10 px-4 py-2 text-sm font-medium text-white backdrop-blur-sm">
+            <LoaderCircle className="h-4 w-4 animate-spin" />
+            Loading photo...
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 function MomentFullscreenViewer({
   activeMomentId,
   moments,
@@ -674,6 +737,17 @@ function MomentFullscreenViewer({
     selectMomentAtIndex,
   ]);
 
+  useEffect(() => {
+    [moments[activeIndex - 1], moments[activeIndex + 1]].forEach(
+      (nearbyMoment) => {
+        if (nearbyMoment?.type === "photo" && nearbyMoment.imageUrl) {
+          const image = new Image();
+          image.src = nearbyMoment.imageUrl;
+        }
+      },
+    );
+  }, [activeIndex, moments]);
+
   if (!moment) {
     return null;
   }
@@ -739,30 +813,11 @@ function MomentFullscreenViewer({
         </>
       ) : null}
       <div className="relative z-10 flex h-full w-full max-w-[1500px] flex-col justify-center gap-3 lg:flex-row lg:items-center lg:gap-6">
-        <div className="relative flex min-h-0 flex-1 items-center justify-center">
-          {moment.type === "photo" && moment.imageUrl ? (
-            isVideoMoment ? (
-              <video
-                className="max-h-[calc(100dvh-22rem)] max-w-full bg-black object-contain lg:max-h-[calc(100dvh-3rem)]"
-                controls
-                playsInline
-                preload="metadata"
-                src={moment.imageUrl}
-              />
-            ) : (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                alt={moment.caption ?? moment.placeName ?? "Trip photo"}
-                className="max-h-[calc(100dvh-22rem)] max-w-full object-contain lg:max-h-[calc(100dvh-3rem)]"
-                src={moment.imageUrl}
-              />
-            )
-          ) : (
-            <div className="max-w-2xl rounded-[28px] bg-white/10 p-6 text-lg leading-8 text-white backdrop-blur-sm sm:p-8 sm:text-xl">
-              {moment.thoughtText ?? moment.caption ?? "A quiet note from the trip."}
-            </div>
-          )}
-        </div>
+        <FullscreenMomentMedia
+          isVideoMoment={isVideoMoment}
+          key={moment.id}
+          moment={moment}
+        />
         <aside className="max-h-[32dvh] w-full shrink-0 overflow-y-auto rounded-[26px] bg-white/10 p-4 backdrop-blur-sm lg:max-h-[calc(100dvh-3rem)] lg:w-[360px]">
           <div className="space-y-1">
             <p className="whitespace-pre-wrap text-base font-medium leading-7 text-white sm:text-lg">{momentTitle}</p>
