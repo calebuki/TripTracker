@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { EmailOtpType } from "@supabase/supabase-js";
 
 import { demoOwner } from "@/lib/demo-data";
@@ -20,6 +20,15 @@ function mapAuthUser(user: {
     displayName: user.user_metadata?.display_name ?? null,
     createdAt: user.created_at ?? new Date().toISOString(),
   };
+}
+
+function usersMatch(left: CrumbsUser | null, right: CrumbsUser | null) {
+  return (
+    left?.id === right?.id &&
+    left?.email === right?.email &&
+    left?.displayName === right?.displayName &&
+    left?.createdAt === right?.createdAt
+  );
 }
 
 const authCallbackRetryDelayMs = 250;
@@ -123,6 +132,16 @@ export function useCrumbsAuth() {
   );
   const [error, setError] = useState<string | null>(null);
   const [retryKey, setRetryKey] = useState(0);
+  const currentUserRef = useRef<CrumbsUser | null>(
+    isDemoMode ? demoOwner : null,
+  );
+
+  const commitUser = useCallback((nextUser: CrumbsUser | null) => {
+    currentUserRef.current = nextUser;
+    setUser((currentUser) =>
+      usersMatch(currentUser, nextUser) ? currentUser : nextUser,
+    );
+  }, []);
 
   const retry = useCallback(() => {
     if (!hasSupabase) {
@@ -206,7 +225,7 @@ export function useCrumbsAuth() {
           clearAuthCallbackUrl();
         }
 
-        setUser(resolvedUser ? mapAuthUser(resolvedUser) : null);
+        commitUser(resolvedUser ? mapAuthUser(resolvedUser) : null);
         setError(
           callbackState.hasCallbackParams && !resolvedUser
             ? "Crumbs couldn't finish signing you in. Please try again."
@@ -217,12 +236,14 @@ export function useCrumbsAuth() {
           return;
         }
 
-        setUser(null);
-        setError(
-          authError instanceof Error
-            ? authError.message
-            : "Crumbs couldn't finish signing you in.",
-        );
+        if (!currentUserRef.current) {
+          commitUser(null);
+          setError(
+            authError instanceof Error
+              ? authError.message
+              : "Crumbs couldn't finish signing you in.",
+          );
+        }
       } finally {
         if (!mounted) {
           return;
@@ -237,47 +258,31 @@ export function useCrumbsAuth() {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(async () => {
-      try {
-        const { data } = await withTimeout(
-          () => supabase.auth.getUser(),
-          authBootstrapTimeoutMs,
-          "Crumbs took too long to refresh your sign-in. Please refresh and try again.",
-        );
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      if (!mounted) {
+        return;
+      }
 
-        if (!mounted) {
-          return;
-        }
+      if (event === "SIGNED_OUT") {
+        commitUser(null);
+      } else if (session?.user) {
+        commitUser(mapAuthUser(session.user));
 
-        if (data.user) {
+        if (getAuthCallbackState().hasCallbackParams) {
           clearAuthCallbackUrl();
         }
-
-        setUser(data.user ? mapAuthUser(data.user) : null);
-        setError(null);
-        setProcessingCallback(false);
-        setLoading(false);
-      } catch (authError) {
-        if (!mounted) {
-          return;
-        }
-
-        setUser(null);
-        setError(
-          authError instanceof Error
-            ? authError.message
-            : "Crumbs couldn't refresh your sign-in.",
-        );
-        setProcessingCallback(false);
-        setLoading(false);
       }
+
+      setError(null);
+      setProcessingCallback(false);
+      setLoading(false);
     });
 
     return () => {
       mounted = false;
       subscription.unsubscribe();
     };
-  }, [retryKey]);
+  }, [commitUser, retryKey]);
 
   return {
     user,
