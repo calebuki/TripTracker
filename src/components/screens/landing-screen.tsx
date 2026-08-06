@@ -2,15 +2,13 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { ArrowRight, LoaderCircle, LogIn } from "lucide-react";
 import { toast } from "sonner";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useTravelerHomeTarget } from "@/hooks/use-traveler-home-target";
-import { useCrumbsAuth } from "@/hooks/use-crumbs-auth";
 import { getTripRepository } from "@/lib/repositories";
 import {
   TRIP_CODE_LENGTH,
@@ -20,22 +18,8 @@ import {
 
 export function LandingScreen() {
   const router = useRouter();
-  const { user, loading: authLoading, isDemoMode } = useCrumbsAuth();
-  const travelerHome = useTravelerHomeTarget({
-    user,
-    authLoading,
-    isDemoMode,
-  });
   const [code, setCode] = useState("");
   const [opening, setOpening] = useState(false);
-
-  useEffect(() => {
-    if (!travelerHome.user || travelerHome.loading || !travelerHome.targetPath) {
-      return;
-    }
-
-    router.replace(travelerHome.targetPath);
-  }, [router, travelerHome.loading, travelerHome.targetPath, travelerHome.user]);
 
   async function handleOpenTrip() {
     const normalized = normalizeShareCode(code);
@@ -69,57 +53,6 @@ export function LandingScreen() {
     } finally {
       setOpening(false);
     }
-  }
-
-  if (travelerHome.user) {
-    return (
-      <main className="flex min-h-screen items-center justify-center bg-[var(--paper)] px-4 py-10 sm:px-6">
-        <Card className="w-full max-w-xl rounded-[36px] bg-[#f9f5ee]">
-          <CardHeader className="space-y-4 p-8 sm:p-10">
-            <div className="inline-flex w-fit items-center gap-2 rounded-full bg-white px-3 py-1.5 text-xs font-medium uppercase tracking-[0.18em] text-slate-500 shadow-[0_10px_30px_rgba(15,23,42,0.08)]">
-              <LoaderCircle className="h-3.5 w-3.5 animate-spin" />
-              Traveler mode
-            </div>
-            <CardTitle className="text-5xl leading-none sm:text-6xl">
-              Reopening Crumbs
-            </CardTitle>
-            <CardDescription className="text-lg leading-8 text-slate-600">
-              {travelerHome.error ??
-                (travelerHome.status === "active"
-                  ? "Your active trip is loading with the camera-first flow."
-                  : travelerHome.status === "latest"
-                    ? "Loading your most recent trip so you can resume or review it."
-                    : "Getting a fresh trip ready for you.")}
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="p-8 pt-0 sm:p-10 sm:pt-0">
-            <Button
-              className="w-full"
-              disabled={travelerHome.loading}
-              onClick={() => {
-                if (travelerHome.targetPath) {
-                  router.replace(travelerHome.targetPath);
-                }
-              }}
-              size="lg"
-              type="button"
-            >
-              {travelerHome.loading ? (
-                <>
-                  <LoaderCircle className="h-4 w-4 animate-spin" />
-                  Loading your trip...
-                </>
-              ) : (
-                <>
-                  Continue
-                  <ArrowRight className="h-4 w-4" />
-                </>
-              )}
-            </Button>
-          </CardContent>
-        </Card>
-      </main>
-    );
   }
 
   return (

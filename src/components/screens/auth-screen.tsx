@@ -1,41 +1,25 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { LoaderCircle, Mail } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { useTravelerHomeTarget } from "@/hooks/use-traveler-home-target";
 import { useCrumbsAuth } from "@/hooks/use-crumbs-auth";
 import { getTripRepository } from "@/lib/repositories";
 import { resolveSiteUrl } from "@/lib/utils";
 
 export function AuthScreen() {
-  const router = useRouter();
   const { user, loading: authLoading, isDemoMode, processingCallback, error: authError, retry } =
     useCrumbsAuth();
-  const isOpeningTrip = Boolean(user || processingCallback || authLoading);
-  const travelerHome = useTravelerHomeTarget({
-    user,
-    authLoading,
-    isDemoMode,
-  });
+  const isCheckingSignIn = Boolean(processingCallback || authLoading);
   const [email, setEmail] = useState("");
   const [sending, setSending] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
   const error = authError ?? sendError;
-
-  useEffect(() => {
-    if (!user || travelerHome.loading || !travelerHome.targetPath) {
-      return;
-    }
-
-    router.replace(travelerHome.targetPath);
-  }, [router, travelerHome.loading, travelerHome.targetPath, user]);
 
   async function handleSendLink() {
     if (!email.trim()) {
@@ -97,23 +81,30 @@ export function AuthScreen() {
             Magic link sign-in
           </div>
           <CardTitle className="text-4xl">
-            {isOpeningTrip ? "Opening your trip" : "Traveler sign-in"}
+            {isCheckingSignIn ? "Checking your sign-in" : "Traveler sign-in"}
           </CardTitle>
-          {isOpeningTrip ? null : (
+          {isCheckingSignIn ? null : (
             <CardDescription>
-              Use a simple email magic link so the traveler can add moments quickly
-              from a phone.
+              Use a simple email magic link to sign in, or switch to another
+              traveler account.
             </CardDescription>
           )}
         </CardHeader>
         <CardContent className="space-y-4">
-          {isOpeningTrip ? (
+          {isCheckingSignIn ? (
             <div className="flex items-center gap-3 rounded-[24px] bg-[var(--paper)] px-4 py-4 text-sm text-slate-600">
               <LoaderCircle className="h-4 w-4 animate-spin text-[var(--ink)]" />
-              {error ?? travelerHome.error ?? "Loading"}
+              {error ?? "Checking your sign-in..."}
             </div>
           ) : (
             <>
+              {user ? (
+                <p className="rounded-[24px] bg-[var(--paper)] px-4 py-3 text-sm leading-6 text-slate-600">
+                  You&apos;re currently signed in as {user.email}. Enter another
+                  email below to switch accounts, or return home to follow a
+                  trip as a viewer.
+                </p>
+              ) : null}
               {error ? (
                 <div className="flex flex-wrap items-center justify-between gap-3 rounded-[24px] border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
                   <p>{error}</p>
