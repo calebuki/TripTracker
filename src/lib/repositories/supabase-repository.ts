@@ -8,7 +8,11 @@ import type { TripRepository } from "@/lib/repositories/types";
 import { generateShareCode } from "@/lib/share-code";
 import { sortMomentsChronologically } from "@/lib/time";
 import { clampPublishDelayHours } from "@/lib/trip-sharing";
-import { getSupabaseBrowserClient } from "@/lib/supabase/client";
+import {
+  getRememberMePreference,
+  getSupabaseBrowserClient,
+  setRememberMePreference,
+} from "@/lib/supabase/client";
 import type { Database } from "@/types/database";
 import type {
   CreateMomentInput,
@@ -445,16 +449,18 @@ export function createSupabaseRepository(): TripRepository {
 
       return mapUser(data.user);
     },
-    async signInWithEmail(email: string, redirectTo: string) {
+    async signInWithPassword(email: string, password: string, rememberMe: boolean) {
       const supabase = getSupabaseBrowserClient();
-      const { error } = await supabase.auth.signInWithOtp({
+      const previousRememberMe = getRememberMePreference();
+
+      setRememberMePreference(rememberMe);
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
-        options: {
-          emailRedirectTo: redirectTo,
-        },
+        password,
       });
 
-      if (error) {
+      if (error || !data.session) {
+        setRememberMePreference(previousRememberMe);
         throw new Error(formatSupabaseError(error));
       }
     },

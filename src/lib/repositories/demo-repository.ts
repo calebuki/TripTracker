@@ -240,7 +240,7 @@ export function createDemoRepository(): TripRepository {
     async getSessionUser() {
       return demoOwner;
     },
-    async signInWithEmail() {
+    async signInWithPassword() {
       return;
     },
     async signOut() {

@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { LoaderCircle, Mail } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { KeyRound, LoaderCircle } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -10,42 +11,51 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { useCrumbsAuth } from "@/hooks/use-crumbs-auth";
 import { getTripRepository } from "@/lib/repositories";
-import { resolveSiteUrl } from "@/lib/utils";
 
 export function AuthScreen() {
   const { user, loading: authLoading, isDemoMode, processingCallback, error: authError, retry } =
     useCrumbsAuth();
+  const router = useRouter();
   const isCheckingSignIn = Boolean(processingCallback || authLoading);
   const [email, setEmail] = useState("");
-  const [sending, setSending] = useState(false);
-  const [sendError, setSendError] = useState<string | null>(null);
-  const error = authError ?? sendError;
+  const [password, setPassword] = useState("");
+  const [rememberMe, setRememberMe] = useState(true);
+  const [signingIn, setSigningIn] = useState(false);
+  const [signInError, setSignInError] = useState<string | null>(null);
+  const error = authError ?? signInError;
 
-  async function handleSendLink() {
+  async function handleSignIn() {
     if (!email.trim()) {
       toast.error("Enter an email address first.");
       return;
     }
 
-    setSending(true);
-    setSendError(null);
+    if (!password) {
+      toast.error("Enter your password first.");
+      return;
+    }
+
+    setSigningIn(true);
+    setSignInError(null);
 
     try {
-      await getTripRepository().signInWithEmail(
+      await getTripRepository().signInWithPassword(
         email.trim(),
-        `${resolveSiteUrl()}/auth`,
+        password,
+        rememberMe,
       );
-      toast.success("Magic link sent. Check your inbox.");
-    } catch (sendLinkError) {
+      toast.success("Signed in.");
+      router.replace("/");
+    } catch (passwordSignInError) {
       const message =
-        sendLinkError instanceof Error
-          ? sendLinkError.message
-          : "Crumbs could not send the sign-in link.";
+        passwordSignInError instanceof Error
+          ? passwordSignInError.message
+          : "Crumbs could not sign you in.";
 
-      setSendError(message);
+      setSignInError(message);
       toast.error(message);
     } finally {
-      setSending(false);
+      setSigningIn(false);
     }
   }
 
@@ -77,16 +87,16 @@ export function AuthScreen() {
       <Card className="w-full max-w-xl rounded-[34px]">
         <CardHeader>
           <div className="inline-flex w-fit items-center gap-2 rounded-full bg-[var(--paper)] px-3 py-1 text-xs font-medium uppercase tracking-[0.16em] text-slate-500">
-            <Mail className="h-3.5 w-3.5" />
-            Magic link sign-in
+            <KeyRound className="h-3.5 w-3.5" />
+            Password sign-in
           </div>
           <CardTitle className="text-4xl">
             {isCheckingSignIn ? "Checking your sign-in" : "Traveler sign-in"}
           </CardTitle>
           {isCheckingSignIn ? null : (
             <CardDescription>
-              Use a simple email magic link to sign in, or switch to another
-              traveler account.
+              Sign in with the email address and password for your traveler
+              account.
             </CardDescription>
           )}
         </CardHeader>
@@ -109,14 +119,14 @@ export function AuthScreen() {
                 <div className="flex flex-wrap items-center justify-between gap-3 rounded-[24px] border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
                   <p>{error}</p>
                   <Button
-                    disabled={sending}
+                    disabled={signingIn}
                     onClick={() => {
                       if (authError) {
                         retry();
                         return;
                       }
 
-                      void handleSendLink();
+                      void handleSignIn();
                     }}
                     size="sm"
                     type="button"
@@ -132,12 +142,28 @@ export function AuthScreen() {
                 type="email"
                 value={email}
               />
+              <Input
+                autoComplete="current-password"
+                onChange={(event) => setPassword(event.target.value)}
+                placeholder="Password"
+                type="password"
+                value={password}
+              />
+              <label className="flex cursor-pointer items-center gap-2 px-1 text-sm text-slate-600">
+                <input
+                  checked={rememberMe}
+                  className="h-4 w-4 rounded border-slate-300 accent-[var(--ink)]"
+                  onChange={(event) => setRememberMe(event.target.checked)}
+                  type="checkbox"
+                />
+                Remember me on this device
+              </label>
               <Button
                 className="w-full bg-[var(--ink)] text-white hover:bg-[var(--ink-strong)]"
-                disabled={sending}
-                onClick={() => void handleSendLink()}
+                disabled={signingIn}
+                onClick={() => void handleSignIn()}
               >
-                {sending ? "Sending magic link..." : "Send magic link"}
+                {signingIn ? "Signing in..." : "Sign in"}
               </Button>
             </>
           )}
