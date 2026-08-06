@@ -1,6 +1,15 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  createContext,
+  createElement,
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import type { EmailOtpType } from "@supabase/supabase-js";
 
 import { demoOwner } from "@/lib/demo-data";
@@ -34,6 +43,17 @@ function usersMatch(left: CrumbsUser | null, right: CrumbsUser | null) {
 const authCallbackRetryDelayMs = 250;
 const authCallbackRetryCount = 12;
 const authBootstrapTimeoutMs = 8_000;
+
+interface CrumbsAuthState {
+  user: CrumbsUser | null;
+  loading: boolean;
+  isDemoMode: boolean;
+  processingCallback: boolean;
+  error: string | null;
+  retry: () => void;
+}
+
+const CrumbsAuthContext = createContext<CrumbsAuthState | null>(null);
 
 function getAuthCallbackState() {
   if (typeof window === "undefined") {
@@ -122,7 +142,7 @@ async function withTimeout<T>(
   }
 }
 
-export function useCrumbsAuth() {
+function useCrumbsAuthState(): CrumbsAuthState {
   const [user, setUser] = useState<CrumbsUser | null>(
     isDemoMode ? demoOwner : null,
   );
@@ -292,4 +312,20 @@ export function useCrumbsAuth() {
     error,
     retry,
   };
+}
+
+export function CrumbsAuthProvider({ children }: { children: ReactNode }) {
+  const auth = useCrumbsAuthState();
+
+  return createElement(CrumbsAuthContext.Provider, { value: auth }, children);
+}
+
+export function useCrumbsAuth() {
+  const auth = useContext(CrumbsAuthContext);
+
+  if (!auth) {
+    throw new Error("useCrumbsAuth must be used within CrumbsAuthProvider.");
+  }
+
+  return auth;
 }

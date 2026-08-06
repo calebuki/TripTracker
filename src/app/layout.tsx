@@ -97,8 +97,7 @@ export default function RootLayout({
         className="min-h-full flex flex-col bg-[var(--paper)] text-[var(--ink)]"
         suppressHydrationWarning
       >
-        {children}
-        <AppProviders />
+        <AppProviders>{children}</AppProviders>
       </body>
     </html>
   );
