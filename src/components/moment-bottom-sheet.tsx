@@ -167,7 +167,7 @@ function MomentComments({
   }
 
   return (
-    <section className={cn("space-y-3", isViewer ? "border-t border-white/15 pt-4" : "mt-4 border-t border-black/5 pt-4")}>
+    <section className={cn("space-y-3", isViewer ? "mt-5 border-t border-white/15 pt-5" : "mt-4 border-t border-black/5 pt-4")}>
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <MessageCircle className={cn("h-4 w-4", isViewer ? "text-white/60" : "text-slate-500")} />
@@ -206,24 +206,27 @@ function MomentComments({
               </p>
             </div>
           ))
-        ) : (
+        ) : isViewer ? null : (
           <p className={cn("rounded-[22px] px-4 py-3 text-sm", isViewer ? "bg-white/10 text-white/70" : "bg-[var(--paper)] text-slate-600")}>
-            {isViewer ? "No comments." : "No comments yet."}
+            No comments yet.
           </p>
         )}
       </div>
 
-      {!isViewer ? <form className="space-y-2" onSubmit={(event) => void handleSubmit(event)}>
+      <form className="space-y-2" onSubmit={(event) => void handleSubmit(event)}>
         <Textarea
-          className="min-h-20 rounded-[22px]"
+          className={cn(
+            "min-h-20 rounded-[22px]",
+            isViewer && "border-white/15 bg-white/10 text-white placeholder:text-white/60 focus:border-white/30",
+          )}
           maxLength={1000}
           onChange={(event) => setDraft(event.target.value)}
-          placeholder="Add a comment"
+          placeholder={visibleComments.length === 0 ? "Add the first comment" : "Write a comment"}
           rows={2}
           value={draft}
         />
         <div className="flex items-center justify-between gap-3">
-          <p className="text-xs text-slate-500">
+          <p className={cn("text-xs", isViewer ? "text-white/60" : "text-slate-500")}>
             {authorKind === "traveler" ? "Posting as OP" : "Posting anonymously"}
           </p>
           <Button disabled={saving || !trimmedDraft} size="sm" type="submit">
@@ -235,7 +238,7 @@ function MomentComments({
             Post
           </Button>
         </div>
-      </form> : null}
+      </form>
     </section>
   );
 }
@@ -469,12 +472,14 @@ function MomentFullscreenViewer({
   activeMomentId,
   moments,
   trip,
+  canManage,
   onClose,
   onSelectMoment,
 }: {
   activeMomentId: string | null;
   moments: Moment[];
   trip: Trip;
+  canManage: boolean;
   onClose: () => void;
   onSelectMoment: (momentId: string) => void;
 }) {
@@ -655,12 +660,12 @@ function MomentFullscreenViewer({
         </div>
         <aside className="max-h-[32dvh] w-full shrink-0 overflow-y-auto rounded-[26px] bg-white/10 p-4 backdrop-blur-sm lg:max-h-[calc(100dvh-3rem)] lg:w-[360px]">
           <div className="space-y-1">
-            <p className="whitespace-pre-wrap text-sm leading-6 text-white">{momentTitle}</p>
+            <p className="whitespace-pre-wrap text-base font-medium leading-7 text-white sm:text-lg">{momentTitle}</p>
             <p className="text-xs text-white/60">Posted {formatPostedAt(moment.postedAt)}</p>
             <p className="text-xs text-white/60">{getMomentLocationLabel(moment)}</p>
           </div>
           <MomentComments
-            authorKind="viewer"
+            authorKind={canManage ? "traveler" : "viewer"}
             moment={moment}
             trip={trip}
             variant="viewer"
@@ -846,6 +851,7 @@ export function MomentBottomSheet({
       </div>
       <MomentFullscreenViewer
         activeMomentId={fullscreenMomentId}
+        canManage={canManage}
         moments={activeFullscreenMoments}
         trip={trip}
         onClose={() => setFullscreenMomentId(null)}
