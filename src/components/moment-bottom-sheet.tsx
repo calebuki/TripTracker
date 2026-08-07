@@ -39,6 +39,7 @@ import { useCrumbsAuth } from "@/hooks/use-crumbs-auth";
 import { isMomentVideo } from "@/lib/media";
 import { getTripRepository } from "@/lib/repositories";
 import { formatLastUpdated, formatMomentTimes } from "@/lib/time";
+import { getTripThemeStyle } from "@/lib/trip-theme";
 import { cn } from "@/lib/utils";
 import type {
   Moment,
@@ -257,11 +258,11 @@ function MomentComments({
   }
 
   return (
-    <section className={cn("space-y-3", isViewer ? "mt-5 border-t border-white/15 pt-5" : "mt-4 border-t border-black/5 pt-4")}>
+    <section className={cn("space-y-3", isViewer ? "mt-5 border-t border-black/10 pt-5" : "mt-4 border-t border-black/5 pt-4")}>
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-2">
-          <MessageCircle className={cn("h-4 w-4", isViewer ? "text-white/60" : "text-slate-500")} />
-          <p className={cn("text-sm font-medium", isViewer ? "text-white" : "text-[var(--ink)]")}>Comments</p>
+          <MessageCircle className="h-4 w-4 text-slate-500" />
+          <p className="text-sm font-medium text-[var(--ink)]">Comments</p>
         </div>
         {visibleComments.length > 0 ? (
           <Badge variant="subtle">{visibleComments.length}</Badge>
@@ -270,14 +271,14 @@ function MomentComments({
 
       <div className="space-y-3">
         {loading ? (
-          <div className={cn("flex items-center gap-2 rounded-[22px] px-4 py-3 text-sm", isViewer ? "bg-white/10 text-white/70" : "bg-[var(--paper)] text-slate-600")}>
+          <div className={cn("flex items-center gap-2 rounded-[22px] px-4 py-3 text-sm", isViewer ? "bg-[var(--surface)] text-slate-600" : "bg-[var(--paper)] text-slate-600")}>
             <LoaderCircle className="h-4 w-4 animate-spin" />
             Loading comments...
           </div>
         ) : visibleComments.length > 0 ? (
           visibleComments.map((comment) => (
             <div
-              className={cn("rounded-[22px] px-4 py-3", isViewer ? "bg-white/10" : "bg-[var(--paper)]")}
+              className={cn("rounded-[22px] px-4 py-3", isViewer ? "bg-[var(--surface)]" : "bg-[var(--paper)]")}
               key={comment.id}
             >
               <div className="flex flex-wrap items-center gap-2">
@@ -297,17 +298,17 @@ function MomentComments({
                     comment.authorLabel
                   )}
                 </Badge>
-                <span className={cn("text-xs", isViewer ? "text-white/60" : "text-slate-500")}>
+                <span className="text-xs text-slate-500">
                   {formatLastUpdated(comment.createdAt)}
                 </span>
               </div>
-              <p className={cn("mt-2 whitespace-pre-wrap text-sm leading-6", isViewer ? "text-white" : "text-[var(--ink)]")}>
+              <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-[var(--ink)]">
                 {comment.body}
               </p>
             </div>
           ))
         ) : isViewer ? null : (
-          <p className={cn("rounded-[22px] px-4 py-3 text-sm", isViewer ? "bg-white/10 text-white/70" : "bg-[var(--paper)] text-slate-600")}>
+          <p className={cn("rounded-[22px] px-4 py-3 text-sm", isViewer ? "bg-[var(--surface)] text-slate-600" : "bg-[var(--paper)] text-slate-600")}>
             No comments yet.
           </p>
         )}
@@ -317,7 +318,7 @@ function MomentComments({
         <Textarea
           className={cn(
             "min-h-20 rounded-[22px]",
-            isViewer && "border-white/15 bg-white/10 text-white placeholder:text-white/60 focus:border-white/30",
+            isViewer && "border-black/10 bg-[var(--surface)] text-[var(--ink)] placeholder:text-slate-500 focus:border-black/20",
           )}
           maxLength={1000}
           onChange={(event) => setDraft(event.target.value)}
@@ -326,7 +327,7 @@ function MomentComments({
           value={draft}
         />
         <div className="flex items-center justify-between gap-3">
-          <p className={cn("text-xs", isViewer ? "text-white/60" : "text-slate-500")}>
+          <p className="text-xs text-slate-500">
             {needsDisplayName ? (
               <Link className="underline underline-offset-4" href="/settings">
                 Set your display name to comment
@@ -660,7 +661,7 @@ function FullscreenMomentMedia({
           />
         )
       ) : (
-        <div className="max-w-2xl rounded-[28px] bg-white/10 p-6 text-lg leading-8 text-white backdrop-blur-sm sm:p-8 sm:text-xl">
+        <div className="max-w-2xl rounded-[28px] bg-[var(--paper)] p-6 text-lg leading-8 text-[var(--ink)] shadow-[0_18px_60px_rgba(0,0,0,0.28)] sm:p-8 sm:text-xl">
           {moment.thoughtText ?? moment.caption ?? "A quiet note from the trip."}
         </div>
       )}
@@ -670,7 +671,7 @@ function FullscreenMomentMedia({
           className="absolute inset-0 flex items-center justify-center"
           role="status"
         >
-          <div className="flex items-center gap-2 rounded-full bg-white/10 px-4 py-2 text-sm font-medium text-white backdrop-blur-sm">
+          <div className="flex items-center gap-2 rounded-full bg-[var(--paper)] px-4 py-2 text-sm font-medium text-[var(--ink)] shadow-[0_12px_30px_rgba(0,0,0,0.22)]">
             <LoaderCircle className="h-4 w-4 animate-spin" />
             Loading photo...
           </div>
@@ -799,10 +800,12 @@ function MomentFullscreenViewer({
     <div
       aria-label="Full-screen moment"
       aria-modal="true"
-      className="pointer-events-auto fixed inset-0 z-50 flex items-center justify-center bg-black/95 p-3 text-white sm:p-6"
+      className="pointer-events-auto fixed inset-0 z-50 flex items-center justify-center bg-[#16070d]/95 p-3 text-[var(--ink)] sm:p-6"
+      data-trip-theme={trip.theme}
       onTouchEnd={handleTouchEnd}
       onTouchStart={handleTouchStart}
       role="dialog"
+      style={getTripThemeStyle(trip.theme)}
     >
       <button
         aria-label="Dismiss full-screen photo"
@@ -811,7 +814,7 @@ function MomentFullscreenViewer({
         type="button"
       />
       <Button
-        className="absolute right-3 top-3 z-20 h-11 w-11 bg-white/10 text-white hover:bg-white/20 sm:right-5 sm:top-5"
+        className="absolute right-3 top-3 z-20 h-11 w-11 bg-[var(--paper)] text-[var(--ink)] shadow-[0_10px_28px_rgba(0,0,0,0.24)] hover:bg-[var(--paper-strong)] sm:right-5 sm:top-5"
         onClick={(event) => {
           event.stopPropagation();
           onClose();
@@ -827,7 +830,7 @@ function MomentFullscreenViewer({
       {hasMultipleMoments ? (
         <>
           <Button
-            className="absolute left-3 top-1/2 z-20 h-11 w-11 -translate-y-1/2 bg-white/10 text-white hover:bg-white/20 disabled:bg-white/5 sm:left-5 sm:h-12 sm:w-12"
+            className="absolute left-3 top-1/2 z-20 h-11 w-11 -translate-y-1/2 bg-[var(--paper)] text-[var(--ink)] shadow-[0_10px_28px_rgba(0,0,0,0.24)] hover:bg-[var(--paper-strong)] disabled:bg-[var(--paper-strong)] sm:left-5 sm:h-12 sm:w-12"
             disabled={!canSelectPrevious}
             onClick={() => selectMomentAtIndex(activeIndex - 1)}
             size="icon"
@@ -839,7 +842,7 @@ function MomentFullscreenViewer({
             <span className="sr-only">Previous moment</span>
           </Button>
           <Button
-            className="absolute right-3 top-1/2 z-20 h-11 w-11 -translate-y-1/2 bg-white/10 text-white hover:bg-white/20 disabled:bg-white/5 sm:right-5 sm:h-12 sm:w-12"
+            className="absolute right-3 top-1/2 z-20 h-11 w-11 -translate-y-1/2 bg-[var(--paper)] text-[var(--ink)] shadow-[0_10px_28px_rgba(0,0,0,0.24)] hover:bg-[var(--paper-strong)] disabled:bg-[var(--paper-strong)] sm:right-5 sm:h-12 sm:w-12"
             disabled={!canSelectNext}
             onClick={() => selectMomentAtIndex(activeIndex + 1)}
             size="icon"
@@ -850,7 +853,7 @@ function MomentFullscreenViewer({
             <ChevronRight className="h-6 w-6" />
             <span className="sr-only">Next moment</span>
           </Button>
-          <div className="absolute left-3 top-3 z-20 rounded-full bg-white/10 px-3 py-1 text-sm font-medium text-white backdrop-blur-sm sm:left-5 sm:top-5">
+          <div className="absolute left-3 top-3 z-20 rounded-full bg-[var(--paper)] px-3 py-1 text-sm font-medium text-[var(--ink)] shadow-[0_10px_28px_rgba(0,0,0,0.24)] sm:left-5 sm:top-5">
             {activeIndex + 1} / {moments.length}
           </div>
         </>
@@ -861,11 +864,11 @@ function MomentFullscreenViewer({
           key={moment.id}
           moment={moment}
         />
-        <aside className="max-h-[32dvh] w-full shrink-0 overflow-y-auto rounded-[26px] bg-white/10 p-4 backdrop-blur-sm lg:max-h-[calc(100dvh-3rem)] lg:w-[360px]">
+        <aside className="max-h-[32dvh] w-full shrink-0 overflow-y-auto rounded-[26px] bg-[var(--paper)] p-4 shadow-[0_18px_60px_rgba(0,0,0,0.28)] lg:max-h-[calc(100dvh-3rem)] lg:w-[360px]">
           <div className="space-y-1">
-            <p className="whitespace-pre-wrap text-base font-medium leading-7 text-white sm:text-lg">{momentTitle}</p>
-            <p className="text-xs text-white/60">Posted {formatPostedAt(moment.postedAt)}</p>
-            <p className="text-xs text-white/60">{getMomentLocationLabel(moment)}</p>
+            <p className="whitespace-pre-wrap text-base font-medium leading-7 text-[var(--ink)] sm:text-lg">{momentTitle}</p>
+            <p className="text-xs text-slate-600">Posted {formatPostedAt(moment.postedAt)}</p>
+            <p className="text-xs text-slate-600">{getMomentLocationLabel(moment)}</p>
           </div>
           <MomentComments
             authorKind={canManage ? "traveler" : "viewer"}
