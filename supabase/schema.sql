@@ -74,6 +74,7 @@ create table if not exists public.trips (
   privacy_mode text not null default 'private_link' check (privacy_mode in ('private_link', 'invite_only')),
   location_privacy_mode text not null default 'exact' check (location_privacy_mode in ('exact', 'delayed')),
   publish_delay_hours integer not null default 6 check (publish_delay_hours >= 1 and publish_delay_hours <= 168),
+  theme text not null default 'classic' check (theme in ('classic', 'blush', 'midnight')),
   cover_location_name text,
   cover_latitude double precision,
   cover_longitude double precision,
@@ -86,6 +87,9 @@ alter table if exists public.trips
 
 alter table if exists public.trips
   add column if not exists publish_delay_hours integer not null default 6;
+
+alter table if exists public.trips
+  add column if not exists theme text not null default 'classic';
 
 update public.trips
 set location_privacy_mode = 'delayed'
@@ -104,6 +108,13 @@ alter table if exists public.trips
 alter table if exists public.trips
   add constraint trips_publish_delay_hours_check
   check (publish_delay_hours >= 1 and publish_delay_hours <= 168);
+
+alter table if exists public.trips
+  drop constraint if exists trips_theme_check;
+
+alter table if exists public.trips
+  add constraint trips_theme_check
+  check (theme in ('classic', 'blush', 'midnight'));
 
 create table if not exists public.trip_members (
   id uuid primary key default gen_random_uuid(),

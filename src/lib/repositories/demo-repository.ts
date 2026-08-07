@@ -41,6 +41,11 @@ function normalizeDatabase(database: DemoDatabase): DemoDatabase {
       publishDelayHours: clampPublishDelayHours(
         "publishDelayHours" in trip ? trip.publishDelayHours : 6,
       ),
+      theme:
+        "theme" in trip &&
+        (trip.theme === "blush" || trip.theme === "midnight")
+          ? trip.theme
+          : "classic",
     })),
     moments: database.moments,
     comments: "comments" in database ? database.comments : [],
@@ -299,6 +304,7 @@ export function createDemoRepository(): TripRepository {
         privacyMode: input.privacyMode,
         locationPrivacyMode: input.locationPrivacyMode,
         publishDelayHours: clampPublishDelayHours(input.publishDelayHours),
+        theme: input.theme ?? "classic",
         coverLocationName: input.coverLocationName ?? null,
         coverLatitude: input.coverLatitude ?? null,
         coverLongitude: input.coverLongitude ?? null,
@@ -582,6 +588,7 @@ export function createDemoRepository(): TripRepository {
         input.publishDelayHours === undefined
           ? trip.publishDelayHours
           : clampPublishDelayHours(input.publishDelayHours);
+      trip.theme = input.theme ?? trip.theme;
       trip.viewerPasscodeHash =
         input.passcode === undefined
           ? trip.viewerPasscodeHash

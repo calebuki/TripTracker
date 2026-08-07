@@ -34,6 +34,46 @@ body {
   font-family: var(--font-manrope), sans-serif;
 }
 
+[data-trip-theme="blush"] [class*="bg-white"] {
+  background-color: var(--paper);
+}
+
+[data-trip-theme="blush"] [class*="border-black"] {
+  border-color: rgba(59, 22, 36, 0.1);
+}
+
+[data-trip-theme="blush"] .text-slate-600 {
+  color: #714052;
+}
+
+[data-trip-theme="blush"] .text-slate-500 {
+  color: #845265;
+}
+
+[data-trip-theme="blush"] .text-slate-400 {
+  color: #9e7180;
+}
+
+[data-trip-theme="midnight"] {
+  color-scheme: dark;
+}
+
+[data-trip-theme="midnight"] [class*="bg-white"] {
+  background-color: var(--surface);
+}
+
+[data-trip-theme="midnight"] [class*="border-black"] {
+  border-color: rgba(252, 235, 242, 0.14);
+}
+
+[data-trip-theme="midnight"] [class*="text-slate-"] {
+  color: #d7b8c7;
+}
+
+[data-trip-theme="midnight"] [class*="hover:bg-white"]:hover {
+  background-color: #352838;
+}
+
 a {
   color: inherit;
   text-decoration: none;

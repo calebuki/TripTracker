@@ -37,6 +37,7 @@ export interface Database {
           privacy_mode: "private_link" | "invite_only";
           location_privacy_mode: "exact" | "delayed";
           publish_delay_hours: number;
+          theme: "classic" | "blush" | "midnight";
           cover_location_name: string | null;
           cover_latitude: number | null;
           cover_longitude: number | null;
@@ -57,6 +58,7 @@ export interface Database {
           privacy_mode?: "private_link" | "invite_only";
           location_privacy_mode?: "exact" | "delayed";
           publish_delay_hours?: number;
+          theme?: "classic" | "blush" | "midnight";
           cover_location_name?: string | null;
           cover_latitude?: number | null;
           cover_longitude?: number | null;
@@ -77,6 +79,7 @@ export interface Database {
           privacy_mode?: "private_link" | "invite_only";
           location_privacy_mode?: "exact" | "delayed";
           publish_delay_hours?: number;
+          theme?: "classic" | "blush" | "midnight";
           cover_location_name?: string | null;
           cover_latitude?: number | null;
           cover_longitude?: number | null;
