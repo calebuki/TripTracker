@@ -60,6 +60,7 @@ export function createDemoDatabase(): DemoDatabase {
     privacyMode: "private_link",
     locationPrivacyMode: "exact",
     publishDelayHours: DEFAULT_PUBLISH_DELAY_HOURS,
+    theme: "classic",
     coverLocationName: "Paris, France",
     coverLatitude: 48.8566,
     coverLongitude: 2.3522,

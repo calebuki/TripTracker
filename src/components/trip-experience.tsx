@@ -20,6 +20,7 @@ import {
   type MomentMarkerGroup,
 } from "@/lib/map";
 import { getTripRepository } from "@/lib/repositories";
+import { getTripThemeStyle } from "@/lib/trip-theme";
 import {
   filterMomentsByDay,
   formatTripDayLabel,
@@ -284,7 +285,11 @@ export function TripExperience({
   );
 
   return (
-    <div className="h-[100dvh] overflow-hidden bg-[var(--paper)]">
+    <div
+      className="h-[100dvh] overflow-hidden bg-[var(--paper)]"
+      data-trip-theme={record.trip.theme}
+      style={getTripThemeStyle(record.trip.theme)}
+    >
       <div className="h-full w-full">
         <div className="relative h-full w-full overflow-hidden bg-white">
           <TripMap

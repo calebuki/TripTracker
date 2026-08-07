@@ -98,6 +98,7 @@ function mapTrip(row: TripRow): Trip {
     privacyMode: row.privacy_mode,
     locationPrivacyMode: row.location_privacy_mode,
     publishDelayHours: row.publish_delay_hours,
+    theme: row.theme,
     coverLocationName: row.cover_location_name,
     coverLatitude: row.cover_latitude,
     coverLongitude: row.cover_longitude,
@@ -531,6 +532,7 @@ export function createSupabaseRepository(): TripRepository {
               privacy_mode: input.privacyMode,
               location_privacy_mode: input.locationPrivacyMode,
               publish_delay_hours: clampPublishDelayHours(input.publishDelayHours),
+              theme: input.theme ?? "classic",
               cover_location_name: input.coverLocationName ?? null,
               cover_latitude: input.coverLatitude ?? null,
               cover_longitude: input.coverLongitude ?? null,
@@ -882,6 +884,7 @@ export function createSupabaseRepository(): TripRepository {
               : input.coverLocationName,
           privacy_mode: input.privacyMode,
           location_privacy_mode: input.locationPrivacyMode,
+          theme: input.theme,
           viewer_passcode_hash:
             input.passcode === undefined
               ? undefined

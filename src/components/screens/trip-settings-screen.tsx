@@ -18,8 +18,9 @@ import {
   clampPublishDelayHours,
   locationPrivacyChoices,
 } from "@/lib/trip-sharing";
+import { tripThemeOptions } from "@/lib/trip-theme";
 import { resolveSiteUrl } from "@/lib/utils";
-import type { Moment, TripLocationPrivacyMode } from "@/types/crumbs";
+import type { Moment, TripLocationPrivacyMode, TripTheme } from "@/types/crumbs";
 
 interface TripSettingsScreenProps {
   tripId: string;
@@ -126,6 +127,7 @@ export function TripSettingsScreen({ tripId }: TripSettingsScreenProps) {
             hasExistingPasscode={Boolean(record.trip.viewerPasscodeHash)}
             initialLocationPrivacyMode={record.trip.locationPrivacyMode}
             initialPublishDelayHours={record.trip.publishDelayHours}
+            initialTheme={record.trip.theme}
             initialEndDate={record.trip.endDate}
             tripTimezone={record.trip.timezone}
             onSaved={refresh}
@@ -191,6 +193,7 @@ interface TripSettingsPanelProps {
   hasExistingPasscode: boolean;
   initialLocationPrivacyMode: TripLocationPrivacyMode;
   initialPublishDelayHours: number;
+  initialTheme: TripTheme;
   initialEndDate: string | null;
   tripTimezone: string;
   onSaved: () => Promise<void> | void;
@@ -203,6 +206,7 @@ function TripSettingsPanel({
   hasExistingPasscode,
   initialLocationPrivacyMode,
   initialPublishDelayHours,
+  initialTheme,
   initialEndDate,
   tripTimezone,
   onSaved,
@@ -215,6 +219,7 @@ function TripSettingsPanel({
   const [publishDelayHours, setPublishDelayHours] = useState(
     initialPublishDelayHours,
   );
+  const [theme, setTheme] = useState<TripTheme>(initialTheme);
   const [workingAction, setWorkingAction] = useState<"save" | "status" | null>(
     null,
   );
@@ -230,6 +235,7 @@ function TripSettingsPanel({
       await getTripRepository().updateTripSettings(tripId, {
         locationPrivacyMode,
         publishDelayHours: clampPublishDelayHours(publishDelayHours),
+        theme,
         passcode: passcodeTouched ? passcode : undefined,
       });
       toast.success("Settings saved.");
@@ -277,12 +283,54 @@ function TripSettingsPanel({
   return (
     <Card className="rounded-[34px]">
       <CardHeader>
-        <CardTitle className="text-3xl">Sharing and privacy</CardTitle>
+        <CardTitle className="text-3xl">Trip controls</CardTitle>
         <CardDescription>
-          Fine-tune what viewers can see without cluttering the main map.
+          Set the look of your trip and fine-tune what viewers can see.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
+        <div className="space-y-3 rounded-[28px] border border-black/5 bg-[var(--paper)] p-4">
+          <div>
+            <Label>Trip appearance</Label>
+            <p className="mt-1 text-sm text-slate-600">
+              This palette appears on the map and shared trip for everyone.
+            </p>
+          </div>
+          <div className="grid gap-3">
+            {tripThemeOptions.map((option) => (
+              <button
+                key={option.value}
+                aria-pressed={theme === option.value}
+                className={`flex items-center gap-3 rounded-[24px] border p-3 text-left transition ${
+                  theme === option.value
+                    ? "border-transparent bg-[var(--accent-soft)]"
+                    : "border-black/6 bg-white hover:bg-[var(--paper)]"
+                }`}
+                onClick={() => setTheme(option.value)}
+                type="button"
+              >
+                <span className="flex h-11 w-16 shrink-0 overflow-hidden rounded-2xl border border-black/5">
+                  {option.swatches.map((color) => (
+                    <span
+                      key={color}
+                      className="flex-1"
+                      style={{ backgroundColor: color }}
+                    />
+                  ))}
+                </span>
+                <span>
+                  <span className="block font-medium text-[var(--ink)]">
+                    {option.label}
+                  </span>
+                  <span className="mt-1 block text-sm text-slate-600">
+                    {option.description}
+                  </span>
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+
         <div className="space-y-3 rounded-[28px] border border-black/5 bg-[var(--paper)] p-4">
           <Label>Private share link</Label>
           <p className="text-sm text-slate-600">{shareUrl}</p>

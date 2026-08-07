@@ -1,5 +1,6 @@
 export type TripPrivacyMode = "private_link" | "invite_only";
 export type TripLocationPrivacyMode = "exact" | "delayed";
+export type TripTheme = "classic" | "blush" | "midnight";
 export type MomentType = "photo" | "thought";
 export type MomentVisibility = "visible" | "hidden";
 export type LocationSource = "exif" | "browser_gps" | "manual" | "none";
@@ -27,6 +28,7 @@ export interface Trip {
   privacyMode: TripPrivacyMode;
   locationPrivacyMode: TripLocationPrivacyMode;
   publishDelayHours: number;
+  theme: TripTheme;
   coverLocationName: string | null;
   coverLatitude: number | null;
   coverLongitude: number | null;
@@ -93,6 +95,7 @@ export interface CreateTripInput {
   passcode?: string | null;
   locationPrivacyMode: TripLocationPrivacyMode;
   publishDelayHours: number;
+  theme?: TripTheme;
 }
 
 export interface UpdateTripSettingsInput {
@@ -106,6 +109,7 @@ export interface UpdateTripSettingsInput {
   passcode?: string | null;
   locationPrivacyMode?: TripLocationPrivacyMode;
   publishDelayHours?: number;
+  theme?: TripTheme;
 }
 
 export interface CreateMomentInput {
