@@ -3,12 +3,14 @@
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PhotoUploader } from "@/components/photo-uploader";
 import { ThoughtComposer } from "@/components/thought-composer";
+import { getTripThemeStyle } from "@/lib/trip-theme";
 import type { Trip } from "@/types/crumbs";
 
 interface AddMomentDialogProps {
@@ -27,12 +29,25 @@ export function AddMomentDialog({
   cameraFirst = false,
 }: AddMomentDialogProps) {
   const libraryOnly = Boolean(trip.endDate);
+  const themeStyle = getTripThemeStyle(trip.theme);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-3xl">
+      <DialogContent
+        className="bg-[var(--paper)] sm:max-w-3xl"
+        data-trip-theme={trip.theme}
+        overlayStyle={{
+          ...themeStyle,
+          backgroundColor: "var(--paper)",
+          opacity: 0.82,
+        }}
+        style={{ ...themeStyle, backgroundColor: "var(--paper)" }}
+      >
         <DialogHeader>
           <DialogTitle>{libraryOnly ? "Add a past moment" : "Add a moment"}</DialogTitle>
+          <DialogDescription className="sr-only">
+            Add media or a written moment to this trip.
+          </DialogDescription>
         </DialogHeader>
         {libraryOnly ? (
           <PhotoUploader
