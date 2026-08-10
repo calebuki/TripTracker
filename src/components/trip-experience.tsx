@@ -3,7 +3,7 @@
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { ChevronLeft, Images, User } from "lucide-react";
+import { ChevronDown, ChevronLeft, Images, User } from "lucide-react";
 import { toast } from "sonner";
 
 import { AddMomentButton } from "@/components/add-moment-button";
@@ -118,6 +118,7 @@ export function TripExperience({
   const [cameraFirstCapture, setCameraFirstCapture] =
     useState(shouldAutoOpenCapture);
   const [markerGroups, setMarkerGroups] = useState<MomentMarkerGroup[]>([]);
+  const [offMapMomentsOpen, setOffMapMomentsOpen] = useState(false);
   const filteredMoments = useMemo(
     () => filterMomentsByDay(displayMoments, record.trip.timezone, dayFilter),
     [dayFilter, displayMoments, record.trip.timezone],
@@ -214,6 +215,7 @@ export function TripExperience({
   }
 
   function selectSpotMoment(momentId: string) {
+    setOffMapMomentsOpen(false);
     setMomentSheetMode("spot");
     setSelectedMomentId(momentId);
   }
@@ -375,32 +377,55 @@ export function TripExperience({
             ) : null}
 
             {offMapMoments.length > 0 ? (
-              <div className="pointer-events-auto absolute left-3 top-28 z-20 w-[min(92vw,320px)] rounded-[28px] border border-black/5 bg-white/92 p-4 shadow-[0_18px_50px_rgba(15,23,42,0.14)] backdrop-blur-sm sm:left-4 sm:top-32">
-                <p className="text-sm font-medium text-[var(--ink)]">
-                  Saved off the map
-                </p>
-                <p className="mt-1 text-sm text-slate-600">
-                  These moments do not have coordinates yet.
-                </p>
-                <div className="mt-3 space-y-2">
-                  {offMapMoments.map((moment) => (
-                    <button
-                      key={moment.id}
-                      className="w-full rounded-[22px] bg-[var(--paper)] px-3 py-2 text-left transition hover:bg-[#f6efdf]"
-                      onClick={() => selectSpotMoment(moment.id)}
-                      type="button"
-                    >
-                      <p className="text-sm font-medium text-[var(--ink)]">
-                        {moment.caption ?? moment.thoughtText ?? "Untitled moment"}
-                      </p>
-                      <p className="mt-1 line-clamp-2 text-sm text-slate-600">
-                        {moment.type === "photo"
-                          ? "Saved without a location."
-                          : moment.thoughtText}
-                      </p>
-                    </button>
-                  ))}
-                </div>
+              <div className="pointer-events-auto absolute left-3 top-28 z-20 w-[min(92vw,320px)] rounded-[28px] border border-black/5 bg-white/92 shadow-[0_18px_50px_rgba(15,23,42,0.14)] backdrop-blur-sm sm:left-4 sm:top-32">
+                <button
+                  aria-controls="off-map-moments-list"
+                  aria-expanded={offMapMomentsOpen}
+                  className="flex w-full items-center gap-3 rounded-[28px] p-4 text-left transition hover:bg-white"
+                  onClick={() => setOffMapMomentsOpen((open) => !open)}
+                  type="button"
+                >
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-sm font-medium text-[var(--ink)]">
+                      Saved off the map
+                    </span>
+                    <span className="mt-1 block text-sm text-slate-600">
+                      {offMapMoments.length}{" "}
+                      {offMapMoments.length === 1 ? "moment" : "moments"} without
+                      location
+                    </span>
+                  </span>
+                  <ChevronDown
+                    aria-hidden
+                    className={`h-5 w-5 shrink-0 text-slate-500 transition-transform ${
+                      offMapMomentsOpen ? "rotate-180" : ""
+                    }`}
+                  />
+                </button>
+                {offMapMomentsOpen ? (
+                  <div
+                    className="max-h-[min(50dvh,24rem)] space-y-2 overflow-y-auto border-t border-black/5 px-4 pb-4 pt-3"
+                    id="off-map-moments-list"
+                  >
+                    {offMapMoments.map((moment) => (
+                      <button
+                        key={moment.id}
+                        className="w-full rounded-[22px] bg-[var(--paper)] px-3 py-2 text-left transition hover:bg-[#f6efdf]"
+                        onClick={() => selectSpotMoment(moment.id)}
+                        type="button"
+                      >
+                        <p className="text-sm font-medium text-[var(--ink)]">
+                          {moment.caption ?? moment.thoughtText ?? "Untitled moment"}
+                        </p>
+                        <p className="mt-1 line-clamp-2 text-sm text-slate-600">
+                          {moment.type === "photo"
+                            ? "Saved without a location."
+                            : moment.thoughtText}
+                        </p>
+                      </button>
+                    ))}
+                  </div>
+                ) : null}
               </div>
             ) : null}
 
