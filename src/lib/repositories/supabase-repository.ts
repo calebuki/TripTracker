@@ -8,6 +8,7 @@ import type { TripRepository } from "@/lib/repositories/types";
 import { generateShareCode } from "@/lib/share-code";
 import { sortMomentsChronologically } from "@/lib/time";
 import { clampPublishDelayHours } from "@/lib/trip-sharing";
+import { getAnonymousViewerId } from "@/lib/viewer-token";
 import {
   getRememberMePreference,
   getSupabaseBrowserClient,
@@ -397,7 +398,7 @@ async function listWatchedTripsForUser(userId: string) {
   });
 }
 
-async function getOptionalCommentAuthHeaders(): Promise<Record<string, string>> {
+async function getOptionalAuthHeaders(): Promise<Record<string, string>> {
   try {
     const { data } = await getSupabaseBrowserClient().auth.getSession();
 
@@ -411,6 +412,22 @@ async function getOptionalCommentAuthHeaders(): Promise<Record<string, string>> 
   } catch {
     return {};
   }
+}
+
+async function parseViewerCountApiResponse(response: Response) {
+  const payload = (await response.json().catch(() => null)) as
+    | { error?: string; uniqueViewerCount?: unknown }
+    | null;
+
+  if (!response.ok) {
+    throw new Error(payload?.error ?? "Crumbs could not load this viewer count.");
+  }
+
+  if (typeof payload?.uniqueViewerCount !== "number") {
+    throw new Error("Crumbs could not read this viewer count.");
+  }
+
+  return payload.uniqueViewerCount;
 }
 
 async function parseCommentApiResponse<T>(
@@ -613,6 +630,35 @@ export function createSupabaseRepository(): TripRepository {
         throw new Error(formatSupabaseError(error));
       }
     },
+    async getTripUniqueViewerCount(tripId: string) {
+      const response = await fetch(
+        `/api/trips/${encodeURIComponent(tripId)}/viewers`,
+        {
+          cache: "no-store",
+          headers: await getOptionalAuthHeaders(),
+        },
+      );
+
+      return parseViewerCountApiResponse(response);
+    },
+    async recordTripView(tripId: string) {
+      const response = await fetch(
+        `/api/trips/${encodeURIComponent(tripId)}/viewers`,
+        {
+          body: JSON.stringify({
+            visitorId: getAnonymousViewerId(tripId),
+          }),
+          cache: "no-store",
+          headers: {
+            "Content-Type": "application/json",
+            ...(await getOptionalAuthHeaders()),
+          },
+          method: "POST",
+        },
+      );
+
+      return parseViewerCountApiResponse(response);
+    },
     async getTripById(tripId: string) {
       const user = await requireUser();
       const supabase = getSupabaseBrowserClient();
@@ -685,7 +731,7 @@ export function createSupabaseRepository(): TripRepository {
       return data.share_slug;
     },
     async listMomentComments(momentId: string) {
-      const headers = await getOptionalCommentAuthHeaders();
+      const headers = await getOptionalAuthHeaders();
       const response = await fetch(`/api/moments/${momentId}/comments`, {
         headers,
       });
@@ -695,7 +741,7 @@ export function createSupabaseRepository(): TripRepository {
     async createMomentComment(input: CreateMomentCommentInput) {
       const headers = {
         "Content-Type": "application/json",
-        ...(await getOptionalCommentAuthHeaders()),
+        ...(await getOptionalAuthHeaders()),
       };
       const response = await fetch(`/api/moments/${input.momentId}/comments`, {
         method: "POST",

@@ -155,6 +155,24 @@ create table if not exists public.trip_watches (
   primary key (trip_id, user_id)
 );
 
+create table if not exists public.trip_anonymous_views (
+  trip_id uuid not null references public.trips (id) on delete cascade,
+  visitor_id uuid not null,
+  created_at timestamptz not null default now(),
+  primary key (trip_id, visitor_id)
+);
+
+create table if not exists public.trip_user_views (
+  trip_id uuid not null references public.trips (id) on delete cascade,
+  user_id uuid not null references public.users (id) on delete cascade,
+  created_at timestamptz not null default now(),
+  primary key (trip_id, user_id)
+);
+
+comment on table public.trip_anonymous_views is 'One row per anonymous browser per trip. Access is restricted to trusted server-side code.';
+comment on column public.trip_anonymous_views.visitor_id is 'Random persistent browser UUID generated client-side; not a fingerprint or user identifier.';
+comment on table public.trip_user_views is 'One row per authenticated user per trip for all-time unique trip reach. Access is restricted to trusted server-side code.';
+
 create table if not exists public.trip_commenters (
   id uuid primary key default gen_random_uuid(),
   trip_id uuid not null references public.trips (id) on delete cascade,
@@ -243,6 +261,8 @@ create index if not exists moments_trip_id_taken_at_idx on public.moments (trip_
 create index if not exists trip_commenters_trip_id_idx on public.trip_commenters (trip_id);
 create index if not exists trip_watches_user_id_last_viewed_at_idx
   on public.trip_watches (user_id, last_viewed_at desc);
+create index if not exists trip_user_views_user_id_idx
+  on public.trip_user_views (user_id);
 create index if not exists moment_comments_moment_id_created_at_idx
   on public.moment_comments (moment_id, created_at);
 create index if not exists moment_comments_trip_id_idx on public.moment_comments (trip_id);
@@ -251,9 +271,17 @@ alter table public.users enable row level security;
 alter table public.trips enable row level security;
 alter table public.trip_members enable row level security;
 alter table public.trip_watches enable row level security;
+alter table public.trip_anonymous_views enable row level security;
+alter table public.trip_user_views enable row level security;
 alter table public.moments enable row level security;
 alter table public.trip_commenters enable row level security;
 alter table public.moment_comments enable row level security;
+
+revoke all on table public.trip_anonymous_views from anon, authenticated;
+grant select, insert, delete on table public.trip_anonymous_views to service_role;
+
+revoke all on table public.trip_user_views from anon, authenticated;
+grant select, insert, delete on table public.trip_user_views to service_role;
 
 drop policy if exists "Users can read themselves" on public.users;
 create policy "Users can read themselves"

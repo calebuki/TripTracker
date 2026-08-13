@@ -8,6 +8,7 @@ import { TripExperience } from "@/components/trip-experience";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useTripRecord } from "@/hooks/use-trip-record";
+import { useTripViewerCount } from "@/hooks/use-trip-viewer-count";
 
 interface OwnerTripScreenProps {
   tripId: string;
@@ -23,6 +24,11 @@ export function OwnerTripScreen({
   const { record, loading, error, refresh, isDemoMode } = useTripRecord({
     role: "owner",
     tripId,
+  });
+  const uniqueViewerCount = useTripViewerCount({
+    tripId: record?.trip.id ?? null,
+    enabled: Boolean(record),
+    recordView: false,
   });
   const handleAutoOpenCaptureConsumed = useCallback(() => {
     setPendingAutoOpenCapture(false);
@@ -73,6 +79,7 @@ export function OwnerTripScreen({
       role="owner"
       isDemoMode={isDemoMode}
       onRefresh={refresh}
+      uniqueViewerCount={uniqueViewerCount}
       autoOpenCapture={pendingAutoOpenCapture}
       onAutoOpenCaptureConsumed={handleAutoOpenCaptureConsumed}
     />

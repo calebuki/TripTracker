@@ -12,6 +12,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { useCrumbsAuth } from "@/hooks/use-crumbs-auth";
 import { useTripRecord } from "@/hooks/use-trip-record";
+import { useTripViewerCount } from "@/hooks/use-trip-viewer-count";
 import { hashPasscode } from "@/lib/crypto";
 import { getTripRepository } from "@/lib/repositories";
 
@@ -40,6 +41,11 @@ export function ViewerTripScreen({ shareSlug }: ViewerTripScreenProps) {
   const watchedTripId = record?.trip.id;
   const watchedTripOwnerId = record?.trip.ownerId;
   const currentUserId = user?.id;
+  const uniqueViewerCount = useTripViewerCount({
+    tripId: watchedTripId ?? null,
+    enabled: verified && !authLoading,
+    recordView: watchedTripOwnerId !== currentUserId,
+  });
 
   useEffect(() => {
     if (
@@ -133,6 +139,7 @@ export function ViewerTripScreen({ shareSlug }: ViewerTripScreenProps) {
       role="viewer"
       isDemoMode={isDemoMode}
       onRefresh={refresh}
+      uniqueViewerCount={uniqueViewerCount}
     />
   );
 }

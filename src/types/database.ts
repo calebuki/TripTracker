@@ -202,6 +202,42 @@ export interface Database {
         };
         Relationships: [];
       };
+      trip_anonymous_views: {
+        Row: {
+          trip_id: string;
+          visitor_id: string;
+          created_at: string;
+        };
+        Insert: {
+          trip_id: string;
+          visitor_id: string;
+          created_at?: string;
+        };
+        Update: {
+          trip_id?: string;
+          visitor_id?: string;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      trip_user_views: {
+        Row: {
+          trip_id: string;
+          user_id: string;
+          created_at: string;
+        };
+        Insert: {
+          trip_id: string;
+          user_id: string;
+          created_at?: string;
+        };
+        Update: {
+          trip_id?: string;
+          user_id?: string;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
       trip_commenters: {
         Row: {
           id: string;
