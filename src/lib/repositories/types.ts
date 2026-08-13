@@ -29,6 +29,8 @@ export interface TripRepository {
   listWatchedTripsForCurrentUser(): Promise<WatchedTrip[]>;
   watchTrip(tripId: string): Promise<void>;
   unwatchTrip(tripId: string): Promise<void>;
+  getTripUniqueViewerCount(tripId: string): Promise<number>;
+  recordTripView(tripId: string): Promise<number>;
   getTripById(tripId: string): Promise<TripRecord | null>;
   getTripByShareSlug(shareSlug: string): Promise<TripRecord | null>;
   getTripByShareCode(shareCode: string): Promise<TripRecord | null>;

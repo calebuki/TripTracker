@@ -363,6 +363,12 @@ export function createDemoRepository(): TripRepository {
         );
       });
     },
+    async getTripUniqueViewerCount() {
+      return 0;
+    },
+    async recordTripView() {
+      return 0;
+    },
     async getTripById(tripId: string) {
       const database = loadDatabase();
       const trip = database.trips.find((entry) => entry.id === tripId);

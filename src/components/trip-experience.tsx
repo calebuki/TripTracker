@@ -3,7 +3,7 @@
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { ChevronDown, ChevronLeft, Images, User } from "lucide-react";
+import { ChevronDown, ChevronLeft, Eye, Images, User } from "lucide-react";
 import { toast } from "sonner";
 
 import { AddMomentButton } from "@/components/add-moment-button";
@@ -69,6 +69,7 @@ interface TripExperienceProps {
   role: RouteRole;
   isDemoMode: boolean;
   onRefresh: () => Promise<void> | void;
+  uniqueViewerCount?: number | null;
   autoOpenCapture?: boolean;
   onAutoOpenCaptureConsumed?: () => void;
 }
@@ -78,6 +79,7 @@ export function TripExperience({
   role,
   isDemoMode,
   onRefresh,
+  uniqueViewerCount = null,
   autoOpenCapture = false,
   onAutoOpenCaptureConsumed,
 }: TripExperienceProps) {
@@ -267,6 +269,13 @@ export function TripExperience({
             <Badge className="font-mono uppercase tracking-[0.12em]" variant="subtle">
               {record.trip.shareCode}
             </Badge>
+            {uniqueViewerCount !== null ? (
+              <Badge className="gap-1.5" variant="subtle">
+                <Eye aria-hidden className="h-3.5 w-3.5" />
+                {uniqueViewerCount}{" "}
+                {uniqueViewerCount === 1 ? "viewer" : "viewers"}
+              </Badge>
+            ) : null}
           </div>
           {postingLockedToActiveTrip ? (
             <p className="mt-2 text-sm leading-6 text-slate-600">
@@ -333,6 +342,13 @@ export function TripExperience({
                     >
                       {record.trip.shareCode}
                     </Badge>
+                    {uniqueViewerCount !== null ? (
+                      <Badge className="gap-1.5" variant="subtle">
+                        <Eye aria-hidden className="h-3.5 w-3.5" />
+                        {uniqueViewerCount}{" "}
+                        {uniqueViewerCount === 1 ? "viewer" : "viewers"}
+                      </Badge>
+                    ) : null}
                   </div>
                   {postingLockedToActiveTrip ? (
                     <p className="mt-2 text-sm leading-6 text-slate-600">
