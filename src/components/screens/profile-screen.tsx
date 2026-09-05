@@ -17,7 +17,7 @@ export function ProfileScreen() {
 
   if (!user && !isDemoMode) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-[var(--paper)] px-4">
+      <main className="crumbs-page flex min-h-screen items-center justify-center bg-[var(--paper)] px-4">
         <Card className="w-full max-w-lg rounded-[34px]">
           <CardHeader>
             <CardTitle className="text-4xl">Sign in to view your trips</CardTitle>

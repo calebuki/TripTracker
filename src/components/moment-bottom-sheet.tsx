@@ -530,6 +530,7 @@ function MomentSheetSlide({
                       Hide from viewers
                     </DropdownMenuItem>
                     <DropdownMenuItem
+                      data-destructive
                       className="text-[#7f1d1d]"
                       onClick={() => onDelete(moment)}
                     >
@@ -864,7 +865,7 @@ function MomentFullscreenViewer({
           key={moment.id}
           moment={moment}
         />
-        <aside className="max-h-[32dvh] w-full shrink-0 overflow-y-auto rounded-[26px] bg-[var(--paper)] p-4 shadow-[0_18px_60px_rgba(0,0,0,0.28)] lg:max-h-[calc(100dvh-3rem)] lg:w-[360px]">
+        <aside className="crumbs-photo-notes max-h-[32dvh] w-full shrink-0 overflow-y-auto rounded-[26px] bg-[var(--paper)] p-4 shadow-[0_18px_60px_rgba(0,0,0,0.28)] lg:max-h-[calc(100dvh-3rem)] lg:w-[360px]">
           <div className="space-y-1">
             <p className="whitespace-pre-wrap text-base font-medium leading-7 text-[var(--ink)] sm:text-lg">{momentTitle}</p>
             <p className="text-xs text-slate-600">Posted {formatPostedAt(moment.postedAt)}</p>
@@ -1194,7 +1195,7 @@ export function MomentBottomSheet({
         )}
       >
         <div className={cn(
-          "pointer-events-auto mx-auto max-h-[calc(100dvh_-_1.5rem_-_env(safe-area-inset-bottom))] max-w-xl overflow-x-hidden overflow-y-auto overscroll-contain rounded-[30px] border border-black/5 bg-white shadow-[0_28px_90px_rgba(15,23,42,0.18)] sm:max-h-[calc(100dvh_-_2rem_-_env(safe-area-inset-bottom))]",
+          "crumbs-moment-panel pointer-events-auto mx-auto max-h-[calc(100dvh_-_1.5rem_-_env(safe-area-inset-bottom))] max-w-xl overflow-x-hidden overflow-y-auto overscroll-contain rounded-[30px] border border-black/5 bg-white shadow-[0_28px_90px_rgba(15,23,42,0.18)] sm:max-h-[calc(100dvh_-_2rem_-_env(safe-area-inset-bottom))]",
           sidebarHeader && "lg:relative lg:flex lg:h-full lg:max-h-none lg:max-w-none lg:flex-col lg:overflow-hidden lg:rounded-none lg:border-x-0 lg:border-y-0 lg:border-r",
         )}>
           {sidebarHeader ? (

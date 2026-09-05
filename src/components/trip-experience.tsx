@@ -6,6 +6,8 @@ import { useEffect, useMemo, useState } from "react";
 import { ChevronDown, ChevronLeft, Eye, Images, User } from "lucide-react";
 import { toast } from "sonner";
 
+import { TripThemeContext } from "@/components/trip-theme-provider";
+import { useConfirmDelete } from "@/components/confirm-action-dialog";
 import { AddMomentButton } from "@/components/add-moment-button";
 import { DaySelector } from "@/components/day-selector";
 import { EmptyDayState } from "@/components/empty-day-state";
@@ -83,6 +85,7 @@ export function TripExperience({
   autoOpenCapture = false,
   onAutoOpenCaptureConsumed,
 }: TripExperienceProps) {
+  const { confirmDelete, confirmationDialog } = useConfirmDelete();
   const { user, loading: authLoading, isDemoMode: authIsDemoMode } =
     useCrumbsAuth();
   const travelerHome = useTravelerHomeTarget({
@@ -200,7 +203,7 @@ export function TripExperience({
   }
 
   async function deleteMoment(moment: Moment) {
-    if (!window.confirm("Delete this moment permanently?")) {
+    if (!(await confirmDelete("Delete this moment?"))) {
       return;
     }
 
@@ -247,7 +250,7 @@ export function TripExperience({
   }
 
   const tripSidebarHeader = (
-    <div className="border-b border-black/5 px-6 pb-6 pt-8 sm:px-8">
+    <div className="crumbs-trip-header border-b border-black/5 px-6 pb-6 pt-8 sm:px-8">
       <div className="flex items-start gap-3 lg:mx-auto lg:max-w-[34rem]">
         <Link
           aria-label="Back to Crumbs home"
@@ -296,239 +299,242 @@ export function TripExperience({
   );
 
   return (
-    <div
-      className="h-[100dvh] overflow-hidden bg-[var(--paper)]"
-      data-trip-theme={record.trip.theme}
-      style={getTripThemeStyle(record.trip.theme)}
-    >
-      <div className="h-full w-full">
-        <div className="relative h-full w-full overflow-hidden bg-white">
-          <TripMap
-            trip={record.trip}
-            moments={mapMoments}
-            selectedMomentId={activeSelectedMomentId}
-            onSelectMoment={selectSpotMoment}
-            onMomentGroupsChange={setMarkerGroups}
-            heightClassName="h-[100dvh] min-h-[100dvh]"
-            className="rounded-none border-0 lg:absolute lg:inset-y-0 lg:right-0 lg:left-[clamp(24rem,34vw,38rem)] lg:rounded-none lg:border-l"
-          />
+    <TripThemeContext value={record.trip.theme}>
+      <div
+        className="h-[100dvh] overflow-hidden bg-[var(--paper)]"
+        data-trip-theme={record.trip.theme}
+        style={getTripThemeStyle(record.trip.theme)}
+      >
+        <div className="h-full w-full">
+          <div className="relative h-full w-full overflow-hidden bg-white">
+            <TripMap
+              trip={record.trip}
+              moments={mapMoments}
+              selectedMomentId={activeSelectedMomentId}
+              onSelectMoment={selectSpotMoment}
+              onMomentGroupsChange={setMarkerGroups}
+              heightClassName="h-[100dvh] min-h-[100dvh]"
+              className="rounded-none border-0 lg:absolute lg:inset-y-0 lg:right-0 lg:left-[clamp(24rem,34vw,38rem)] lg:rounded-none lg:border-l"
+            />
 
-          <div className="pointer-events-none absolute inset-0">
-            <div className="pointer-events-auto absolute inset-x-0 top-0 p-3 sm:p-4 lg:hidden">
-              <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-2 sm:gap-3">
-                <Link
-                  aria-label="Back to Crumbs home"
-                  className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-black/5 bg-white/92 text-[var(--ink)] shadow-[0_14px_40px_rgba(15,23,42,0.12)] backdrop-blur-sm transition hover:bg-white"
-                  href="/"
-                  title="Back to Crumbs home"
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                </Link>
+            <div className="pointer-events-none absolute inset-0">
+              <div className="pointer-events-auto absolute inset-x-0 top-0 p-3 sm:p-4 lg:hidden">
+                <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-2 sm:gap-3">
+                  <Link
+                    aria-label="Back to Crumbs home"
+                    className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-black/5 bg-white/92 text-[var(--ink)] shadow-[0_14px_40px_rgba(15,23,42,0.12)] backdrop-blur-sm transition hover:bg-white"
+                    href="/"
+                    title="Back to Crumbs home"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </Link>
 
-                <div className="min-w-0 rounded-[28px] border border-black/5 bg-white/92 px-4 py-3 shadow-[0_14px_40px_rgba(15,23,42,0.12)] backdrop-blur-sm sm:max-w-2xl">
-                  <div className="flex min-w-0 flex-wrap items-center gap-2">
-                    <h1 className="min-w-0 font-serif text-[1.45rem] leading-tight tracking-tight text-[var(--ink)] sm:text-[2.2rem]">
-                      {record.trip.title}
-                    </h1>
-                    {isDemoMode ? <Badge variant="accent">Demo mode</Badge> : null}
-                  </div>
-                  <div className="mt-2 flex flex-wrap items-center gap-2">
-                    <p className="text-sm leading-6 text-slate-600">
-                      {dayHeadline}
-                    </p>
-                    <Badge
-                      className="font-mono uppercase tracking-[0.12em]"
-                      variant="subtle"
-                    >
-                      {record.trip.shareCode}
-                    </Badge>
-                    {uniqueViewerCount !== null ? (
-                      <Badge className="gap-1.5" variant="subtle">
-                        <Eye aria-hidden className="h-3.5 w-3.5" />
-                        {uniqueViewerCount}{" "}
-                        {uniqueViewerCount === 1 ? "viewer" : "viewers"}
+                  <div className="crumbs-map-title min-w-0 rounded-[28px] border border-black/5 bg-white/92 px-4 py-3 shadow-[0_14px_40px_rgba(15,23,42,0.12)] backdrop-blur-sm sm:max-w-2xl">
+                    <div className="flex min-w-0 flex-wrap items-center gap-2">
+                      <h1 className="min-w-0 font-serif text-[1.45rem] leading-tight tracking-tight text-[var(--ink)] sm:text-[2.2rem]">
+                        {record.trip.title}
+                      </h1>
+                      {isDemoMode ? <Badge variant="accent">Demo mode</Badge> : null}
+                    </div>
+                    <div className="mt-2 flex flex-wrap items-center gap-2">
+                      <p className="text-sm leading-6 text-slate-600">
+                        {dayHeadline}
+                      </p>
+                      <Badge
+                        className="font-mono uppercase tracking-[0.12em]"
+                        variant="subtle"
+                      >
+                        {record.trip.shareCode}
                       </Badge>
+                      {uniqueViewerCount !== null ? (
+                        <Badge className="gap-1.5" variant="subtle">
+                          <Eye aria-hidden className="h-3.5 w-3.5" />
+                          {uniqueViewerCount}{" "}
+                          {uniqueViewerCount === 1 ? "viewer" : "viewers"}
+                        </Badge>
+                      ) : null}
+                    </div>
+                    {postingLockedToActiveTrip ? (
+                      <p className="mt-2 text-sm leading-6 text-slate-600">
+                        This past trip is view-only for new moments while{" "}
+                        {activeOwnerTrip?.title ?? "your active trip"} is running.
+                      </p>
                     ) : null}
                   </div>
-                  {postingLockedToActiveTrip ? (
-                    <p className="mt-2 text-sm leading-6 text-slate-600">
-                      This past trip is view-only for new moments while{" "}
-                      {activeOwnerTrip?.title ?? "your active trip"} is running.
-                    </p>
+
+                  {role === "owner" ? (
+                    <Button
+                      asChild
+                      className="bg-white/92 shadow-[0_14px_40px_rgba(15,23,42,0.12)] backdrop-blur-sm"
+                      size="icon"
+                      variant="secondary"
+                    >
+                      <Link href="/profile">
+                        <User className="h-4 w-4" />
+                        <span className="sr-only">Open profile</span>
+                      </Link>
+                    </Button>
+                  ) : (
+                    <div aria-hidden className="h-11 w-11" />
+                  )}
+                </div>
+              </div>
+
+              {filteredMoments.length === 0 ? (
+                <div className="pointer-events-auto absolute inset-x-4 top-1/2 -translate-y-1/2">
+                  <EmptyDayState
+                    label={
+                      dayFilter.kind === "all"
+                        ? "this trip"
+                        : dayFilter.kind === "date" && dayFilter.value
+                          ? formatTripDayLabel(dayFilter.value, record.trip.timezone)
+                          : dayFilter.kind
+                    }
+                    canAdd={canAddMoments}
+                    onAdd={openAddMomentDialog}
+                  />
+                </div>
+              ) : null}
+
+              {offMapMoments.length > 0 ? (
+                <div className="crumbs-off-map pointer-events-auto absolute left-3 top-28 z-20 w-[min(92vw,320px)] rounded-[28px] border border-black/5 bg-white/92 shadow-[0_18px_50px_rgba(15,23,42,0.14)] backdrop-blur-sm sm:left-4 sm:top-32">
+                  <button
+                    aria-controls="off-map-moments-list"
+                    aria-expanded={offMapMomentsOpen}
+                    className="flex w-full items-center gap-3 rounded-[28px] p-4 text-left transition hover:bg-white"
+                    onClick={() => setOffMapMomentsOpen((open) => !open)}
+                    type="button"
+                  >
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-sm font-medium text-[var(--ink)]">
+                        Saved off the map
+                      </span>
+                      <span className="mt-1 block text-sm text-slate-600">
+                        {offMapMoments.length}{" "}
+                        {offMapMoments.length === 1 ? "moment" : "moments"} without
+                        location
+                      </span>
+                    </span>
+                    <ChevronDown
+                      aria-hidden
+                      className={`h-5 w-5 shrink-0 text-slate-500 transition-transform ${
+                        offMapMomentsOpen ? "rotate-180" : ""
+                      }`}
+                    />
+                  </button>
+                  {offMapMomentsOpen ? (
+                    <div
+                      className="max-h-[min(50dvh,24rem)] space-y-2 overflow-y-auto border-t border-black/5 px-4 pb-4 pt-3"
+                      id="off-map-moments-list"
+                    >
+                      {offMapMoments.map((moment) => (
+                        <button
+                          key={moment.id}
+                          className="w-full rounded-[22px] bg-[var(--paper)] px-3 py-2 text-left transition hover:bg-[#f6efdf]"
+                          onClick={() => selectSpotMoment(moment.id)}
+                          type="button"
+                        >
+                          <p className="text-sm font-medium text-[var(--ink)]">
+                            {moment.caption ?? moment.thoughtText ?? "Untitled moment"}
+                          </p>
+                          <p className="mt-1 line-clamp-2 text-sm text-slate-600">
+                            {moment.type === "photo"
+                              ? "Saved without a location."
+                              : moment.thoughtText}
+                          </p>
+                        </button>
+                      ))}
+                    </div>
                   ) : null}
                 </div>
+              ) : null}
 
-                {role === "owner" ? (
-                  <Button
-                    asChild
-                    className="bg-white/92 shadow-[0_14px_40px_rgba(15,23,42,0.12)] backdrop-blur-sm"
-                    size="icon"
-                    variant="secondary"
-                  >
-                    <Link href="/profile">
-                      <User className="h-4 w-4" />
-                      <span className="sr-only">Open profile</span>
-                    </Link>
-                  </Button>
-                ) : (
-                  <div aria-hidden className="h-11 w-11" />
-                )}
-              </div>
-            </div>
-
-            {filteredMoments.length === 0 ? (
-              <div className="pointer-events-auto absolute inset-x-4 top-1/2 -translate-y-1/2">
-                <EmptyDayState
-                  label={
-                    dayFilter.kind === "all"
-                      ? "this trip"
-                      : dayFilter.kind === "date" && dayFilter.value
-                        ? formatTripDayLabel(dayFilter.value, record.trip.timezone)
-                        : dayFilter.kind
-                  }
-                  canAdd={canAddMoments}
-                  onAdd={openAddMomentDialog}
+              <div className="pointer-events-auto absolute inset-x-0 bottom-4 flex justify-center px-3 lg:left-[clamp(24rem,34vw,38rem)] lg:right-0 lg:justify-center">
+                <DaySelector
+                  options={dayOptions}
+                  moments={displayMoments}
+                  timezone={record.trip.timezone}
+                  value={dayFilter}
+                  onChange={setDayFilter}
                 />
               </div>
-            ) : null}
 
-            {offMapMoments.length > 0 ? (
-              <div className="pointer-events-auto absolute left-3 top-28 z-20 w-[min(92vw,320px)] rounded-[28px] border border-black/5 bg-white/92 shadow-[0_18px_50px_rgba(15,23,42,0.14)] backdrop-blur-sm sm:left-4 sm:top-32">
-                <button
-                  aria-controls="off-map-moments-list"
-                  aria-expanded={offMapMomentsOpen}
-                  className="flex w-full items-center gap-3 rounded-[28px] p-4 text-left transition hover:bg-white"
-                  onClick={() => setOffMapMomentsOpen((open) => !open)}
+              {filteredMoments.length > 0 ? (
+                <Button
+                  aria-label="View all moments"
+                  className="pointer-events-auto absolute right-3 top-1/2 z-20 h-12 w-12 -translate-y-1/2 border border-black/5 bg-white/92 shadow-[0_18px_50px_rgba(15,23,42,0.16)] backdrop-blur-sm hover:bg-white sm:right-4"
+                  onClick={openTimelineMoments}
+                  size="icon"
+                  title="View all moments"
                   type="button"
+                  variant="secondary"
                 >
-                  <span className="min-w-0 flex-1">
-                    <span className="block text-sm font-medium text-[var(--ink)]">
-                      Saved off the map
-                    </span>
-                    <span className="mt-1 block text-sm text-slate-600">
-                      {offMapMoments.length}{" "}
-                      {offMapMoments.length === 1 ? "moment" : "moments"} without
-                      location
-                    </span>
-                  </span>
-                  <ChevronDown
-                    aria-hidden
-                    className={`h-5 w-5 shrink-0 text-slate-500 transition-transform ${
-                      offMapMomentsOpen ? "rotate-180" : ""
-                    }`}
-                  />
-                </button>
-                {offMapMomentsOpen ? (
-                  <div
-                    className="max-h-[min(50dvh,24rem)] space-y-2 overflow-y-auto border-t border-black/5 px-4 pb-4 pt-3"
-                    id="off-map-moments-list"
-                  >
-                    {offMapMoments.map((moment) => (
-                      <button
-                        key={moment.id}
-                        className="w-full rounded-[22px] bg-[var(--paper)] px-3 py-2 text-left transition hover:bg-[#f6efdf]"
-                        onClick={() => selectSpotMoment(moment.id)}
-                        type="button"
-                      >
-                        <p className="text-sm font-medium text-[var(--ink)]">
-                          {moment.caption ?? moment.thoughtText ?? "Untitled moment"}
-                        </p>
-                        <p className="mt-1 line-clamp-2 text-sm text-slate-600">
-                          {moment.type === "photo"
-                            ? "Saved without a location."
-                            : moment.thoughtText}
-                        </p>
-                      </button>
-                    ))}
-                  </div>
-                ) : null}
-              </div>
-            ) : null}
+                  <Images className="h-5 w-5" />
+                  <span className="sr-only">View all moments</span>
+                </Button>
+              ) : null}
 
-            <div className="pointer-events-auto absolute inset-x-0 bottom-4 flex justify-center px-3 lg:left-[clamp(24rem,34vw,38rem)] lg:right-0 lg:justify-center">
-              <DaySelector
-                options={dayOptions}
-                moments={displayMoments}
-                timezone={record.trip.timezone}
-                value={dayFilter}
-                onChange={setDayFilter}
+              {canAddMoments ? (
+                <AddMomentButton onClick={openAddMomentDialog} />
+              ) : null}
+
+              <MomentBottomSheet
+                trip={record.trip}
+                moments={selectedSheetMoments}
+                navigationMoments={filteredMoments}
+                fullscreenMoments={filteredMoments}
+                sidebarHeader={tripSidebarHeader}
+                sidebarEmptyState={
+                  <p className="text-center font-serif text-2xl text-slate-500">
+                    Select a moment
+                  </p>
+                }
+                selectedMomentId={activeSelectedMomentId}
+                open={Boolean(activeSelectedMomentId)}
+                canManage={role === "owner"}
+                carouselTitle={
+                  momentSheetMode === "timeline"
+                    ? `${selectedSheetMoments.length} moments in this view`
+                    : undefined
+                }
+                onClose={() => setSelectedMomentId(null)}
+                onSelectMoment={setSelectedMomentId}
+                onEdit={(moment) => setEditingMomentId(moment.id)}
+                onHide={hideMoment}
+                onDelete={deleteMoment}
               />
             </div>
-
-            {filteredMoments.length > 0 ? (
-              <Button
-                aria-label="View all moments"
-                className="pointer-events-auto absolute right-3 top-1/2 z-20 h-12 w-12 -translate-y-1/2 border border-black/5 bg-white/92 shadow-[0_18px_50px_rgba(15,23,42,0.16)] backdrop-blur-sm hover:bg-white sm:right-4"
-                onClick={openTimelineMoments}
-                size="icon"
-                title="View all moments"
-                type="button"
-                variant="secondary"
-              >
-                <Images className="h-5 w-5" />
-                <span className="sr-only">View all moments</span>
-              </Button>
-            ) : null}
-
-            {canAddMoments ? (
-              <AddMomentButton onClick={openAddMomentDialog} />
-            ) : null}
-
-            <MomentBottomSheet
-              trip={record.trip}
-              moments={selectedSheetMoments}
-              navigationMoments={filteredMoments}
-              fullscreenMoments={filteredMoments}
-              sidebarHeader={tripSidebarHeader}
-              sidebarEmptyState={
-                <p className="text-center font-serif text-2xl text-slate-500">
-                  Select a moment
-                </p>
-              }
-              selectedMomentId={activeSelectedMomentId}
-              open={Boolean(activeSelectedMomentId)}
-              canManage={role === "owner"}
-              carouselTitle={
-                momentSheetMode === "timeline"
-                  ? `${selectedSheetMoments.length} moments in this view`
-                  : undefined
-              }
-              onClose={() => setSelectedMomentId(null)}
-              onSelectMoment={setSelectedMomentId}
-              onEdit={(moment) => setEditingMomentId(moment.id)}
-              onHide={hideMoment}
-              onDelete={deleteMoment}
-            />
           </div>
         </div>
-      </div>
 
-      {role === "owner" ? (
-        <>
-          {canAddMoments && addMomentOpen ? (
-            <AddMomentDialog
-              trip={record.trip}
-              open
-              onOpenChange={updateAddMomentOpen}
-              onSaved={onRefresh}
-              cameraFirst={cameraFirstCapture}
-            />
-          ) : null}
-          {editingMoment ? (
-            <EditMomentDetailsDialog
-              key={editingMoment.id}
-              moment={editingMoment}
-              open
-              onOpenChange={(open) => {
-                if (!open) {
-                  setEditingMomentId(null);
-                }
-              }}
-              onSaved={onRefresh}
-            />
-          ) : null}
-        </>
-      ) : null}
-    </div>
+        {confirmationDialog}
+        {role === "owner" ? (
+          <>
+            {canAddMoments && addMomentOpen ? (
+              <AddMomentDialog
+                trip={record.trip}
+                open
+                onOpenChange={updateAddMomentOpen}
+                onSaved={onRefresh}
+                cameraFirst={cameraFirstCapture}
+              />
+            ) : null}
+            {editingMoment ? (
+              <EditMomentDetailsDialog
+                key={editingMoment.id}
+                moment={editingMoment}
+                open
+                onOpenChange={(open) => {
+                  if (!open) {
+                    setEditingMomentId(null);
+                  }
+                }}
+                onSaved={onRefresh}
+              />
+            ) : null}
+          </>
+        ) : null}
+      </div>
+    </TripThemeContext>
   );
 }

@@ -6,6 +6,7 @@ import { LoaderCircle } from "lucide-react";
 import { toast } from "sonner";
 
 import { LoadingShell } from "@/components/loading-shell";
+import { CrumbsBrand } from "@/components/crumbs-brand";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -23,9 +24,10 @@ export function AccountSettingsScreen() {
 
   if (!user && !isDemoMode) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-[var(--paper)] px-4">
+      <main className="crumbs-page flex min-h-screen items-center justify-center bg-[var(--paper)] px-4">
         <Card className="w-full max-w-lg rounded-[34px]">
           <CardHeader>
+            <Link href="/" aria-label="Crumbs home" className="mb-5 inline-flex"><CrumbsBrand /></Link>
             <CardTitle className="text-4xl">Sign in to manage your account</CardTitle>
             <CardDescription>
               Your display name is saved with your account.
@@ -85,7 +87,7 @@ function DisplayNameForm({ user }: { user: NonNullable<ReturnType<typeof useCrum
   }
 
   return (
-    <main className="flex min-h-screen bg-[var(--paper)] px-4 py-6 sm:px-6">
+    <main className="crumbs-page flex min-h-screen bg-[var(--paper)] px-4 py-6 sm:px-6">
       <div className="mx-auto w-full max-w-2xl space-y-6">
         <Button asChild variant="ghost">
           <Link href="/">Back to your Crumbs</Link>
@@ -93,6 +95,7 @@ function DisplayNameForm({ user }: { user: NonNullable<ReturnType<typeof useCrum
 
         <Card className="rounded-[34px]">
           <CardHeader>
+            <Link href="/" aria-label="Crumbs home" className="mb-5 inline-flex"><CrumbsBrand /></Link>
             <div className="text-sm uppercase tracking-[0.18em] text-slate-500">
               Personal settings
             </div>

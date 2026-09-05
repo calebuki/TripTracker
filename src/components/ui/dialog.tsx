@@ -4,6 +4,7 @@ import * as React from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
 
+import { useTripSurfaceTheme } from "@/components/trip-theme-provider";
 import { cn } from "@/lib/utils";
 
 const Dialog = DialogPrimitive.Root;
@@ -18,7 +19,7 @@ const DialogOverlay = React.forwardRef<
   <DialogPrimitive.Overlay
     ref={ref}
     className={cn(
-      "fixed inset-0 z-50 bg-[rgba(248,245,239,0.82)] backdrop-blur-sm",
+      "crumbs-overlay fixed inset-0 z-50 bg-[rgba(32,49,46,0.36)] backdrop-blur-sm",
       className,
     )}
     {...props}
@@ -32,41 +33,47 @@ const DialogContent = React.forwardRef<
     overlayClassName?: string;
     overlayStyle?: React.CSSProperties;
   }
->(({ className, children, overlayClassName, overlayStyle, ...props }, ref) => (
-  <DialogPortal>
-    <DialogOverlay className={overlayClassName} style={overlayStyle} />
-    <DialogPrimitive.Content
-      ref={ref}
-      className={cn(
-        "fixed inset-x-0 bottom-0 z-50 max-h-[calc(100dvh-0.75rem)] overflow-y-auto overscroll-contain rounded-t-[32px] border border-black/5 bg-white px-6 pb-[calc(env(safe-area-inset-bottom)+1.5rem)] pt-6 shadow-[0_-10px_60px_rgba(15,23,42,0.16)] scroll-pb-32 sm:left-1/2 sm:top-1/2 sm:bottom-auto sm:w-full sm:max-h-[min(90vh,760px)] sm:max-w-2xl sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-[32px] sm:px-6 sm:pb-6 sm:pt-6",
-        className,
-      )}
-      {...props}
-    >
-      {children}
-      <DialogPrimitive.Close className="absolute right-5 top-5 rounded-full p-2 text-slate-500 transition hover:bg-[var(--paper)] hover:text-[var(--ink)]">
-        <X className="h-4 w-4" />
-        <span className="sr-only">Close</span>
-      </DialogPrimitive.Close>
-    </DialogPrimitive.Content>
-  </DialogPortal>
-));
+>(({ className, children, overlayClassName, overlayStyle, ...props }, ref) => {
+  const theme = useTripSurfaceTheme();
+  return (
+    <DialogPortal>
+      <DialogOverlay className={overlayClassName} style={overlayStyle} />
+      <DialogPrimitive.Content
+        {...theme}
+        ref={ref}
+        className={cn(
+          "crumbs-dialog fixed inset-x-0 bottom-0 z-50 max-h-[calc(100dvh-0.75rem)] overflow-y-auto overscroll-contain rounded-t-[32px] border border-black/5 bg-white px-6 pb-[calc(env(safe-area-inset-bottom)+1.5rem)] pt-6 shadow-[0_-10px_60px_rgba(15,23,42,0.16)] scroll-pb-32 sm:left-1/2 sm:top-1/2 sm:bottom-auto sm:w-full sm:max-h-[min(90vh,760px)] sm:max-w-2xl sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-[32px] sm:px-6 sm:pb-6 sm:pt-6",
+          className,
+        )}
+        {...props}
+      >
+        {children}
+        <DialogPrimitive.Close className="crumbs-close absolute right-5 top-5 rounded-full p-2 text-slate-500 transition hover:bg-[var(--paper)] hover:text-[var(--ink)]">
+          <X className="h-4 w-4" />
+          <span className="sr-only">Close</span>
+        </DialogPrimitive.Close>
+      </DialogPrimitive.Content>
+    </DialogPortal>
+  );
+});
 DialogContent.displayName = DialogPrimitive.Content.displayName;
 
-function DialogHeader({
-  className,
-  ...props
-}: React.ComponentProps<"div">) {
-  return <div className={cn("space-y-2 pr-10", className)} {...props} />;
-}
-
-function DialogFooter({
-  className,
-  ...props
-}: React.ComponentProps<"div">) {
+function DialogHeader({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
-      className={cn("mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end", className)}
+      className={cn("crumbs-dialog-header space-y-2 pr-10", className)}
+      {...props}
+    />
+  );
+}
+
+function DialogFooter({ className, ...props }: React.ComponentProps<"div">) {
+  return (
+    <div
+      className={cn(
+        "mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end",
+        className,
+      )}
       {...props}
     />
   );
@@ -78,7 +85,10 @@ const DialogTitle = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <DialogPrimitive.Title
     ref={ref}
-    className={cn("font-serif text-3xl tracking-tight text-[var(--ink)]", className)}
+    className={cn(
+      "font-serif text-3xl tracking-tight text-[var(--ink)]",
+      className,
+    )}
     {...props}
   />
 ));

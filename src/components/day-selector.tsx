@@ -84,7 +84,7 @@ export function DaySelector({
   }
 
   return (
-    <div className="flex items-center gap-2 rounded-full border border-black/5 bg-white/92 p-1 shadow-[0_16px_48px_rgba(15,23,42,0.12)] backdrop-blur-sm">
+    <div className="crumbs-day-dock flex items-center gap-2 rounded-full border border-black/5 bg-white/92 p-1 shadow-[0_16px_48px_rgba(15,23,42,0.12)] backdrop-blur-sm">
       {quickOptions.map((option) => {
         const active =
           value.kind === option.kind &&
@@ -93,6 +93,7 @@ export function DaySelector({
         return (
           <Button
             key={`${option.kind}-${option.value ?? option.label}`}
+            aria-pressed={active}
             size="sm"
             variant={active ? "default" : "ghost"}
             className={cn(

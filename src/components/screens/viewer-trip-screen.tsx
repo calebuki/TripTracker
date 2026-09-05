@@ -69,7 +69,7 @@ export function ViewerTripScreen({ shareSlug }: ViewerTripScreenProps) {
 
   if (!record) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-[var(--paper)] px-4">
+      <main className="crumbs-page flex min-h-screen items-center justify-center bg-[var(--paper)] px-4">
         <Card className="w-full max-w-lg rounded-[34px]">
           <CardHeader>
             <CardTitle className="text-4xl">Shared trip not found</CardTitle>
@@ -92,7 +92,7 @@ export function ViewerTripScreen({ shareSlug }: ViewerTripScreenProps) {
 
   if (!verified && record.trip.viewerPasscodeHash) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-[var(--paper)] px-4">
+      <main className="crumbs-page flex min-h-screen items-center justify-center bg-[var(--paper)] px-4">
         <Card className="w-full max-w-lg rounded-[34px]">
           <CardHeader>
             <div className="inline-flex w-fit items-center gap-2 rounded-full bg-[var(--paper)] px-3 py-1 text-xs font-medium uppercase tracking-[0.16em] text-slate-500">

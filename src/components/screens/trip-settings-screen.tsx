@@ -7,6 +7,7 @@ import { DateTime } from "luxon";
 import { Copy, LoaderCircle, User } from "lucide-react";
 import { toast } from "sonner";
 
+import { useConfirmDelete } from "@/components/confirm-action-dialog";
 import { LoadingShell } from "@/components/loading-shell";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -27,6 +28,7 @@ interface TripSettingsScreenProps {
 }
 
 export function TripSettingsScreen({ tripId }: TripSettingsScreenProps) {
+  const { confirmDelete, confirmationDialog } = useConfirmDelete();
   const { record, loading, error, refresh } = useTripRecord({
     role: "owner",
     tripId,
@@ -47,7 +49,7 @@ export function TripSettingsScreen({ tripId }: TripSettingsScreenProps) {
   }
 
   async function deleteMoment(moment: Moment) {
-    if (!window.confirm("Delete this hidden moment permanently?")) {
+    if (!(await confirmDelete("Delete this hidden moment?"))) {
       return;
     }
 
@@ -70,7 +72,7 @@ export function TripSettingsScreen({ tripId }: TripSettingsScreenProps) {
 
   if (!record) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-[var(--paper)] px-4">
+      <main className="crumbs-page flex min-h-screen items-center justify-center bg-[var(--paper)] px-4">
         <Card className="w-full max-w-lg rounded-[34px]">
           <CardHeader>
             <CardTitle className="text-4xl">Trip not available</CardTitle>
@@ -94,7 +96,7 @@ export function TripSettingsScreen({ tripId }: TripSettingsScreenProps) {
   const shareUrl = `${resolveSiteUrl()}/t/${record.trip.shareSlug}`;
 
   return (
-    <main className="min-h-screen bg-[var(--paper)] px-4 py-6 sm:px-6">
+    <main className="crumbs-page min-h-screen bg-[var(--paper)] px-4 py-6 sm:px-6">
       <div className="mx-auto max-w-5xl space-y-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
@@ -182,6 +184,7 @@ export function TripSettingsScreen({ tripId }: TripSettingsScreenProps) {
           </Card>
         </div>
       </div>
+      {confirmationDialog}
     </main>
   );
 }

@@ -9,7 +9,7 @@ export function Card({
   return (
     <div
       className={cn(
-        "rounded-[28px] border border-black/5 bg-white shadow-[0_20px_60px_rgba(15,23,42,0.08)]",
+        "crumbs-card rounded-[28px] border border-[var(--line)] bg-[var(--surface)] shadow-[0_8px_0_rgba(74,53,31,0.025),0_18px_50px_rgba(74,53,31,0.06)]",
         className,
       )}
       {...props}
@@ -21,7 +21,7 @@ export function CardHeader({
   className,
   ...props
 }: React.ComponentProps<"div">) {
-  return <div className={cn("space-y-2 p-6", className)} {...props} />;
+  return <div className={cn("crumbs-card-header space-y-2 p-6", className)} {...props} />;
 }
 
 export function CardTitle({

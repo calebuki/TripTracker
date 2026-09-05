@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { KeyRound, LoaderCircle } from "lucide-react";
 import { toast } from "sonner";
 
+import { CrumbsBrand } from "@/components/crumbs-brand";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -61,9 +62,10 @@ export function AuthScreen() {
 
   if (isDemoMode) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-[var(--paper)] px-4">
+      <main className="crumbs-page flex min-h-screen items-center justify-center bg-[var(--paper)] px-4">
         <Card className="w-full max-w-xl rounded-[34px]">
           <CardHeader>
+            <Link href="/" aria-label="Crumbs home" className="mb-5 inline-flex"><CrumbsBrand /></Link>
             <CardTitle className="text-4xl">Demo mode is already open</CardTitle>
             <CardDescription>
               Crumbs can run without Supabase while you shape the experience.
@@ -83,9 +85,10 @@ export function AuthScreen() {
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-[var(--paper)] px-4">
+    <main className="crumbs-page flex min-h-screen items-center justify-center bg-[var(--paper)] px-4">
       <Card className="w-full max-w-xl rounded-[34px]">
         <CardHeader>
+            <Link href="/" aria-label="Crumbs home" className="mb-5 inline-flex"><CrumbsBrand /></Link>
           <div className="inline-flex w-fit items-center gap-2 rounded-full bg-[var(--paper)] px-3 py-1 text-xs font-medium uppercase tracking-[0.16em] text-slate-500">
             <KeyRound className="h-3.5 w-3.5" />
             Password sign-in

@@ -7,6 +7,7 @@ import { DateTime } from "luxon";
 import { LoaderCircle, LocateFixed, User } from "lucide-react";
 import { toast } from "sonner";
 
+import { CrumbsBrand } from "@/components/crumbs-brand";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -213,9 +214,10 @@ export function CreateTripScreen() {
 
   if (!loading && !user && !isDemoMode) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-[var(--paper)] px-4">
+      <main className="crumbs-page flex min-h-screen items-center justify-center bg-[var(--paper)] px-4">
         <Card className="w-full max-w-lg rounded-[34px]">
           <CardHeader>
+            <Link href="/" aria-label="Crumbs home" className="mb-5 inline-flex"><CrumbsBrand /></Link>
             <CardTitle className="text-4xl">Sign in to create a trip</CardTitle>
             <CardDescription>
               Magic-link sign-in keeps the traveler dashboard private while viewers
@@ -233,7 +235,7 @@ export function CreateTripScreen() {
   }
 
   return (
-    <main className="min-h-screen bg-[var(--paper)] px-4 py-6 sm:px-6">
+    <main className="crumbs-page min-h-screen bg-[var(--paper)] px-4 py-6 sm:px-6">
       <div className="mx-auto max-w-4xl space-y-4">
         <div className="flex justify-end">
           <Button asChild size="icon" variant="secondary">

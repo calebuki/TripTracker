@@ -2,9 +2,21 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from "react";
 import { DateTime } from "luxon";
 import {
+  Archive,
+  Compass,
+  MapPin,
+  Menu,
+  Route,
+  type LucideIcon,
   Eye,
   LoaderCircle,
   LogOut,
@@ -15,6 +27,13 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
+import { CrumbsBrand, TravelStamp } from "@/components/crumbs-brand";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from "@/components/ui/dropdown-menu";
 import { TripCodeEntry } from "@/components/trip-code-entry";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -142,77 +161,109 @@ export function AccountDashboardScreen({
   }
 
   return (
-    <main className="min-h-screen bg-[var(--paper)] px-4 py-6 sm:px-6">
+    <main className="crumbs-page min-h-screen bg-[var(--paper)] px-4 py-6 sm:px-6">
       <div className="mx-auto max-w-5xl space-y-8">
-        <header className="flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <p className="text-sm uppercase tracking-[0.18em] text-slate-500">
-              Your Crumbs
-            </p>
-            <h1 className="font-serif text-5xl tracking-tight text-[var(--ink)]">
-              {user.displayName ?? "Welcome back"}
-            </h1>
-            <p className="mt-2 text-sm text-slate-600">{user.email}</p>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
+        <nav
+          aria-label="Main navigation"
+          className="crumbs-dashboard-nav flex items-center justify-between gap-3"
+        >
+          <Link href="/" aria-label="Crumbs home">
+            <CrumbsBrand />
+          </Link>
+          <div className="flex items-center gap-3">
             {!loading && !activeTrip ? (
-              <Button asChild variant="secondary">
-                <Link href="/trips/new">Create trip</Link>
+              <Button asChild>
+                <Link href="/trips/new">
+                  <MapPin aria-hidden className="h-4 w-4" />
+                  Create trip
+                </Link>
               </Button>
             ) : null}
-            <Button asChild variant="outline">
-              <Link href="/settings">
-                <Settings className="h-4 w-4" />
-                Account settings
-              </Link>
-            </Button>
-            {!isDemoMode ? (
-              <Button
-                disabled={signingOut}
-                onClick={() => void handleSignOut()}
-                type="button"
-                variant="ghost"
-              >
-                {signingOut ? (
-                  <>
-                    <LoaderCircle className="h-4 w-4 animate-spin" />
-                    Signing out...
-                  </>
-                ) : (
-                  <>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  aria-label="Open account menu"
+                  variant="secondary"
+                  size="icon"
+                >
+                  <Menu className="h-5 w-5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <div className="crumbs-menu-label">
+                  <p className="font-semibold">
+                    {user.displayName ?? "Your account"}
+                  </p>
+                  <p className="mt-1 max-w-56 truncate text-xs text-slate-500">
+                    {user.email}
+                  </p>
+                </div>
+                <DropdownMenuItem asChild>
+                  <Link href="/profile">
+                    <User className="h-4 w-4" />
+                    Profile
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/settings">
+                    <Settings className="h-4 w-4" />
+                    Account settings
+                  </Link>
+                </DropdownMenuItem>
+                {!isDemoMode ? (
+                  <DropdownMenuItem
+                    disabled={signingOut}
+                    onSelect={() => void handleSignOut()}
+                  >
                     <LogOut className="h-4 w-4" />
-                    Sign out
-                  </>
-                )}
-              </Button>
-            ) : null}
+                    {signingOut ? "Signing out..." : "Sign out"}
+                  </DropdownMenuItem>
+                ) : null}
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
+        </nav>
+        <header className="crumbs-dashboard-hero">
+          <div>
+            <p className="crumbs-eyebrow mb-3">Your travel journal</p>
+            <h1 className="font-serif text-5xl tracking-tight sm:text-6xl">
+              {user.displayName
+                ? user.displayName + "’s crumbs."
+                : "Your crumbs."}
+            </h1>
+            <p className="mt-3 text-sm text-slate-600">
+              The places you go. The moments you keep.
+            </p>
+          </div>
+          <TravelStamp />
         </header>
 
         {error ? (
           <Card className="rounded-[30px]">
             <CardContent className="flex flex-wrap items-center justify-between gap-3 p-5 text-sm text-slate-600">
               <p>{error}</p>
-              <Button onClick={() => void refresh()} size="sm" type="button" variant="secondary">
+              <Button
+                onClick={() => void refresh()}
+                size="sm"
+                type="button"
+                variant="secondary"
+              >
                 Retry
               </Button>
             </CardContent>
           </Card>
         ) : null}
 
-        <div className="grid gap-5 lg:grid-cols-2 lg:items-start">
+        <div className="crumbs-dashboard-grid grid gap-5 lg:grid-cols-2 lg:items-start">
           <DashboardPanel
-            className="bg-[#f9f5ee]"
-            description="Enter their crumb code or open a shared link. Trips you open are saved in Watching."
-            title="Follow a friend&apos;s trip"
+            icon={Route}
+            description="Their crumb code. Your window into the journey."
+            title="Follow a friend's trip"
           >
             <TripCodeEntry compact />
           </DashboardPanel>
 
-          <DashboardPanel
-            description="Friends&apos; trips you&apos;ve opened while signed in."
-            title="Watching"
-          >
+          <DashboardPanel icon={Eye} title="Watching">
             {loading ? (
               <TripCardSkeleton />
             ) : watchedTrips.length > 0 ? (
@@ -233,7 +284,7 @@ export function AccountDashboardScreen({
             )}
           </DashboardPanel>
 
-          <DashboardPanel title="Your active trip">
+          <DashboardPanel icon={Compass} title="Your active trip">
             {loading ? (
               <TripCardSkeleton />
             ) : activeTrip ? (
@@ -247,10 +298,7 @@ export function AccountDashboardScreen({
             )}
           </DashboardPanel>
 
-          <DashboardPanel
-            description="Ended trips stay editable and can be resumed when you have no active trip."
-            title="Your past trips"
-          >
+          <DashboardPanel icon={Archive} title="Your past trips">
             {loading ? (
               <div className="space-y-3">
                 <TripCardSkeleton />
@@ -308,8 +356,10 @@ function DashboardPanel({
   description,
   children,
   className,
+  icon: Icon,
 }: {
   title: ReactNode;
+  icon: LucideIcon;
   description?: ReactNode;
   children: ReactNode;
   className?: string;
@@ -317,12 +367,17 @@ function DashboardPanel({
   return (
     <section
       className={cn(
-        "flex min-h-[20rem] flex-col rounded-[32px] border border-black/5 bg-white p-5 shadow-[0_20px_60px_rgba(15,23,42,0.08)] sm:p-6",
+        "crumbs-dashboard-panel flex min-h-[20rem] flex-col rounded-[32px] border border-black/5 bg-white p-5 shadow-[0_20px_60px_rgba(15,23,42,0.08)] sm:p-6",
         className,
       )}
     >
       <div>
-        <h2 className="text-2xl font-medium text-[var(--ink)]">{title}</h2>
+        <div className="flex items-center gap-3">
+          <span className="crumbs-panel-icon">
+            <Icon aria-hidden className="h-5 w-5" />
+          </span>
+          <h2 className="text-2xl font-medium text-[var(--ink)]">{title}</h2>
+        </div>
         {description ? (
           <p className="mt-1 text-sm leading-6 text-slate-600">{description}</p>
         ) : null}
@@ -377,7 +432,9 @@ function OwnedTripCard({
             {trip.endDate === null ? "Active" : "Past trip"}
           </div>
           <div>
-            <p className="text-xl font-medium text-[var(--ink)]">{trip.title}</p>
+            <p className="text-xl font-medium text-[var(--ink)]">
+              {trip.title}
+            </p>
             <p className="mt-1 text-sm text-slate-600">
               {trip.coverLocationName ?? trip.timezone}
             </p>
@@ -425,7 +482,9 @@ function WatchedTripCard({
             Watching
           </div>
           <div>
-            <p className="text-xl font-medium text-[var(--ink)]">{trip.title}</p>
+            <p className="text-xl font-medium text-[var(--ink)]">
+              {trip.title}
+            </p>
             <p className="mt-1 text-sm text-slate-600">
               {trip.coverLocationName ?? trip.timezone}
             </p>

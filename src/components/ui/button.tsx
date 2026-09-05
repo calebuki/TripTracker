@@ -7,14 +7,14 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-full text-sm font-medium transition-all disabled:pointer-events-none disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-transparent",
+  "crumbs-button inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-full text-sm font-medium transition-all disabled:pointer-events-none disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-transparent",
   {
     variants: {
       variant: {
         default:
-          "bg-[var(--ink)] px-4 py-2.5 text-white shadow-[0_12px_30px_rgba(15,23,42,0.14)] hover:bg-[var(--ink-strong)]",
+          "bg-[var(--terracotta)] px-4 py-2.5 text-white shadow-[0_5px_0_var(--terracotta-shadow),0_10px_24px_rgba(170,70,30,0.15)] hover:bg-[var(--terracotta-hover)]",
         secondary:
-          "bg-white px-4 py-2.5 text-[var(--ink)] shadow-[inset_0_0_0_1px_rgba(15,23,42,0.08)] hover:bg-[var(--paper)]",
+          "bg-[var(--sea-soft)] px-4 py-2.5 text-[var(--sea-ink)] shadow-[inset_0_0_0_1px_rgba(15,23,42,0.08)] hover:bg-[var(--paper)]",
         ghost:
           "px-3 py-2 text-[var(--ink)] hover:bg-white/70",
         outline:
