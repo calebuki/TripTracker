@@ -81,6 +81,8 @@ Canonical app URL for generating auth redirects and shared links in local or dep
 
 ## Storage notes
 
+Cloudflare R2 migration and deployment instructions: [Cloudflare media](docs/cloudflare-media.md).
+
 - The schema creates a public `trip-moments` bucket so shared viewers can render photo URLs directly.
 - Uploaded files are stored under `ownerId/tripId/file.ext`.
 - Storage RLS allows owners to write to their own folder prefix.

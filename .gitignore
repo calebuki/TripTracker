@@ -12,6 +12,9 @@
 
 # testing
 /coverage
+/.media-migration/
+/.wrangler/
+/cloudflare/.wrangler/
 
 # next.js
 /.next/
