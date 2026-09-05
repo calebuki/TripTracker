@@ -82,6 +82,31 @@ separately.
 
 ## Checks
 
+## Production configuration (September 5, 2026)
+
+New uploads use the private `crumbs-media` R2 bucket and the read-only delivery
+Worker at `https://crumbs-media.crumbs-app.workers.dev`. Supabase continues to
+handle authentication and journal records. Production has
+`NEXT_PUBLIC_CRUMBS_MEDIA_STORAGE=r2`; upload credentials are server-only and
+restricted to this bucket.
+
+The original inventory contains 618 files (2,210,410,759 bytes), including 21
+files not currently referenced by a moment. All are included in the migration.
+The copy command overlaps network requests with bounded concurrency and writes
+a verified report only after every object passes both R2 and public-delivery
+SHA-256 checks. Reports and original link mappings are retained locally in the
+ignored `.media-migration/` directory.
+
+The live authenticated upload endpoint, ownership denial, signed upload,
+download checksum, CORS, overwrite protection, and range responses have passed.
+The temporary verification account, trip, and media were removed afterward.
+
+After reclaiming source storage, rollback requires restoring the files from R2
+to Supabase before restoring the old URL/path pairs. Clients holding old media
+URLs should refresh after cutover.
+
+## Validation commands
+
 ```powershell
 node --test tests/r2-config.test.mjs tests/media-worker.test.mjs
 npm run lint

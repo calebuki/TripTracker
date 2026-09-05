@@ -82,7 +82,7 @@ if (!flags.size) process.exit(0);
 const config = getR2Config();
 const r2 = createR2Client(config);
 const verified = new Map();
-for (const [index, object] of objects.entries()) {
+async function copyObject(object, index) {
   // Bound memory even if a different bucket is accidentally selected.
   if (object.size > 500 * 1024 * 1024) throw new Error("Object exceeds migration's 500 MB memory limit.");
   let data;
@@ -127,8 +127,22 @@ for (const [index, object] of objects.entries()) {
   }
   verified.set(object.key, { imageUrl, sha256, bytes: bytes.length });
   await appendFile(report, JSON.stringify({ action: "verified", key: object.key, sha256, bytes: bytes.length, imageUrl }) + "\n");
-  console.log(`Verified ${index + 1}/${objects.length}`);
+  console.log(`Verified ${verified.size}/${objects.length}`);
 }
+
+// Bound concurrent file buffers while overlapping remote network latency.
+const largestObject = Math.max(1, ...objects.map((object) => object.size));
+const concurrency = Math.min(6, Math.max(1, Math.floor(128 * 1024 * 1024 / largestObject)));
+let nextObject = 0;
+let copyError;
+await Promise.all(Array.from({ length: concurrency }, async () => {
+  while (!copyError && nextObject < objects.length) {
+    const index = nextObject++;
+    try { await copyObject(objects[index], index); }
+    catch (error) { copyError = error; }
+  }
+}));
+if (copyError) throw copyError;
 
 if (flags.has("--switch")) {
   // Refresh after copying: new uploads may have arrived during the transfer.
