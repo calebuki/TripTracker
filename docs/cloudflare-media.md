@@ -80,8 +80,6 @@ delivery Worker. This migration does not change the app's hide/delete behavior;
 deleting a moment still removes its database record, with object cleanup handled
 separately.
 
-## Checks
-
 ## Production configuration (September 5, 2026)
 
 New uploads use the private `crumbs-media` R2 bucket and the read-only delivery
