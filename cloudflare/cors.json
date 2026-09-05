@@ -1,0 +1,11 @@
+{
+  "rules": [{
+    "allowed": {
+      "origins": ["https://www.followmycrumbs.com", "https://followmycrumbs.com", "http://localhost:3000"],
+      "methods": ["PUT", "GET", "HEAD"],
+      "headers": ["Content-Type", "Cache-Control", "If-None-Match", "Range"]
+    },
+    "exposeHeaders": ["ETag", "Content-Length", "Content-Range"],
+    "maxAgeSeconds": 3600
+  }]
+}

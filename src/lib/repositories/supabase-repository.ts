@@ -778,7 +778,21 @@ export function createSupabaseRepository(): TripRepository {
       let imageUrl: string | null = input.imagePreviewUrl ?? null;
       let imageStoragePath: string | null = null;
 
-      if (input.type === "photo" && input.file) {
+      if (input.type === "photo" && input.file && publicEnv.mediaStorage === "r2") {
+        const response = await fetch("/api/media/uploads", {
+          method: "POST",
+          headers: { ...await getOptionalAuthHeaders(), "Content-Type": "application/json" },
+          body: JSON.stringify({ tripId: input.tripId, contentType: input.file.type, size: input.file.size }),
+        });
+        const upload = await response.json();
+        if (!response.ok) throw new Error(upload.error ?? "Could not prepare your upload.");
+        const result = await fetch(upload.uploadUrl, {
+          method: "PUT", headers: upload.headers, body: input.file,
+        });
+        if (!result.ok) throw new Error("Could not upload your photo or video. Please try again.");
+        imageUrl = upload.imageUrl;
+        imageStoragePath = upload.imageStoragePath;
+      } else if (input.type === "photo" && input.file) {
         const extension = input.file.name.split(".").pop()?.toLowerCase() ?? "jpg";
         const storagePath = `${user.id}/${input.tripId}/${momentId}.${extension}`;
         const { error: uploadError } = await supabase.storage
