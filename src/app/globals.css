@@ -483,9 +483,6 @@ a:hover > .crumbs-wordmark .crumbs-wordmark-stop {
   font-family: var(--font-barlow), sans-serif;
   font-weight: 700;
   fill: var(--ink);
-  paint-order: stroke;
-  stroke: var(--paper);
-  stroke-linejoin: round;
 }
 .route-diagram[data-animate="true"] .route-diagram-label {
   animation: crumbs-fade 240ms ease-out var(--delay, 0ms) both;

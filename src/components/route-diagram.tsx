@@ -122,7 +122,8 @@ function placeLabels(
         (box.top < 0 || box.bottom > height ? 3 : 0) +
         count(labelBoxes, box) * 20 +
         count(stationBoxes, box, ownStation) * 20 +
-        count(routeBoxes, box) * 3
+        // Labels keep clear of the line rather than sitting on it.
+        count(routeBoxes, box) * 20
       );
     };
     const choice = candidates.reduce((best, candidate) =>
@@ -305,7 +306,6 @@ export function RouteDiagram({
               <text
                 className="route-diagram-label"
                 fontSize={labelSize}
-                strokeWidth={labelSize * 0.4}
                 style={delay}
                 textAnchor={placement.anchor}
                 x={placement.x}
