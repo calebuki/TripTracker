@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Manrope, Newsreader } from "next/font/google";
+import { Barlow } from "next/font/google";
 import "maplibre-gl/dist/maplibre-gl.css";
 
 import { AppProviders } from "@/components/providers/app-providers";
@@ -7,19 +7,15 @@ import { publicEnv } from "@/lib/env";
 import { getConfiguredSiteOrigin } from "@/lib/site-url";
 import "./globals.css";
 
-const manrope = Manrope({
-  variable: "--font-manrope",
+const barlow = Barlow({
+  variable: "--font-barlow",
   subsets: ["latin"],
-});
-
-const newsreader = Newsreader({
-  variable: "--font-newsreader",
-  subsets: ["latin"],
-  style: ["normal", "italic"],
+  weight: ["400", "500", "600", "700", "800", "900"],
 });
 
 const siteOrigin = getConfiguredSiteOrigin();
-const siteDescription = "Follow a private trail of crumbs from the moments that made the trip.";
+const siteDescription =
+  "Post your trip as a map of photos and notes. Friends follow along with a 5-character code.";
 const preconnectOrigins = Array.from(
   new Set(
     [publicEnv.mapStyleUrl, publicEnv.supabaseUrl]
@@ -69,7 +65,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#f6f1e8",
+  themeColor: "#f4f4f0",
 };
 
 export default function RootLayout({
@@ -80,7 +76,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${manrope.variable} ${newsreader.variable} h-full antialiased`}
+      className={`${barlow.variable} h-full antialiased`}
       suppressHydrationWarning
     >
       <head>

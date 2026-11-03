@@ -142,7 +142,7 @@ export function DaySelector({
             >
               <ChevronLeft className="h-4 w-4" />
             </Button>
-            <p aria-live="polite" className="font-serif text-xl text-[var(--ink)]">
+            <p aria-live="polite" className="font-display text-xl text-[var(--ink)]">
               {displayMonth.toFormat("LLLL yyyy")}
             </p>
             <Button

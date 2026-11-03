@@ -262,7 +262,7 @@ export function TripExperience({
         </Link>
         <div className="min-w-0 flex-1">
           <div className="flex min-w-0 flex-wrap items-center gap-2">
-            <h1 className="min-w-0 font-serif text-4xl leading-[0.95] tracking-tight text-[var(--ink)] xl:text-5xl">
+            <h1 className="min-w-0 font-display text-4xl leading-[0.95] tracking-tight text-[var(--ink)] xl:text-5xl">
               {record.trip.title}
             </h1>
             {isDemoMode ? <Badge variant="accent">Demo mode</Badge> : null}
@@ -331,7 +331,7 @@ export function TripExperience({
 
                   <div className="crumbs-map-title min-w-0 rounded-[28px] border border-black/5 bg-white/92 px-4 py-3 shadow-[0_14px_40px_rgba(15,23,42,0.12)] backdrop-blur-sm sm:max-w-2xl">
                     <div className="flex min-w-0 flex-wrap items-center gap-2">
-                      <h1 className="min-w-0 font-serif text-[1.45rem] leading-tight tracking-tight text-[var(--ink)] sm:text-[2.2rem]">
+                      <h1 className="min-w-0 font-display text-[1.45rem] leading-tight tracking-tight text-[var(--ink)] sm:text-[2.2rem]">
                         {record.trip.title}
                       </h1>
                       {isDemoMode ? <Badge variant="accent">Demo mode</Badge> : null}
@@ -485,7 +485,7 @@ export function TripExperience({
                 fullscreenMoments={filteredMoments}
                 sidebarHeader={tripSidebarHeader}
                 sidebarEmptyState={
-                  <p className="text-center font-serif text-2xl text-slate-500">
+                  <p className="text-center font-display text-2xl text-slate-500">
                     Select a moment
                   </p>
                 }

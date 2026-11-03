@@ -3,13 +3,13 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Lock } from "lucide-react";
-import { toast } from "sonner";
 
+import { CrumbsBrand } from "@/components/crumbs-brand";
 import { LoadingShell } from "@/components/loading-shell";
 import { TripExperience } from "@/components/trip-experience";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { useCrumbsAuth } from "@/hooks/use-crumbs-auth";
 import { useTripRecord } from "@/hooks/use-trip-record";
 import { useTripViewerCount } from "@/hooks/use-trip-viewer-count";
@@ -27,6 +27,7 @@ export function ViewerTripScreen({ shareSlug }: ViewerTripScreenProps) {
   });
   const [passcode, setPasscode] = useState("");
   const [verifiedOverride, setVerifiedOverride] = useState(false);
+  const [passcodeError, setPasscodeError] = useState(false);
   const { user, loading: authLoading } = useCrumbsAuth();
   const storedVerification =
     typeof window !== "undefined" && record?.trip.viewerPasscodeHash
@@ -69,67 +70,78 @@ export function ViewerTripScreen({ shareSlug }: ViewerTripScreenProps) {
 
   if (!record) {
     return (
-      <main className="crumbs-page flex min-h-screen items-center justify-center bg-[var(--paper)] px-4">
-        <Card className="w-full max-w-lg rounded-[34px]">
-          <CardHeader>
-            <CardTitle className="text-4xl">Shared trip not found</CardTitle>
-            <CardDescription>
-              {error ?? "The link may have changed or expired."}
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="flex flex-wrap gap-3">
-            <Button onClick={() => void refresh()} type="button">
-              Retry
-            </Button>
-            <Button asChild variant="secondary">
-              <Link href="/">Back to Crumbs</Link>
-            </Button>
-          </CardContent>
-        </Card>
-      </main>
+      <ViewerGate>
+        <h1 className="font-display text-5xl">Trip not found</h1>
+        <p className="mt-3 text-lg font-medium text-[var(--ink-soft)]">
+          {error ?? "The link may have changed, or the trip was removed."}
+        </p>
+        <div className="mt-8 flex flex-wrap gap-3">
+          <Button onClick={() => void refresh()} type="button">
+            Try again
+          </Button>
+          <Button asChild variant="outline">
+            <Link href="/">Enter a different code</Link>
+          </Button>
+        </div>
+      </ViewerGate>
     );
   }
 
   if (!verified && record.trip.viewerPasscodeHash) {
+    const trip = record.trip;
+
     return (
-      <main className="crumbs-page flex min-h-screen items-center justify-center bg-[var(--paper)] px-4">
-        <Card className="w-full max-w-lg rounded-[34px]">
-          <CardHeader>
-            <div className="inline-flex w-fit items-center gap-2 rounded-full bg-[var(--paper)] px-3 py-1 text-xs font-medium uppercase tracking-[0.16em] text-slate-500">
-              <Lock className="h-3.5 w-3.5" />
-              Protected trip
-            </div>
-            <CardTitle className="text-4xl">{record.trip.title}</CardTitle>
-            <CardDescription>
-              This shared trip uses a simple viewer passcode.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
+      <ViewerGate>
+        <p className="flex items-center gap-2 text-[15px] font-bold text-[var(--ink-soft)]">
+          <Lock aria-hidden className="h-4 w-4" />
+          Passcode required
+        </p>
+        <h1 className="mt-3 font-display text-5xl">{trip.title}</h1>
+        <form
+          className="mt-8 space-y-4"
+          onSubmit={async (event) => {
+            event.preventDefault();
+            const hashed = await hashPasscode(trip.shareSlug, passcode);
+
+            if (hashed === trip.viewerPasscodeHash) {
+              const key = `crumbs-passcode:${trip.shareSlug}`;
+              window.sessionStorage.setItem(key, hashed ?? "");
+              setVerifiedOverride(true);
+              return;
+            }
+
+            setPasscodeError(true);
+          }}
+        >
+          <div className="space-y-2">
+            <Label htmlFor="viewer-passcode">Passcode from the traveler</Label>
             <Input
-              onChange={(event) => setPasscode(event.target.value)}
-              placeholder="Enter passcode"
+              aria-describedby={passcodeError ? "viewer-passcode-error" : undefined}
+              aria-invalid={passcodeError}
+              autoComplete="off"
+              id="viewer-passcode"
+              onChange={(event) => {
+                setPasscode(event.target.value);
+                setPasscodeError(false);
+              }}
               type="password"
               value={passcode}
             />
-            <Button
-              onClick={async () => {
-                const hashed = await hashPasscode(record.trip.shareSlug, passcode);
-
-                if (hashed === record.trip.viewerPasscodeHash) {
-                  const key = `crumbs-passcode:${record.trip.shareSlug}`;
-                  window.sessionStorage.setItem(key, hashed ?? "");
-                  setVerifiedOverride(true);
-                  return;
-                }
-
-                toast.error("That passcode doesn't match.");
-              }}
-            >
-              Open trip
-            </Button>
-          </CardContent>
-        </Card>
-      </main>
+            {passcodeError ? (
+              <p
+                className="text-sm font-semibold text-[var(--danger)]"
+                id="viewer-passcode-error"
+                role="alert"
+              >
+                That passcode doesn&apos;t match. Check it with the traveler.
+              </p>
+            ) : null}
+          </div>
+          <Button className="w-full" size="lg" type="submit">
+            Open trip
+          </Button>
+        </form>
+      </ViewerGate>
     );
   }
 
@@ -141,5 +153,20 @@ export function ViewerTripScreen({ shareSlug }: ViewerTripScreenProps) {
       onRefresh={refresh}
       uniqueViewerCount={uniqueViewerCount}
     />
+  );
+}
+
+function ViewerGate({ children }: { children: React.ReactNode }) {
+  return (
+    <main className="flex min-h-dvh flex-col bg-[var(--paper)] px-4 pb-12 pt-5 sm:px-8">
+      <nav aria-label="Main navigation" className="mx-auto w-full max-w-6xl">
+        <Link aria-label="Crumbs home" className="inline-flex" href="/">
+          <CrumbsBrand />
+        </Link>
+      </nav>
+      <div className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center pt-12">
+        {children}
+      </div>
+    </main>
   );
 }
