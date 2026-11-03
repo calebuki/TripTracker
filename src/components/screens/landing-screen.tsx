@@ -90,10 +90,6 @@ export function WelcomeScreen() {
           >
             Got a crumb code?
           </h1>
-          <p className="mt-5 max-w-md text-lg font-medium leading-7 text-[var(--ink-soft)]">
-            Travelers share a 5-character code. Type it here to follow their
-            trip on a map, photo by photo.
-          </p>
           <div className="mt-9">
             <TripCodeEntry autoFocus hideLabel />
           </div>
@@ -147,11 +143,7 @@ export function WelcomeScreen() {
                 </div>
               ) : null}
             </div>
-            <div className="shrink-0">
-              <p className="mb-3 text-sm font-semibold text-[var(--ink-soft)]">
-                Sample trip, {new Set(layout.stations.map((station) => station.dayIndex)).size}{" "}
-                days in {sample.trip.coverLocationName?.split(",")[0] ?? "Paris"}
-              </p>
+            <div className="w-60 shrink-0">
               <TimeOfDayLegend />
             </div>
           </figcaption>
