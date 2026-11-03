@@ -54,6 +54,20 @@
 }
 
 /* Scroll areas inside the trip view never show a bar; edges fade instead. */
+/* The landscape illustration sitting along the bottom of a page. The page
+   takes the illustration's warm paper so there's no seam, and keeps room at
+   the bottom so content never sits on the hills. */
+@utility landscape-backdrop {
+  --paper: #f7eee5;
+  --paper-strong: #ece1d4;
+  background-color: #f7eee5;
+  background-image: url("/art/landscape.webp");
+  background-repeat: no-repeat;
+  background-position: bottom center;
+  background-size: max(100%, 960px) auto;
+  padding-bottom: calc(max(100vw, 960px) * 0.2125 + 1.5rem);
+}
+
 @utility no-scrollbar {
   scrollbar-width: none;
 

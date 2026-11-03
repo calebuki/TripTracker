@@ -24,8 +24,8 @@ import {
 import { toast } from "sonner";
 
 import { CrumbsBrand } from "@/components/crumbs-brand";
-import { RouteDiagram } from "@/components/route-diagram";
 import { TripCodeEntry } from "@/components/trip-code-entry";
+import { TripPreviewMap } from "@/components/trip-preview-map";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -34,7 +34,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { getTripRepository } from "@/lib/repositories";
-import { buildRouteDiagram, getRouteColorForKey } from "@/lib/route-diagram";
+import { hasCoordinates } from "@/lib/map";
+import { getRouteColorForKey } from "@/lib/route-diagram";
 import type { CrumbsUser, Trip, TripRecord, WatchedTrip } from "@/types/crumbs";
 
 interface AccountDashboardScreenProps {
@@ -191,7 +192,7 @@ export function AccountDashboardScreen({
   const initial = (firstName ?? user.email).charAt(0).toUpperCase();
 
   return (
-    <main className="min-h-dvh bg-[var(--paper)] px-4 pb-16 pt-5 sm:px-8">
+    <main className="landscape-backdrop min-h-dvh px-4 pt-5 sm:px-8">
       <div className="mx-auto max-w-6xl">
         <nav
           aria-label="Main navigation"
@@ -424,63 +425,24 @@ function ActiveTripCard({ trip, record }: { trip: Trip; record: TripRecord | nul
     () => record?.moments.filter((moment) => moment.visibility === "visible") ?? [],
     [record],
   );
-  const layout = useMemo(
-    () =>
-      buildRouteDiagram(visibleMoments, trip.timezone, {
-        width: 640,
-        height: 230,
-        padding: 28,
-        minGap: 26,
-        maxStations: 12,
-        startDate: trip.startDate,
-      }),
-    [trip.startDate, trip.timezone, visibleMoments],
-  );
-  const narrowLayout = useMemo(
-    () =>
-      buildRouteDiagram(visibleMoments, trip.timezone, {
-        width: 340,
-        height: 190,
-        padding: 18,
-        minGap: 22,
-        maxStations: 9,
-        startDate: trip.startDate,
-      }),
-    [trip.startDate, trip.timezone, visibleMoments],
-  );
+  const hasStops = visibleMoments.some(hasCoordinates);
   const dayNumber = getTripDayNumber(trip);
   const momentCount = visibleMoments.length;
 
   return (
     <article className="overflow-hidden rounded-2xl border-2 border-[var(--ink)] bg-[var(--surface)]">
-      <div className="border-b-2 border-[var(--line)] bg-[var(--paper)] px-3 py-4">
+      <div className="border-b-2 border-[var(--ink)] bg-[var(--paper)]">
         {!record ? (
-          <div aria-hidden className="h-[clamp(120px,36vw,230px)] animate-pulse rounded-lg bg-[var(--paper-strong)]" />
-        ) : layout.stations.length > 0 ? (
-          <>
-            <RouteDiagram
-              className="hidden sm:block"
-              label={`Route of ${trip.title}`}
-              labelSize={14}
-              layout={layout}
-              showLabels={layout.stations.length <= 6}
-              stationRadius={8}
-              strokeWidth={9}
-              train
-            />
-            <RouteDiagram
-              className="sm:hidden"
-              label={`Route of ${trip.title}`}
-              labelSize={12}
-              layout={narrowLayout}
-              showLabels={narrowLayout.stations.length <= 6}
-              stationRadius={6}
-              strokeWidth={7}
-              train
-            />
-          </>
+          <div aria-hidden className="h-[clamp(200px,44vw,280px)] animate-pulse bg-[var(--paper-strong)]" />
+        ) : hasStops ? (
+          <TripPreviewMap
+            className="h-[clamp(200px,44vw,280px)]"
+            label={`Map of ${trip.title}`}
+            moments={visibleMoments}
+            trip={trip}
+          />
         ) : (
-          <div className="flex h-[clamp(120px,36vw,230px)] items-center justify-center gap-0 px-6">
+          <div className="flex h-[clamp(200px,44vw,280px)] items-center justify-center gap-0 px-6">
             <span className="h-6 w-6 shrink-0 rounded-full border-[5px] border-[var(--ink)] bg-[var(--surface)]" />
             <span className="h-2 w-full max-w-64 border-t-[6px] border-dashed border-[var(--line)]" />
             <span className="ml-4 shrink-0 text-[15px] font-semibold text-[var(--ink-soft)]">

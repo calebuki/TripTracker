@@ -69,7 +69,7 @@ export function WelcomeScreen() {
     layout.stations[layout.stations.length - 1];
 
   return (
-    <main className="flex min-h-dvh flex-col bg-[var(--paper)] px-4 pb-10 pt-5 sm:px-8">
+    <main className="landscape-backdrop flex min-h-dvh flex-col px-4 pt-5 sm:px-8">
       <nav
         aria-label="Main navigation"
         className="mx-auto flex w-full max-w-6xl items-center justify-between gap-4"

@@ -7,7 +7,7 @@ import { CrumbsBrand } from "@/components/crumbs-brand";
 // passcode, and "couldn't load this" screens.
 export function CenteredPage({ children }: { children: ReactNode }) {
   return (
-    <main className="flex min-h-dvh flex-col bg-[var(--paper)] px-4 pb-12 pt-5 sm:px-8">
+    <main className="landscape-backdrop flex min-h-dvh flex-col px-4 pt-5 sm:px-8">
       <nav aria-label="Main navigation" className="mx-auto w-full max-w-6xl">
         <Link aria-label="Crumbs home" className="inline-flex" href="/">
           <CrumbsBrand />
