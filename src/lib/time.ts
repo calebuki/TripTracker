@@ -25,6 +25,19 @@ export function getTripDayKey(timestamp: string, timezone: string) {
     .toISODate();
 }
 
+// Day 0 is the trip's start date, so a day keeps its number (and route
+// colour) whichever days are being shown.
+export function getTripDayIndex(timestamp: string, timezone: string, startDate: string) {
+  const day = parseTimestamp(timestamp).setZone(timezone).startOf("day");
+  const start = DateTime.fromISO(startDate, { zone: timezone }).startOf("day");
+
+  if (!day.isValid || !start.isValid) {
+    return 0;
+  }
+
+  return Math.max(0, Math.round(day.diff(start, "days").days));
+}
+
 export function formatTripDayLabel(dayKey: string, timezone: string) {
   return DateTime.fromISO(dayKey, { zone: timezone }).toFormat("cccc, LLL d");
 }
@@ -51,7 +64,7 @@ export function getDayOptions(trip: Trip, moments: Moment[]): DayOption[] {
   return [
     { kind: "today", label: "Today", value: today },
     { kind: "yesterday", label: "Yesterday", value: yesterday },
-    { kind: "all", label: "All Days" },
+    { kind: "all", label: "All days" },
     ...dates.map((value) => ({
       kind: "date" as const,
       label: DateTime.fromISO(value, { zone: trip.timezone }).toFormat(

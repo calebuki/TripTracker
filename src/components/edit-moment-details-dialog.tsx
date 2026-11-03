@@ -93,11 +93,10 @@ export function EditMomentDetailsDialog({
       >
         <DialogHeader>
           <DialogTitle>
-            {moment?.type === "photo" ? "Edit photo details" : "Edit moment"}
+            {moment?.type === "photo" ? "Edit photo details" : "Edit note"}
           </DialogTitle>
           <DialogDescription>
-            Keep the posting flow quick now, then clean up the title and notes here
-            whenever you have a second.
+            Change the title and notes for this moment.
           </DialogDescription>
         </DialogHeader>
 
@@ -129,13 +128,13 @@ export function EditMomentDetailsDialog({
             />
           </div>
 
-          <div className="sticky bottom-[-1rem] -mx-6 border-t border-black/5 bg-white/96 px-6 pb-[calc(env(safe-area-inset-bottom)+0.25rem)] pt-4 backdrop-blur-sm">
+          <div className="sticky bottom-[-1rem] -mx-6 border-t-2 border-[var(--line)] bg-[var(--surface)] px-6 pb-[calc(env(safe-area-inset-bottom)+0.25rem)] pt-4">
             <div className="flex justify-end">
               <Button disabled={saving} onClick={() => void handleSave()} type="button">
                 {saving ? (
                   <>
                     <LoaderCircle className="h-4 w-4 animate-spin" />
-                    Saving...
+                    Saving…
                   </>
                 ) : (
                   "Save details"

@@ -12,11 +12,11 @@ import {
 } from "react";
 
 import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion";
-import type { RouteDiagramLayout, RouteLeg } from "@/lib/route-diagram";
+import type { RouteDiagramLayout, RouteSegment } from "@/lib/route-diagram";
 import { cn } from "@/lib/utils";
 
-const legStaggerMs = 520;
-const legDrawMs = 700;
+// The line draws one stretch at a time and eases into each station.
+const segmentDrawMs = 420;
 
 interface LabelPlacement {
   x: number;
@@ -36,14 +36,14 @@ function overlaps(a: Box, b: Box) {
 }
 
 // Small boxes along every drawn line, so labels never sit on a route.
-function lineBoxes(legs: RouteLeg[], strokeWidth: number) {
+function lineBoxes(segments: RouteSegment[], strokeWidth: number) {
   const half = strokeWidth / 2;
   const boxes: Box[] = [];
 
-  for (const leg of legs) {
-    for (let index = 1; index < leg.points.length; index += 1) {
-      const from = leg.points[index - 1];
-      const to = leg.points[index];
+  for (const segment of segments) {
+    for (let index = 1; index < segment.points.length; index += 1) {
+      const from = segment.points[index - 1];
+      const to = segment.points[index];
       const steps = Math.max(1, Math.ceil(Math.hypot(to.x - from.x, to.y - from.y) / half));
 
       for (let step = 0; step <= steps; step += 1) {
@@ -73,7 +73,7 @@ function placeLabels(
     top: station.y - stationRadius * 1.3,
     bottom: station.y + stationRadius * 1.3,
   }));
-  const routeBoxes = lineBoxes(layout.legs, strokeWidth);
+  const routeBoxes = lineBoxes(layout.segments, strokeWidth);
   const labelBoxes: Box[] = [];
 
   for (const station of stations) {
@@ -112,16 +112,17 @@ function placeLabels(
     const ownStation = stations.indexOf(station);
     const count = (boxes: Box[], box: Box, skip = -1) =>
       boxes.filter((other, index) => index !== skip && overlaps(box, other)).length;
-    // Cheapest spot wins. Text running off the sides is never acceptable; a
-    // little overhang above or below is fine because the SVG doesn't clip.
+    // Cheapest spot wins. The SVG doesn't clip, so a label may hang a little
+    // past the sheet, but never far enough to push the page sideways.
     const cost = (placement: LabelPlacement) => {
       const box = boxFor(placement);
+      const sideOverhang = Math.max(0, -box.left) + Math.max(0, box.right - width);
       return (
-        (box.left < 0 || box.right > width ? 1000 : 0) +
+        (sideOverhang > 16 ? 1000 : sideOverhang > 0 ? 4 + sideOverhang * 0.25 : 0) +
         (box.top < 0 || box.bottom > height ? 3 : 0) +
         count(labelBoxes, box) * 20 +
         count(stationBoxes, box, ownStation) * 20 +
-        count(routeBoxes, box) * 2
+        count(routeBoxes, box) * 3
       );
     };
     const choice = candidates.reduce((best, candidate) =>
@@ -165,8 +166,7 @@ export function RouteDiagram({
   const pathId = `route-${useId().replace(/[^a-zA-Z0-9_-]/g, "")}`;
   const reducedMotion = usePrefersReducedMotion();
   const drawsIn = animate && !reducedMotion;
-  const legOrder = new Map(layout.legs.map((leg, index) => [leg.dayIndex, index]));
-  const drawnMs = layout.legs.length * legStaggerMs + legDrawMs;
+  const drawnMs = Math.max(1, layout.segments.length) * segmentDrawMs;
   const [trainReady, setTrainReady] = useState(false);
   const [inView, setInView] = useState(false);
   const svgRef = useRef<SVGSVGElement>(null);
@@ -220,11 +220,6 @@ export function RouteDiagram({
     }
   }, [showTrain]);
 
-  function stationDelay(dayIndex: number, legProgress: number) {
-    const order = legOrder.get(dayIndex);
-    return order === undefined ? 0 : order * legStaggerMs + legProgress * legDrawMs;
-  }
-
   function handleKeyDown(event: KeyboardEvent<SVGGElement>, stationId: string) {
     if (event.key === "Enter" || event.key === " ") {
       event.preventDefault();
@@ -241,25 +236,57 @@ export function RouteDiagram({
       role={onStationSelect ? "group" : "img"}
       viewBox={`0 0 ${layout.width} ${layout.height}`}
     >
+      <defs>
+        {layout.segments.map((segment) => (
+          // Runs from one station to the next, so the colour follows the time
+          // that passed between them.
+          <linearGradient
+            gradientUnits="userSpaceOnUse"
+            id={`${pathId}-${segment.index}`}
+            key={segment.index}
+            x1={segment.from.x}
+            x2={segment.to.x}
+            y1={segment.from.y}
+            y2={segment.to.y}
+          >
+            {segment.stops.map((stop) => (
+              <stop key={stop.offset} offset={stop.offset} stopColor={stop.color} />
+            ))}
+          </linearGradient>
+        ))}
+      </defs>
       {layout.path ? <path d={layout.path} fill="none" id={pathId} /> : null}
-      {layout.legs.map((leg) => (
-        <path
-          className="route-diagram-path"
-          d={leg.d}
-          key={leg.dayIndex}
-          pathLength={1}
-          stroke={leg.color}
-          strokeWidth={strokeWidth}
-          style={
-            {
-              "--delay": `${(legOrder.get(leg.dayIndex) ?? 0) * legStaggerMs}ms`,
-              "--draw": `${legDrawMs}ms`,
-            } as CSSProperties
-          }
-        />
-      ))}
+      {layout.segments.map((segment) => {
+        const timing = {
+          "--delay": `${segment.index * segmentDrawMs}ms`,
+          "--draw": `${segmentDrawMs}ms`,
+        } as CSSProperties;
+
+        // An ink edge under each stretch, as on the map, so yellow daytime
+        // stretches hold up on the light page.
+        return (
+          <g key={segment.index}>
+            <path
+              className="route-diagram-path"
+              d={segment.d}
+              pathLength={1}
+              stroke="var(--ink)"
+              strokeWidth={strokeWidth + 4}
+              style={timing}
+            />
+            <path
+              className="route-diagram-path"
+              d={segment.d}
+              pathLength={1}
+              stroke={`url(#${pathId}-${segment.index})`}
+              strokeWidth={strokeWidth}
+              style={timing}
+            />
+          </g>
+        );
+      })}
       {layout.stations.map((station) => {
-        const delay = { "--delay": `${stationDelay(station.dayIndex, station.legProgress)}ms` } as CSSProperties;
+        const delay = { "--delay": `${station.order * segmentDrawMs}ms` } as CSSProperties;
         const placement = labels.get(station.id);
         const radius = station.isDayStart ? stationRadius * 1.25 : stationRadius;
         const marker = (

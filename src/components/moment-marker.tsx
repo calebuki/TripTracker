@@ -3,12 +3,13 @@
 import { Film, MessageSquareText } from "lucide-react";
 
 import { getSupabaseImageTransformUrl, isMomentVideo } from "@/lib/media";
-import { cn } from "@/lib/utils";
 import type { Moment } from "@/types/crumbs";
 
 interface MomentMarkerProps {
   moment: Moment;
   order: number;
+  // Time-of-day colour of the moment, matching the trail.
+  color: string;
   endOrder?: number;
   clusterSize?: number;
   selected?: boolean;
@@ -18,6 +19,7 @@ interface MomentMarkerProps {
 export function MomentMarker({
   moment,
   order,
+  color,
   endOrder,
   clusterSize = 1,
   selected = false,
@@ -31,69 +33,60 @@ export function MomentMarker({
   });
   const orderLabel =
     clusterSize > 1 && endOrder && endOrder !== order
-      ? `${order}-${endOrder}`
+      ? `${order}–${endOrder}`
       : order.toString();
+  const label = moment.caption ?? moment.placeName ?? (hasMedia ? "Photo" : "Note");
 
   return (
     <button
-      className={cn(
-        "group relative rounded-full transition-transform hover:scale-[1.03]",
-        selected && "scale-[1.04]",
-      )}
+      aria-label={`${label}, stop ${orderLabel}${clusterSize > 1 ? `, ${clusterSize} moments here` : ""}`}
+      aria-pressed={selected}
+      className="crumbs-marker group relative rounded-full"
+      data-selected={selected}
       onClick={onClick}
       type="button"
     >
-      {hasMedia && !isVideo ? (
-        <div
-          className={cn(
-            "h-14 w-14 overflow-hidden rounded-full border-2 border-white shadow-[0_16px_40px_rgba(15,23,42,0.24)] ring-4 ring-transparent transition",
-            clusterSize > 1 && "shadow-[0_0_0_4px_rgba(255,248,234,0.85),0_16px_40px_rgba(15,23,42,0.24)]",
-            selected && "ring-[var(--accent)]",
-          )}
+      {hasMedia ? (
+        <span
+          className="block h-14 w-14 rounded-full p-1 ring-2 ring-[#15161c]"
+          style={{ background: color }}
         >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            alt={moment.caption ?? moment.placeName ?? "Trip moment photo"}
-            className="h-full w-full object-cover"
-            decoding="async"
-            fetchPriority={selected ? "high" : "low"}
-            loading="lazy"
-            onError={(event) => {
-              const originalUrl = moment.imageUrl ?? "";
+          <span className="grid h-full w-full place-items-center overflow-hidden rounded-full border-2 border-white bg-[#15161c] text-white">
+            {isVideo ? (
+              <Film aria-hidden className="h-5 w-5" />
+            ) : (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                alt=""
+                className="h-full w-full object-cover"
+                decoding="async"
+                fetchPriority={selected ? "high" : "low"}
+                loading="lazy"
+                onError={(event) => {
+                  const originalUrl = moment.imageUrl ?? "";
 
-              if (originalUrl && event.currentTarget.src !== originalUrl) {
-                event.currentTarget.src = originalUrl;
-              }
-            }}
-            src={markerImageUrl}
-          />
-        </div>
-      ) : hasMedia ? (
-        <div
-          className={cn(
-            "flex h-14 w-14 items-center justify-center rounded-full border-2 border-white bg-[var(--ink)] text-white shadow-[0_16px_40px_rgba(15,23,42,0.24)] ring-4 ring-transparent transition",
-            clusterSize > 1 && "shadow-[0_0_0_4px_rgba(255,248,234,0.85),0_16px_40px_rgba(15,23,42,0.24)]",
-            selected && "ring-[var(--accent)]",
-          )}
-        >
-          <Film className="h-5 w-5" />
-        </div>
+                  if (originalUrl && event.currentTarget.src !== originalUrl) {
+                    event.currentTarget.src = originalUrl;
+                  }
+                }}
+                src={markerImageUrl}
+              />
+            )}
+          </span>
+        </span>
       ) : (
-        <div
-          className={cn(
-            "flex min-h-12 min-w-12 items-center justify-center rounded-[18px] border border-white/60 bg-[var(--ink)] px-3 text-white shadow-[0_16px_40px_rgba(15,23,42,0.22)] ring-4 ring-transparent transition",
-            clusterSize > 1 && "shadow-[0_0_0_4px_rgba(255,248,234,0.85),0_16px_40px_rgba(15,23,42,0.22)]",
-            selected && "ring-[var(--accent)]",
-          )}
+        <span
+          className="grid h-12 w-12 place-items-center rounded-full border-[5px] bg-white text-[#15161c] ring-2 ring-[#15161c]"
+          style={{ borderColor: color }}
         >
-          <MessageSquareText className="h-4 w-4" />
-        </div>
+          <MessageSquareText aria-hidden className="h-4 w-4" />
+        </span>
       )}
-      <span className="pointer-events-none absolute -right-1 -top-1 inline-flex min-h-6 min-w-6 items-center justify-center rounded-full border border-white/90 bg-[var(--accent)] px-1.5 text-[11px] font-semibold leading-none text-[var(--ink)] shadow-[0_8px_20px_rgba(15,23,42,0.18)]">
+      <span className="tabular pointer-events-none absolute -right-1.5 -top-1.5 inline-flex h-6 min-w-6 items-center justify-center rounded-full border-2 border-white bg-[#15161c] px-1.5 text-xs font-bold leading-none text-white">
         {orderLabel}
       </span>
       {clusterSize > 1 ? (
-        <span className="pointer-events-none absolute -bottom-1 -left-1 inline-flex min-h-6 min-w-6 items-center justify-center rounded-full border border-white/90 bg-white px-1.5 text-[11px] font-semibold leading-none text-[var(--ink)] shadow-[0_8px_20px_rgba(15,23,42,0.18)]">
+        <span className="tabular pointer-events-none absolute -bottom-1.5 -left-1.5 inline-flex h-6 min-w-6 items-center justify-center rounded-full border-2 border-[#15161c] bg-white px-1.5 text-xs font-bold leading-none text-[#15161c]">
           {clusterSize}
         </span>
       ) : null}

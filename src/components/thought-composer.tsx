@@ -91,12 +91,12 @@ export function ThoughtComposer({
         accuracyMeters: location?.accuracyMeters ?? null,
         timezone: trip.timezone,
       });
-      toast.success("Thought saved on the map.");
+      toast.success("Note saved.");
       await onSaved();
       onClose();
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : "Crumbs could not save this thought.",
+        error instanceof Error ? error.message : "Crumbs couldn't save this note.",
       );
     } finally {
       setSaving(false);
@@ -106,22 +106,23 @@ export function ThoughtComposer({
   return (
     <div className="space-y-5">
       <Textarea
+        aria-label="Note"
         onChange={(event) => setThoughtText(event.target.value)}
         placeholder="What's happening here?"
         value={thoughtText}
       />
 
-      <div className="rounded-[28px] border border-black/5 bg-[var(--paper)] p-4">
+      <div className="rounded-xl border-2 border-[var(--line)] bg-[var(--surface)] p-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="space-y-2">
-            <p className="text-sm font-medium text-[var(--ink)]">Location</p>
-            <p className="text-sm leading-6 text-slate-600">
+            <p className="font-bold text-[var(--ink)]">Location</p>
+            <p className="text-[15px] font-medium leading-6 text-[var(--ink-soft)]">
               {locating
                 ? "Trying your current location…"
                 : location
-                  ? "This thought will appear exactly where you pin it."
+                  ? "The note will sit exactly where you pin it."
                   : locationError ??
-                    "No location is attached yet, but you can still save the note."}
+                    "No location yet. You can still save the note."}
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -176,7 +177,7 @@ export function ThoughtComposer({
                 });
                 setIsPicking(false);
                 setLocationError(null);
-                toast.success("Thought pinned on the map.");
+                toast.success("Note pinned on the map.");
               }}
               heightClassName="h-56"
             />
@@ -189,10 +190,10 @@ export function ThoughtComposer({
           {saving ? (
             <>
               <LoaderCircle className="h-4 w-4 animate-spin" />
-              Saving thought…
+              Saving note…
             </>
           ) : (
-            "Save thought"
+            "Save note"
           )}
         </Button>
       </div>

@@ -54,12 +54,6 @@ export function useConfirmDelete() {
         }}
       >
         <DialogHeader>
-          <span
-            aria-hidden
-            className="mb-3 inline-flex rounded-2xl bg-red-50 p-3 text-red-800"
-          >
-            <Trash2 className="h-5 w-5" />
-          </span>
           <DialogTitle>{title ?? "Delete moment?"}</DialogTitle>
           <DialogDescription>
             This removes the moment from the trip. This cannot be undone.
@@ -74,6 +68,7 @@ export function useConfirmDelete() {
             Keep moment
           </Button>
           <Button variant="danger" onClick={() => finish(true)}>
+            <Trash2 aria-hidden className="h-4 w-4" />
             Delete moment
           </Button>
         </DialogFooter>

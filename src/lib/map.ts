@@ -2,7 +2,8 @@ import type { FeatureCollection, LineString } from "geojson";
 import { DateTime } from "luxon";
 
 import type { Moment, Trip, TripLocationPrivacyMode } from "@/types/crumbs";
-import { sortMomentsChronologically } from "@/lib/time";
+import { getMomentTimestamp, sortMomentsChronologically } from "@/lib/time";
+import { getTimeGradientStops } from "@/lib/time-of-day";
 
 const defaultParisCenter = {
   latitude: 48.8566,
@@ -75,35 +76,83 @@ export function getMapBounds(moments: Moment[]) {
   ] as [number, number, number, number];
 }
 
-export function buildTrailGeoJson(
-  moments: Moment[],
-): FeatureCollection<LineString> {
-  const points = getMomentsWithCoordinates(moments);
+// Distance in kilometres; only ratios matter here, for gradient positions.
+function haversineKm(from: [number, number], to: [number, number]) {
+  const toRadians = (degrees: number) => (degrees * Math.PI) / 180;
+  const latitudeDelta = toRadians(to[1] - from[1]);
+  const longitudeDelta = toRadians(to[0] - from[0]);
+  const factor =
+    Math.sin(latitudeDelta / 2) ** 2 +
+    Math.cos(toRadians(from[1])) *
+      Math.cos(toRadians(to[1])) *
+      Math.sin(longitudeDelta / 2) ** 2;
 
-  if (points.length < 2) {
-    return {
-      type: "FeatureCollection",
-      features: [],
-    };
+  return 6371 * 2 * Math.atan2(Math.sqrt(factor), Math.sqrt(1 - factor));
+}
+
+// MapLibre `line-gradient` expression: colour by position along the line.
+export type TrailGradient = ["interpolate", ["linear"], ["line-progress"], ...(number | string)[]];
+
+export interface Trail {
+  data: FeatureCollection<LineString>;
+  gradient: TrailGradient | null;
+}
+
+/**
+ * The trail as one line whose colour follows the time of day between each
+ * pair of moments (see `getTimeGradientStops`).
+ */
+export function buildTrail(moments: Moment[], timezone: string): Trail {
+  const points = getMomentsWithCoordinates(moments);
+  const coordinates = points.map(
+    (moment) => [moment.longitude as number, moment.latitude as number] as [number, number],
+  );
+  const cumulative = [0];
+
+  for (let index = 1; index < coordinates.length; index += 1) {
+    cumulative.push(cumulative[index - 1] + haversineKm(coordinates[index - 1], coordinates[index]));
   }
 
-  const coordinates = points.map((moment) => [
-    moment.longitude as number,
-    moment.latitude as number,
-  ]);
+  const total = cumulative[cumulative.length - 1] ?? 0;
+
+  if (points.length < 2 || total === 0) {
+    return { data: { type: "FeatureCollection", features: [] }, gradient: null };
+  }
+
+  const stops: Array<[number, string]> = [];
+
+  for (let index = 1; index < points.length; index += 1) {
+    const start = cumulative[index - 1] / total;
+    const end = cumulative[index] / total;
+    const segmentStops = getTimeGradientStops(
+      getMomentTimestamp(points[index - 1]),
+      getMomentTimestamp(points[index]),
+      timezone,
+    );
+
+    for (const stop of index === 1 ? segmentStops : segmentStops.slice(1)) {
+      const previous = stops[stops.length - 1]?.[0] ?? -1;
+      // Interpolate needs strictly increasing positions; stacked moments share one.
+      const position = Math.max(start + (end - start) * stop.offset, previous + 1e-9);
+
+      if (position <= 1) {
+        stops.push([position, stop.color]);
+      }
+    }
+  }
 
   return {
-    type: "FeatureCollection",
-    features: [
-      {
-        type: "Feature",
-        properties: {},
-        geometry: {
-          type: "LineString",
-          coordinates,
+    data: {
+      type: "FeatureCollection",
+      features: [
+        {
+          type: "Feature",
+          properties: {},
+          geometry: { type: "LineString", coordinates },
         },
-      },
-    ],
+      ],
+    },
+    gradient: ["interpolate", ["linear"], ["line-progress"], ...stops.flat()],
   };
 }
 

@@ -432,8 +432,9 @@ function ActiveTripCard({ trip, record }: { trip: Trip; record: TripRecord | nul
         padding: 28,
         minGap: 26,
         maxStations: 12,
+        startDate: trip.startDate,
       }),
-    [trip.timezone, visibleMoments],
+    [trip.startDate, trip.timezone, visibleMoments],
   );
   const narrowLayout = useMemo(
     () =>
@@ -443,8 +444,9 @@ function ActiveTripCard({ trip, record }: { trip: Trip; record: TripRecord | nul
         padding: 18,
         minGap: 22,
         maxStations: 9,
+        startDate: trip.startDate,
       }),
-    [trip.timezone, visibleMoments],
+    [trip.startDate, trip.timezone, visibleMoments],
   );
   const dayNumber = getTripDayNumber(trip);
   const momentCount = visibleMoments.length;

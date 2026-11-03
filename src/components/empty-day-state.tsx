@@ -1,4 +1,4 @@
-import { CalendarX2 } from "lucide-react";
+import { Plus } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 
@@ -10,18 +10,18 @@ interface EmptyDayStateProps {
 
 export function EmptyDayState({ label, canAdd, onAdd }: EmptyDayStateProps) {
   return (
-    <div className="pointer-events-auto mx-auto max-w-sm rounded-[28px] border border-black/5 bg-white/92 p-5 text-center shadow-[0_18px_48px_rgba(15,23,42,0.12)] backdrop-blur-sm">
-      <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-[var(--paper)] text-slate-500">
-        <CalendarX2 className="h-5 w-5" />
+    <div className="pointer-events-auto mx-auto max-w-sm rounded-2xl border-2 border-[var(--ink)] bg-[var(--surface)] p-5 text-center">
+      <div aria-hidden className="mx-auto mb-4 flex w-32 items-center">
+        <span className="h-4 w-4 shrink-0 rounded-full border-4 border-[var(--ink)] bg-[var(--surface)]" />
+        <span className="h-0 flex-1 border-t-4 border-dashed border-[var(--line)]" />
+        <span className="h-4 w-4 shrink-0 rounded-full border-4 border-[var(--line)] bg-[var(--surface)]" />
       </div>
-      <p className="text-base font-medium text-[var(--ink)]">
-        No moments yet for {label}.
-      </p>
-      <p className="mt-2 text-sm leading-6 text-slate-600">
-        The map stays simple until something is saved for this day.
+      <p className="text-lg font-bold text-[var(--ink)]">
+        No moments for {label} yet.
       </p>
       {canAdd && onAdd ? (
         <Button className="pointer-events-auto mt-4" onClick={onAdd}>
+          <Plus aria-hidden className="h-4 w-4" />
           Add the first moment
         </Button>
       ) : null}

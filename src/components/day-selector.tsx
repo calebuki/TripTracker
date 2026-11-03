@@ -84,7 +84,7 @@ export function DaySelector({
   }
 
   return (
-    <div className="crumbs-day-dock flex items-center gap-2 rounded-full border border-black/5 bg-white/92 p-1 shadow-[0_16px_48px_rgba(15,23,42,0.12)] backdrop-blur-sm">
+    <div className="crumbs-day-dock flex items-center gap-1 rounded-full">
       {quickOptions.map((option) => {
         const active =
           value.kind === option.kind &&
@@ -96,10 +96,7 @@ export function DaySelector({
             aria-pressed={active}
             size="sm"
             variant={active ? "default" : "ghost"}
-            className={cn(
-              "rounded-full px-4",
-              active && "shadow-none",
-            )}
+            className="px-4"
             onClick={() =>
               onChange({
                 kind: option.kind,
@@ -116,9 +113,9 @@ export function DaySelector({
           <Button
             size="icon"
             variant={value.kind === "date" ? "default" : "ghost"}
-            className="h-10 w-10"
+            className="h-9 w-9"
           >
-            <CalendarDays className="h-4 w-4" />
+            <CalendarDays aria-hidden className="h-4 w-4" />
             <span className="sr-only">Choose a day</span>
           </Button>
         </PopoverTrigger>
@@ -164,7 +161,7 @@ export function DaySelector({
           <div className="mt-4 grid grid-cols-7 gap-1 text-center">
             {WEEKDAY_LABELS.map((weekday) => (
               <span
-                className="pb-1 text-[0.68rem] font-medium uppercase tracking-[0.1em] text-slate-400"
+                className="pb-1 text-xs font-bold text-[var(--ink-soft)]"
                 key={weekday}
               >
                 {weekday}
@@ -177,7 +174,7 @@ export function DaySelector({
               const isSelected = value.kind === "date" && value.value === dayKey;
               const isCurrentMonth = day.month === displayMonth.month;
               const intensity = hasActivity
-                ? 0.13 + 0.67 * Math.sqrt(activityCount / mostActiveDayCount)
+                ? Math.round(25 + 75 * Math.sqrt(activityCount / mostActiveDayCount))
                 : 0;
 
               return (
@@ -189,12 +186,12 @@ export function DaySelector({
                   }
                   aria-pressed={isSelected}
                   className={cn(
-                    "relative flex aspect-square items-center justify-center rounded-xl text-sm font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)] focus-visible:ring-offset-2",
-                    isCurrentMonth ? "text-[var(--ink)]" : "text-slate-300",
-                    hasActivity
-                      ? "hover:scale-105 hover:shadow-sm"
-                      : "cursor-default",
-                    isSelected && "ring-2 ring-[var(--ink)] ring-offset-2",
+                    "tabular relative flex aspect-square items-center justify-center rounded-lg text-sm font-bold transition-transform duration-150",
+                    isCurrentMonth ? "text-[var(--ink)]" : "text-[var(--ink-soft)] opacity-40",
+                    hasActivity ? "hover:scale-110" : "cursor-default font-medium",
+                    // Strong highlights get dark numerals so they stay readable in every theme.
+                    intensity >= 55 && "text-[#15161c]",
+                    isSelected && "outline-3 outline-offset-2 outline-[var(--ink)]",
                   )}
                   disabled={!hasActivity}
                   key={dayKey}
@@ -208,7 +205,9 @@ export function DaySelector({
                   }}
                   style={
                     hasActivity
-                      ? { backgroundColor: `rgba(22, 163, 74, ${intensity})` }
+                      ? {
+                          backgroundColor: `color-mix(in srgb, var(--accent) ${intensity}%, transparent)`,
+                        }
                       : undefined
                   }
                   title={
@@ -223,8 +222,8 @@ export function DaySelector({
               );
             })}
           </div>
-          <p className="mt-4 text-center text-xs text-slate-500">
-            Darker green means more moments that day.
+          <p className="mt-4 text-center text-sm font-medium text-[var(--ink-soft)]">
+            Stronger colour means more moments that day.
           </p>
         </PopoverContent>
       </Popover>

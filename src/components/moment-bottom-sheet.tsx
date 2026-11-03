@@ -36,6 +36,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useCrumbsAuth } from "@/hooks/use-crumbs-auth";
+import { useScrollFade } from "@/hooks/use-scroll-fade";
 import { isMomentVideo } from "@/lib/media";
 import { getTripRepository } from "@/lib/repositories";
 import { formatLastUpdated, formatMomentTimes } from "@/lib/time";
@@ -130,74 +131,38 @@ function loadMomentComments(momentId: string) {
   return request;
 }
 
-function MomentComments({
-  authorKind,
-  moment,
-  trip,
-  variant = "sheet",
-  onLoaded,
-}: {
-  authorKind: MomentCommentAuthorKind;
-  moment: Moment;
-  trip: Trip;
-  variant?: "sheet" | "viewer";
-  onLoaded?: () => void;
-}) {
+function isMissingCommentsTableError(error: unknown) {
+  return (
+    error instanceof Error &&
+    error.message.includes("moment_comments") &&
+    error.message.includes("schema cache")
+  );
+}
+
+function useMomentComments(momentId: string, onLoaded?: () => void) {
   const [commentsResult, setCommentsResult] = useState<{
     momentId: string;
     comments: MomentComment[] | null;
   }>(() => ({
-    momentId: moment.id,
-    comments: momentCommentsCache.get(moment.id) ?? null,
+    momentId,
+    comments: momentCommentsCache.get(momentId) ?? null,
   }));
-  const [draft, setDraft] = useState("");
-  const [saving, setSaving] = useState(false);
-  const { user } = useCrumbsAuth();
-  const trimmedDraft = draft.trim();
   const comments =
-    commentsResult.momentId === moment.id ? commentsResult.comments : null;
-  const visibleComments = comments ?? [];
-  const loading = comments === null;
-  const isViewer = variant === "viewer";
-  const isTripOwner = user?.id === trip.ownerId;
-  const needsDisplayName = Boolean(
-    user && !isTripOwner && !user.displayName?.trim(),
-  );
-  const postingLabel = isTripOwner || authorKind === "traveler"
-    ? "Posting as OP"
-    : user?.displayName
-      ? `Posting as @${user.displayName}`
-      : user
-        ? "Choose a display name to comment"
-        : "Posting anonymously";
-
-  function isMissingCommentsTableError(error: unknown) {
-    return (
-      error instanceof Error &&
-      error.message.includes("moment_comments") &&
-      error.message.includes("schema cache")
-    );
-  }
+    commentsResult.momentId === momentId ? commentsResult.comments : null;
 
   useEffect(() => {
     let mounted = true;
 
-    void loadMomentComments(moment.id)
+    void loadMomentComments(momentId)
       .then((nextComments) => {
         if (mounted) {
-          setCommentsResult({
-            momentId: moment.id,
-            comments: nextComments,
-          });
+          setCommentsResult({ momentId, comments: nextComments });
           onLoaded?.();
         }
       })
       .catch((error) => {
         if (mounted) {
-          setCommentsResult({
-            momentId: moment.id,
-            comments: [],
-          });
+          setCommentsResult({ momentId, comments: [] });
           onLoaded?.();
 
           if (!isMissingCommentsTableError(error)) {
@@ -213,13 +178,86 @@ function MomentComments({
     return () => {
       mounted = false;
     };
-  }, [moment.id, onLoaded]);
+  }, [momentId, onLoaded]);
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  const addComment = useCallback(
+    (comment: MomentComment) => {
+      setCommentsResult((current) => {
+        const nextComments =
+          current.momentId === momentId && current.comments
+            ? [...current.comments, comment]
+            : [comment];
 
-    if (!trimmedDraft) {
-      toast.error("Write a comment before posting.");
+        momentCommentsCache.set(momentId, nextComments);
+        return { momentId, comments: nextComments };
+      });
+    },
+    [momentId],
+  );
+
+  return { comments, addComment };
+}
+
+function MomentCommentThread({
+  authorKind,
+  moment,
+  trip,
+  comments,
+  onPosted,
+  onBack,
+}: {
+  authorKind: MomentCommentAuthorKind;
+  moment: Moment;
+  trip: Trip;
+  comments: MomentComment[] | null;
+  onPosted: (comment: MomentComment) => void;
+  onBack?: () => void;
+}) {
+  const [draft, setDraft] = useState("");
+  const [saving, setSaving] = useState(false);
+  const { user } = useCrumbsAuth();
+  const listRef = useRef<HTMLOListElement | null>(null);
+  const listFadeRef = useScrollFade<HTMLOListElement>();
+  const setListRef = useCallback(
+    (node: HTMLOListElement | null) => {
+      listRef.current = node;
+      const cleanup = listFadeRef(node);
+
+      return () => {
+        listRef.current = null;
+        cleanup?.();
+      };
+    },
+    [listFadeRef],
+  );
+  const trimmedDraft = draft.trim();
+  const visibleComments = comments ?? [];
+  const loading = comments === null;
+  const isTripOwner = user?.id === trip.ownerId;
+  const needsDisplayName = Boolean(
+    user && !isTripOwner && !user.displayName?.trim(),
+  );
+  const postingLabel = isTripOwner || authorKind === "traveler"
+    ? "Posting as OP"
+    : user?.displayName
+      ? `Posting as @${user.displayName}`
+      : user
+        ? "Choose a display name to comment"
+        : "Posting anonymously";
+
+  // Newest comments sit at the bottom, like a conversation.
+  useEffect(() => {
+    const list = listRef.current;
+
+    if (list) {
+      list.scrollTop = list.scrollHeight;
+    }
+  }, [visibleComments.length]);
+
+  async function handleSubmit(event?: FormEvent<HTMLFormElement>) {
+    event?.preventDefault();
+
+    if (!trimmedDraft || saving) {
       return;
     }
 
@@ -233,21 +271,8 @@ function MomentComments({
         body: trimmedDraft,
       });
 
-      setCommentsResult((current) => {
-        const nextComments =
-          current.momentId === moment.id && current.comments
-            ? [...current.comments, comment]
-            : [comment];
-
-        momentCommentsCache.set(moment.id, nextComments);
-
-        return {
-          momentId: moment.id,
-          comments: nextComments,
-        };
-      });
+      onPosted(comment);
       setDraft("");
-      toast.success("Comment posted.");
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : "Crumbs could not post this comment.",
@@ -258,33 +283,45 @@ function MomentComments({
   }
 
   return (
-    <section className={cn("space-y-3", isViewer ? "mt-5 border-t border-black/10 pt-5" : "mt-4 border-t border-black/5 pt-4")}>
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <MessageCircle className="h-4 w-4 text-slate-500" />
-          <p className="text-sm font-medium text-[var(--ink)]">Comments</p>
-        </div>
+    <section aria-label="Comments" className="flex min-h-0 flex-1 flex-col">
+      <div className="flex shrink-0 items-center gap-2 pb-3">
+        {onBack ? (
+          <Button
+            aria-label="Back to the moment"
+            className="-ml-2 h-9 w-9"
+            onClick={onBack}
+            size="icon"
+            type="button"
+            variant="ghost"
+          >
+            <ChevronLeft aria-hidden className="h-5 w-5" />
+          </Button>
+        ) : (
+          <MessageCircle aria-hidden className="h-4 w-4 text-[var(--ink)]" />
+        )}
+        <h3 className="font-bold text-[var(--ink)]">Comments</h3>
         {visibleComments.length > 0 ? (
-          <Badge variant="subtle">{visibleComments.length}</Badge>
+          <span className="tabular text-sm font-bold text-[var(--ink-soft)]">
+            {visibleComments.length}
+          </span>
         ) : null}
       </div>
 
-      <div className="space-y-3">
+      <ol
+        className="no-scrollbar scroll-fade min-h-0 flex-1 space-y-4 overflow-y-auto"
+        ref={setListRef}
+      >
         {loading ? (
-          <div className={cn("flex items-center gap-2 rounded-[22px] px-4 py-3 text-sm", isViewer ? "bg-[var(--surface)] text-slate-600" : "bg-[var(--paper)] text-slate-600")}>
-            <LoaderCircle className="h-4 w-4 animate-spin" />
-            Loading comments...
-          </div>
+          <li className="flex items-center gap-2 text-sm font-semibold text-[var(--ink-soft)]">
+            <LoaderCircle aria-hidden className="h-4 w-4 animate-spin" />
+            Loading comments…
+          </li>
         ) : visibleComments.length > 0 ? (
           visibleComments.map((comment) => (
-            <div
-              className={cn("rounded-[22px] px-4 py-3", isViewer ? "bg-[var(--surface)]" : "bg-[var(--paper)]")}
-              key={comment.id}
-            >
+            <li key={comment.id}>
               <div className="flex flex-wrap items-center gap-2">
                 <Badge
-                  className="font-mono"
-                  variant={comment.authorKind === "traveler" ? "accent" : "subtle"}
+                  variant={comment.authorKind === "traveler" ? "accent" : "default"}
                 >
                   {comment.authorEmail ? (
                     <span
@@ -298,59 +335,79 @@ function MomentComments({
                     comment.authorLabel
                   )}
                 </Badge>
-                <span className="text-xs text-slate-500">
+                <span className="text-sm font-medium text-[var(--ink-soft)]">
                   {formatLastUpdated(comment.createdAt)}
                 </span>
               </div>
-              <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-[var(--ink)]">
+              <p className="mt-1.5 whitespace-pre-wrap text-[15px] font-medium leading-6 text-[var(--ink)]">
                 {comment.body}
               </p>
-            </div>
+            </li>
           ))
-        ) : isViewer ? null : (
-          <p className={cn("rounded-[22px] px-4 py-3 text-sm", isViewer ? "bg-[var(--surface)] text-slate-600" : "bg-[var(--paper)] text-slate-600")}>
+        ) : (
+          <li className="text-[15px] font-medium text-[var(--ink-soft)]">
             No comments yet.
-          </p>
+          </li>
         )}
-      </div>
+      </ol>
 
-      <form className="space-y-2" onSubmit={(event) => void handleSubmit(event)}>
-        <Textarea
-          className={cn(
-            "min-h-20 rounded-[22px]",
-            isViewer && "border-black/10 bg-[var(--surface)] text-[var(--ink)] placeholder:text-slate-500 focus:border-black/20",
-          )}
-          maxLength={1000}
-          onChange={(event) => setDraft(event.target.value)}
-          placeholder={visibleComments.length === 0 ? "Add the first comment" : "Write a comment"}
-          rows={2}
-          value={draft}
-        />
-        <div className="flex items-center justify-between gap-3">
-          <p className="text-xs text-slate-500">
-            {needsDisplayName ? (
-              <Link className="underline underline-offset-4" href="/settings">
-                Set your display name to comment
-              </Link>
-            ) : (
-              postingLabel
-            )}
-          </p>
+      <form
+        className="mt-3 shrink-0 border-t-2 border-[var(--line)] pt-3"
+        onSubmit={(event) => void handleSubmit(event)}
+      >
+        <div className="flex items-end gap-2">
+          <Textarea
+            aria-label="Comment"
+            className="no-scrollbar max-h-28 min-h-11 flex-1 resize-none py-2.5 [field-sizing:content]"
+            maxLength={1000}
+            onChange={(event) => setDraft(event.target.value)}
+            onKeyDown={(event) => {
+              // Enter posts; Shift+Enter starts a new line.
+              if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) {
+                event.preventDefault();
+                void handleSubmit();
+              }
+            }}
+            placeholder={visibleComments.length === 0 ? "Add the first comment" : "Write a comment"}
+            rows={1}
+            value={draft}
+          />
           <Button
+            aria-label="Post comment"
             disabled={saving || !trimmedDraft || needsDisplayName}
-            size="sm"
+            size="icon"
             type="submit"
           >
             {saving ? (
-              <LoaderCircle className="h-4 w-4 animate-spin" />
+              <LoaderCircle aria-hidden className="h-4 w-4 animate-spin" />
             ) : (
-              <Send className="h-4 w-4" />
+              <Send aria-hidden className="h-4 w-4" />
             )}
-            Post
           </Button>
         </div>
+        <p className="mt-1.5 text-sm font-medium text-[var(--ink-soft)]">
+          {needsDisplayName ? (
+            <Link className="underline underline-offset-4" href="/settings">
+              Set your display name to comment
+            </Link>
+          ) : (
+            postingLabel
+          )}
+        </p>
       </form>
     </section>
+  );
+}
+
+// Long notes stay readable without a scroll bar: they scroll quietly and
+// fade at the edge that has more text.
+function FadingText({ className, children }: { className?: string; children: ReactNode }) {
+  const fadeRef = useScrollFade<HTMLDivElement>();
+
+  return (
+    <div className={cn("no-scrollbar scroll-fade overflow-y-auto", className)} ref={fadeRef}>
+      {children}
+    </div>
   );
 }
 
@@ -388,6 +445,7 @@ function MomentSheetSlide({
   const isVideoMoment = isMomentVideo(moment);
   const momentTitle = getMomentTitle(moment);
   const hasMediaToLoad = moment.type === "photo" && Boolean(moment.imageUrl);
+  const [view, setView] = useState<"moment" | "comments">("moment");
   const [mediaReady, setMediaReady] = useState(
     !hasMediaToLoad ||
       (!isVideoMoment && Boolean(moment.imageUrl && loadedPhotoUrls.has(moment.imageUrl))),
@@ -397,13 +455,16 @@ function MomentSheetSlide({
   const markCommentsReady = useCallback(() => {
     setCommentsReady(true);
   }, []);
+  const { comments, addComment } = useMomentComments(moment.id, markCommentsReady);
+  const latestComment = comments?.at(-1) ?? null;
+  const commentCount = comments?.length ?? 0;
   const tripTimeLabel =
     trip.coverLocationName?.split(",")[0]?.trim() ||
     trip.timezone.split("/").at(-1)?.replace(/_/g, " ") ||
-    "Trip";
+    "trip time";
   const openViewerButton = (
-    <span className="absolute right-3 top-3 inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-[var(--ink)] shadow-[0_12px_30px_rgba(15,23,42,0.16)]">
-      <Maximize2 className="h-4 w-4" />
+    <span className="absolute right-3 top-3 inline-flex h-9 w-9 items-center justify-center rounded-full border-2 border-[#15161c] bg-white text-[#15161c]">
+      <Maximize2 aria-hidden className="h-4 w-4" />
     </span>
   );
 
@@ -417,164 +478,181 @@ function MomentSheetSlide({
   }, [commentsReady, mediaReady, moment.id, onMomentReady]);
 
   return (
-    <article className="w-full lg:flex lg:min-h-full lg:flex-col">
-      <div className="px-4 py-4 sm:px-5 sm:py-5 lg:mx-auto lg:flex lg:min-h-full lg:w-full lg:max-w-[34rem] lg:flex-1 lg:flex-col lg:justify-center lg:px-8 lg:py-6">
-        <div className="flex flex-col gap-6 lg:gap-8">
-          {moment.type === "photo" && moment.imageUrl ? (
-            <div className="order-2 space-y-3">
-              <div className="overflow-hidden rounded-[26px] bg-[var(--paper)]">
-                {isVideoMoment ? (
-                  <div className="relative">
-                    <video
-                      className="h-64 w-full bg-black object-cover sm:h-80"
-                      controls
-                      onError={() => setMediaReady(true)}
-                      onLoadedData={() => setMediaReady(true)}
-                      playsInline
-                      preload="metadata"
-                      src={moment.imageUrl}
-                    />
-                    <button
-                      aria-label="Open full-screen video"
-                      className="absolute right-3 top-3 inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-[var(--ink)] shadow-[0_12px_30px_rgba(15,23,42,0.16)]"
-                      onClick={() => onOpenPhotoViewer(moment)}
-                      title="Open full-screen video"
-                      type="button"
-                    >
-                      <Maximize2 className="h-4 w-4" />
-                      <span className="sr-only">Open full-screen video</span>
-                    </button>
-                  </div>
-                ) : (
-                  <button
-                    aria-label="Open full-screen photo"
-                    className="group relative block w-full overflow-hidden text-left"
-                    data-moment-media
-                    onClick={() => onOpenPhotoViewer(moment)}
-                    title="Open full-screen photo"
-                    type="button"
-                  >
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      alt={moment.caption ?? moment.placeName ?? "Trip photo"}
-                      className="h-64 w-full object-cover transition duration-300 group-hover:scale-[1.01] sm:h-80"
-                      onError={() => setMediaReady(true)}
-                      onLoad={() => {
-                        if (moment.imageUrl) {
-                          markPhotoReady(moment.imageUrl);
-                        }
-                        setMediaReady(true);
-                      }}
-                      src={moment.imageUrl}
-                    />
-                    {openViewerButton}
-                  </button>
-                )}
-              </div>
-              {moment.thoughtText ? (
-                <div className="rounded-[24px] bg-[var(--paper)] p-4 text-sm leading-7 text-[var(--ink)]">
-                  {moment.thoughtText}
-                </div>
-              ) : null}
+    <article className="flex min-h-0 w-full flex-1 flex-col">
+      <div className="no-scrollbar flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-4 py-4 sm:px-5 sm:py-5 lg:mx-auto lg:w-full lg:max-w-[34rem] lg:px-8 lg:py-6">
+        <header className="shrink-0 space-y-2 pr-12">
+          <h2
+            className={cn(
+              "font-display leading-tight text-[var(--ink)]",
+              momentTitle.length > 70 ? "text-2xl sm:text-3xl" : "text-3xl sm:text-4xl",
+            )}
+          >
+            {momentTitle}
+          </h2>
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0 text-[15px] font-medium text-[var(--ink-soft)]">
+              <p className="flex flex-wrap items-center gap-x-1.5 font-bold">
+                {isVideoMoment ? <Film aria-hidden className="h-4 w-4" /> : null}
+                {moment.type === "photo" ? (isVideoMoment ? "Video" : "Photo") : "Note"}
+                {moment.placeName ? ` · ${moment.placeName}` : null}
+              </p>
+              <p className="tabular">
+                {times.tripLabel} in {tripTimeLabel}
+                {times.viewerLabel ? ` · ${times.viewerLabel} your time` : null}
+              </p>
             </div>
-          ) : (
-            <button
-              aria-label="Open full-screen moment"
-              className="order-2 relative block w-full rounded-[26px] bg-[var(--paper)] p-5 text-left text-base leading-7 text-[var(--ink)]"
-              data-moment-media
-              onClick={() => onOpenPhotoViewer(moment)}
-              title="Open full-screen moment"
-              type="button"
-            >
-              {moment.thoughtText ?? moment.caption ?? "A quiet note from the trip."}
-              {openViewerButton}
-            </button>
-          )}
-
-          <div className="contents">
-            <div className="order-3 flex items-start justify-between gap-3">
-              <div className="flex flex-wrap items-center gap-2">
-                <Badge variant="accent">
-                  {moment.type === "photo"
-                    ? isVideoMoment
-                      ? "Video"
-                      : "Photo"
-                    : "Thought"}
-                </Badge>
-                {isVideoMoment ? (
-                  <Badge variant="subtle">
-                    <Film className="mr-1 h-3 w-3" />
-                    Captured media
-                  </Badge>
+            {canManage && onHide && onDelete ? (
+              <div className="flex shrink-0 items-center gap-1">
+                {onEdit ? (
+                  <Button
+                    className="h-9 px-3"
+                    onClick={() => onEdit(moment)}
+                    size="sm"
+                    type="button"
+                    variant="outline"
+                  >
+                    <Pencil aria-hidden className="h-3.5 w-3.5" />
+                    Edit
+                  </Button>
                 ) : null}
-                {moment.placeName ? (
-                  <Badge variant="subtle">{moment.placeName}</Badge>
-                ) : null}
-              </div>
-              {canManage && onHide && onDelete ? (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button className="h-10 w-10" size="icon" variant="ghost">
-                      <MoreHorizontal className="h-4 w-4" />
-                      <span className="sr-only">Moment options</span>
+                    <Button aria-label="Moment options" className="h-9 w-9" size="icon" variant="ghost">
+                      <MoreHorizontal aria-hidden className="h-5 w-5" />
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    {onEdit ? (
-                      <DropdownMenuItem onClick={() => onEdit(moment)}>
-                        Edit details
-                      </DropdownMenuItem>
-                    ) : null}
                     <DropdownMenuItem onClick={() => onHide(moment)}>
-                      <EyeOff className="mr-2 h-4 w-4" />
+                      <EyeOff aria-hidden className="h-4 w-4" />
                       Hide from viewers
                     </DropdownMenuItem>
                     <DropdownMenuItem
                       data-destructive
-                      className="text-[#7f1d1d]"
+                      className="text-[var(--danger)]"
                       onClick={() => onDelete(moment)}
                     >
-                      <Trash2 className="mr-2 h-4 w-4" />
+                      <Trash2 aria-hidden className="h-4 w-4" />
                       Delete moment
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
-              ) : null}
-            </div>
-
-            <div className="order-1 space-y-2">
-              <div className="flex flex-wrap items-center gap-3">
-                <p className="font-display text-3xl leading-tight tracking-tight text-[var(--ink)] sm:text-4xl">
-                  {momentTitle}
-                </p>
-                {canManage && onEdit ? (
-                  <Button
-                    className="h-8 rounded-full px-2.5 text-xs"
-                    onClick={() => onEdit(moment)}
-                    size="sm"
-                    type="button"
-                    variant="secondary"
-                  >
-                    <Pencil className="h-3.5 w-3.5" />
-                    Edit title
-                  </Button>
-                ) : null}
               </div>
-              <div className="space-y-1 text-sm text-slate-600">
-                <p>{tripTimeLabel} time: {times.tripLabel}</p>
-                {times.viewerLabel ? <p>Your time: {times.viewerLabel}</p> : null}
-              </div>
-            </div>
+            ) : null}
           </div>
-        </div>
-        <div className="lg:pt-10">
-          <MomentComments
+        </header>
+
+        {view === "comments" ? (
+          <MomentCommentThread
             authorKind={canManage ? "traveler" : "viewer"}
+            comments={comments}
             moment={moment}
-            onLoaded={markCommentsReady}
+            onBack={() => setView("moment")}
+            onPosted={addComment}
             trip={trip}
           />
-        </div>
+        ) : (
+          <>
+            {moment.type === "photo" && moment.imageUrl ? (
+              isVideoMoment ? (
+                <div className="relative flex min-h-36 flex-1 items-center justify-center">
+                  <video
+                    className="max-h-full max-w-full rounded-xl bg-black"
+                    controls
+                    onError={() => setMediaReady(true)}
+                    onLoadedData={() => setMediaReady(true)}
+                    playsInline
+                    preload="metadata"
+                    src={moment.imageUrl}
+                  />
+                  <button
+                    aria-label="Open full-screen video"
+                    className="absolute right-3 top-3 inline-flex h-9 w-9 items-center justify-center rounded-full border-2 border-[#15161c] bg-white text-[#15161c]"
+                    onClick={() => onOpenPhotoViewer(moment)}
+                    title="Open full-screen video"
+                    type="button"
+                  >
+                    <Maximize2 aria-hidden className="h-4 w-4" />
+                  </button>
+                </div>
+              ) : (
+                <button
+                  aria-label="Open full-screen photo"
+                  className="group relative flex min-h-36 flex-1 items-center justify-center rounded-xl"
+                  data-moment-media
+                  onClick={() => onOpenPhotoViewer(moment)}
+                  title="Open full-screen photo"
+                  type="button"
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    alt={moment.caption ?? moment.placeName ?? "Trip photo"}
+                    className="max-h-full max-w-full rounded-xl bg-[var(--paper-strong)] object-contain transition-transform duration-300 group-hover:scale-[1.01]"
+                    onError={() => setMediaReady(true)}
+                    onLoad={() => {
+                      if (moment.imageUrl) {
+                        markPhotoReady(moment.imageUrl);
+                      }
+                      setMediaReady(true);
+                    }}
+                    src={moment.imageUrl}
+                  />
+                  {openViewerButton}
+                </button>
+              )
+            ) : (
+              <div className="relative flex min-h-28 flex-1 flex-col rounded-xl bg-[var(--paper)]">
+                <FadingText className="min-h-0 flex-1 p-5 pr-14 text-lg font-medium leading-8 text-[var(--ink)]">
+                  {moment.thoughtText ?? moment.caption ?? "A quiet note from the trip."}
+                </FadingText>
+                <button
+                  aria-label="Open full-screen note"
+                  className="absolute right-3 top-3 inline-flex h-9 w-9 items-center justify-center rounded-full border-2 border-[#15161c] bg-white text-[#15161c]"
+                  data-moment-media
+                  onClick={() => onOpenPhotoViewer(moment)}
+                  title="Open full-screen note"
+                  type="button"
+                >
+                  <Maximize2 aria-hidden className="h-4 w-4" />
+                </button>
+              </div>
+            )}
+
+            {moment.type === "photo" && moment.thoughtText ? (
+              <FadingText className="max-h-32 shrink-0 text-[17px] font-medium leading-7 text-[var(--ink)]">
+                {moment.thoughtText}
+              </FadingText>
+            ) : null}
+
+            <button
+              aria-label={
+                commentCount > 0
+                  ? `Open ${commentCount} ${commentCount === 1 ? "comment" : "comments"}`
+                  : "Open comments"
+              }
+              className="flex w-full shrink-0 items-center gap-3 rounded-xl border-2 border-[var(--line)] px-4 py-3 text-left transition-colors hover:border-[var(--ink)]"
+              data-swipe-exempt
+              onClick={() => setView("comments")}
+              type="button"
+            >
+              <MessageCircle aria-hidden className="h-5 w-5 shrink-0 text-[var(--ink)]" />
+              <span className="min-w-0 flex-1">
+                <span className="tabular block font-bold text-[var(--ink)]">
+                  {commentCount > 0
+                    ? `${commentCount} ${commentCount === 1 ? "comment" : "comments"}`
+                    : "Comments"}
+                </span>
+                <span className="block truncate text-sm font-medium text-[var(--ink-soft)]">
+                  {latestComment
+                    ? `${latestComment.authorLabel}: ${latestComment.body}`
+                    : comments === null
+                      ? "Loading…"
+                      : "No comments yet"}
+                </span>
+              </span>
+              <ChevronRight aria-hidden className="h-5 w-5 shrink-0 text-[var(--ink)]" />
+            </button>
+          </>
+        )}
       </div>
     </article>
   );
@@ -633,7 +711,7 @@ function FullscreenMomentMedia({
         isVideoMoment ? (
           <video
             className={cn(
-              "max-h-[calc(100dvh-22rem)] max-w-full bg-black object-contain transition-opacity duration-200 lg:max-h-[calc(100dvh-3rem)]",
+              "max-h-[calc(100dvh-25rem)] max-w-full bg-black object-contain transition-opacity duration-200 lg:max-h-[calc(100dvh-3rem)]",
               !mediaReady && "opacity-0",
             )}
             controls
@@ -648,7 +726,7 @@ function FullscreenMomentMedia({
           <img
             alt={moment.caption ?? moment.placeName ?? "Trip photo"}
             className={cn(
-              "max-h-[calc(100dvh-22rem)] max-w-full object-contain transition-opacity duration-200 lg:max-h-[calc(100dvh-3rem)]",
+              "max-h-[calc(100dvh-25rem)] max-w-full object-contain transition-opacity duration-200 lg:max-h-[calc(100dvh-3rem)]",
               !mediaReady && "opacity-0",
             )}
             onError={() => setMediaReady(true)}
@@ -662,7 +740,7 @@ function FullscreenMomentMedia({
           />
         )
       ) : (
-        <div className="max-w-2xl rounded-[28px] bg-[var(--paper)] p-6 text-lg leading-8 text-[var(--ink)] shadow-[0_18px_60px_rgba(0,0,0,0.28)] sm:p-8 sm:text-xl">
+        <div className="max-w-2xl rounded-2xl border-2 border-[var(--ink)] bg-[var(--surface)] p-6 text-lg font-medium leading-8 text-[var(--ink)] sm:p-8 sm:text-xl">
           {moment.thoughtText ?? moment.caption ?? "A quiet note from the trip."}
         </div>
       )}
@@ -672,13 +750,53 @@ function FullscreenMomentMedia({
           className="absolute inset-0 flex items-center justify-center"
           role="status"
         >
-          <div className="flex items-center gap-2 rounded-full bg-[var(--paper)] px-4 py-2 text-sm font-medium text-[var(--ink)] shadow-[0_12px_30px_rgba(0,0,0,0.22)]">
-            <LoaderCircle className="h-4 w-4 animate-spin" />
-            Loading photo...
+          <div className="flex items-center gap-2 rounded-full border-2 border-[var(--ink)] bg-[var(--surface)] px-4 py-2 text-sm font-bold text-[var(--ink)]">
+            <LoaderCircle aria-hidden className="h-4 w-4 animate-spin" />
+            Loading photo…
           </div>
         </div>
       ) : null}
     </div>
+  );
+}
+
+function FullscreenNotes({
+  moment,
+  trip,
+  canManage,
+}: {
+  moment: Moment;
+  trip: Trip;
+  canManage: boolean;
+}) {
+  const { comments, addComment } = useMomentComments(moment.id);
+
+  return (
+    <aside className="flex h-[min(22rem,40dvh)] w-full shrink-0 flex-col rounded-2xl border-2 border-[var(--ink)] bg-[var(--surface)] p-5 lg:h-[calc(100dvh-3rem)] lg:w-[360px]">
+      <FadingText className="max-h-[45%] shrink-0 space-y-1 pb-3">
+        <p className="whitespace-pre-wrap font-display text-2xl leading-tight text-[var(--ink)]">
+          {getMomentTitle(moment)}
+        </p>
+        <p className="text-sm font-medium text-[var(--ink-soft)]">
+          Posted {formatPostedAt(moment.postedAt)}
+        </p>
+        <p className="text-sm font-medium text-[var(--ink-soft)]">
+          {getMomentLocationLabel(moment)}
+        </p>
+        {moment.type === "photo" && moment.thoughtText ? (
+          <p className="pt-2 text-[15px] font-medium leading-6 text-[var(--ink)]">
+            {moment.thoughtText}
+          </p>
+        ) : null}
+      </FadingText>
+      <MomentCommentThread
+        authorKind={canManage ? "traveler" : "viewer"}
+        comments={comments}
+        moment={moment}
+        onPosted={addComment}
+        trip={trip}
+      />
+    </aside>
   );
 }
 
@@ -707,7 +825,6 @@ function MomentFullscreenViewer({
   const canSelectPrevious = hasMultipleMoments && activeIndex > 0;
   const canSelectNext = hasMultipleMoments && activeIndex < moments.length - 1;
   const isVideoMoment = moment ? isMomentVideo(moment) : false;
-  const momentTitle = moment ? getMomentTitle(moment) : "";
 
   const selectMomentAtIndex = useCallback(
     (nextIndex: number) => {
@@ -801,7 +918,7 @@ function MomentFullscreenViewer({
     <div
       aria-label="Full-screen moment"
       aria-modal="true"
-      className="pointer-events-auto fixed inset-0 z-50 flex items-center justify-center bg-[#16070d]/95 p-3 text-[var(--ink)] sm:p-6"
+      className="pointer-events-auto fixed inset-0 z-50 flex items-center justify-center bg-[rgb(10_11_15/0.94)] p-3 text-[var(--ink)] sm:p-6"
       data-trip-theme={trip.theme}
       onTouchEnd={handleTouchEnd}
       onTouchStart={handleTouchStart}
@@ -815,7 +932,7 @@ function MomentFullscreenViewer({
         type="button"
       />
       <Button
-        className="absolute right-3 top-3 z-20 h-11 w-11 bg-[var(--paper)] text-[var(--ink)] shadow-[0_10px_28px_rgba(0,0,0,0.24)] hover:bg-[var(--paper-strong)] sm:right-5 sm:top-5"
+        className="absolute right-3 top-3 z-20 h-11 w-11 bg-[var(--surface)] text-[var(--ink)] hover:bg-[var(--paper-strong)] sm:right-5 sm:top-5"
         onClick={(event) => {
           event.stopPropagation();
           onClose();
@@ -831,7 +948,7 @@ function MomentFullscreenViewer({
       {hasMultipleMoments ? (
         <>
           <Button
-            className="absolute left-3 top-1/2 z-20 h-11 w-11 -translate-y-1/2 bg-[var(--paper)] text-[var(--ink)] shadow-[0_10px_28px_rgba(0,0,0,0.24)] hover:bg-[var(--paper-strong)] disabled:bg-[var(--paper-strong)] sm:left-5 sm:h-12 sm:w-12"
+            className="absolute left-3 top-1/2 z-20 h-11 w-11 -translate-y-1/2 bg-[var(--surface)] text-[var(--ink)] hover:bg-[var(--paper-strong)] sm:left-5 sm:h-12 sm:w-12"
             disabled={!canSelectPrevious}
             onClick={() => selectMomentAtIndex(activeIndex - 1)}
             size="icon"
@@ -843,7 +960,7 @@ function MomentFullscreenViewer({
             <span className="sr-only">Previous moment</span>
           </Button>
           <Button
-            className="absolute right-3 top-1/2 z-20 h-11 w-11 -translate-y-1/2 bg-[var(--paper)] text-[var(--ink)] shadow-[0_10px_28px_rgba(0,0,0,0.24)] hover:bg-[var(--paper-strong)] disabled:bg-[var(--paper-strong)] sm:right-5 sm:h-12 sm:w-12"
+            className="absolute right-3 top-1/2 z-20 h-11 w-11 -translate-y-1/2 bg-[var(--surface)] text-[var(--ink)] hover:bg-[var(--paper-strong)] sm:right-5 sm:h-12 sm:w-12"
             disabled={!canSelectNext}
             onClick={() => selectMomentAtIndex(activeIndex + 1)}
             size="icon"
@@ -854,7 +971,7 @@ function MomentFullscreenViewer({
             <ChevronRight className="h-6 w-6" />
             <span className="sr-only">Next moment</span>
           </Button>
-          <div className="absolute left-3 top-3 z-20 rounded-full bg-[var(--paper)] px-3 py-1 text-sm font-medium text-[var(--ink)] shadow-[0_10px_28px_rgba(0,0,0,0.24)] sm:left-5 sm:top-5">
+          <div className="tabular absolute left-3 top-3 z-20 rounded-full bg-[var(--surface)] px-3 py-1 text-sm font-bold text-[var(--ink)] sm:left-5 sm:top-5">
             {activeIndex + 1} / {moments.length}
           </div>
         </>
@@ -865,19 +982,12 @@ function MomentFullscreenViewer({
           key={moment.id}
           moment={moment}
         />
-        <aside className="crumbs-photo-notes max-h-[32dvh] w-full shrink-0 overflow-y-auto rounded-[26px] bg-[var(--paper)] p-4 shadow-[0_18px_60px_rgba(0,0,0,0.28)] lg:max-h-[calc(100dvh-3rem)] lg:w-[360px]">
-          <div className="space-y-1">
-            <p className="whitespace-pre-wrap text-base font-medium leading-7 text-[var(--ink)] sm:text-lg">{momentTitle}</p>
-            <p className="text-xs text-slate-600">Posted {formatPostedAt(moment.postedAt)}</p>
-            <p className="text-xs text-slate-600">{getMomentLocationLabel(moment)}</p>
-          </div>
-          <MomentComments
-            authorKind={canManage ? "traveler" : "viewer"}
-            moment={moment}
-            trip={trip}
-            variant="viewer"
-          />
-        </aside>
+        <FullscreenNotes
+          canManage={canManage}
+          key={moment.id}
+          moment={moment}
+          trip={trip}
+        />
       </div>
     </div>
   );
@@ -1144,29 +1254,29 @@ export function MomentBottomSheet({
       className="flex items-center justify-center gap-4"
     >
       <Button
-        className="h-12 w-12 rounded-full border border-black/5 bg-white shadow-[0_10px_24px_rgba(15,23,42,0.1)] hover:bg-[var(--paper)]"
+        aria-label="Previous moment"
+        className="h-12 w-12"
         disabled={selectedNavigationIndex === 0}
         onClick={() => selectMomentAtIndex(selectedNavigationIndex - 1)}
         size="icon"
         type="button"
-        variant="secondary"
+        variant="outline"
       >
-        <ChevronLeft className="h-5 w-5" />
-        <span className="sr-only">Previous moment</span>
+        <ChevronLeft aria-hidden className="h-5 w-5" />
       </Button>
-      <span className="min-w-16 text-center text-sm font-medium text-[var(--ink)]">
+      <span className="tabular min-w-16 text-center font-bold text-[var(--ink)]">
         {selectedNavigationIndex + 1} / {activeNavigationMoments.length}
       </span>
       <Button
-        className="h-12 w-12 rounded-full border border-black/5 bg-white shadow-[0_10px_24px_rgba(15,23,42,0.1)] hover:bg-[var(--paper)]"
+        aria-label="Next moment"
+        className="h-12 w-12"
         disabled={selectedNavigationIndex === activeNavigationMoments.length - 1}
         onClick={() => selectMomentAtIndex(selectedNavigationIndex + 1)}
         size="icon"
         type="button"
-        variant="secondary"
+        variant="outline"
       >
-        <ChevronRight className="h-5 w-5" />
-        <span className="sr-only">Next moment</span>
+        <ChevronRight aria-hidden className="h-5 w-5" />
       </Button>
     </div>
   ) : null;
@@ -1187,33 +1297,37 @@ export function MomentBottomSheet({
     <>
       <div
         className={cn(
-          "pointer-events-none absolute inset-x-0 bottom-0 z-30 p-3 transition duration-300 sm:p-4",
+          "pointer-events-none absolute inset-x-0 bottom-0 z-30 p-3 transition-[translate,opacity] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] sm:p-4",
           sidebarHeader && "lg:inset-y-0 lg:left-0 lg:right-auto lg:w-[clamp(24rem,34vw,38rem)] lg:p-0",
-          open || sidebarHeader
+          // With a sidebar the panel never leaves large screens; on phones it
+          // still slides up from the bottom when a moment opens.
+          open
             ? "translate-y-0 opacity-100"
-            : "translate-y-full opacity-0",
+            : sidebarHeader
+              ? "max-lg:translate-y-full max-lg:opacity-0"
+              : "translate-y-full opacity-0",
         )}
       >
         <div className={cn(
-          "crumbs-moment-panel pointer-events-auto mx-auto max-h-[calc(100dvh_-_1.5rem_-_env(safe-area-inset-bottom))] max-w-xl overflow-x-hidden overflow-y-auto overscroll-contain rounded-[30px] border border-black/5 bg-white shadow-[0_28px_90px_rgba(15,23,42,0.18)] sm:max-h-[calc(100dvh_-_2rem_-_env(safe-area-inset-bottom))]",
-          sidebarHeader && "lg:relative lg:flex lg:h-full lg:max-h-none lg:max-w-none lg:flex-col lg:overflow-hidden lg:rounded-none lg:border-x-0 lg:border-y-0 lg:border-r",
+          "pointer-events-auto mx-auto flex h-[min(46rem,calc(100dvh_-_9rem_-_env(safe-area-inset-bottom)))] max-w-xl flex-col overflow-hidden rounded-[20px] border-2 border-[var(--ink)] bg-[var(--surface)] shadow-[0_16px_32px_-16px_rgb(0_0_0/0.4)]",
+          sidebarHeader && "lg:relative lg:flex lg:h-full lg:max-h-none lg:max-w-none lg:flex-col lg:overflow-hidden lg:rounded-none lg:border-0 lg:border-r-2 lg:border-r-[var(--line)] lg:shadow-none",
+          sidebarHeader && !activeMoment && "max-lg:hidden",
         )}>
           {sidebarHeader ? (
             <div className="hidden lg:block lg:shrink-0">{sidebarHeader}</div>
           ) : null}
           {activeMoment ? (
-            <div className="sticky top-0 z-30 h-0 lg:hidden">
+            <div className="sticky top-0 z-30 h-0 shrink-0 lg:hidden">
               <Button
                 aria-label="Close moment"
-                className="absolute right-4 top-4 h-10 w-10 bg-white/95 shadow-[0_10px_24px_rgba(15,23,42,0.1)] hover:bg-[var(--paper)]"
+                className="absolute right-3 top-3 h-10 w-10 bg-[var(--surface)]"
                 data-swipe-exempt
                 onClick={onClose}
                 size="icon"
                 type="button"
-                variant="secondary"
+                variant="outline"
               >
-                <X className="h-4 w-4" />
-                <span className="sr-only">Close moment</span>
+                <X aria-hidden className="h-4 w-4" />
               </Button>
             </div>
           ) : null}
@@ -1221,9 +1335,8 @@ export function MomentBottomSheet({
             <div
               aria-busy={!activeMomentReady}
               className={cn(
-                "relative overflow-x-hidden [touch-action:pan-y] lg:translate-x-0 lg:transition-none",
+                "relative flex min-h-0 flex-1 flex-col overflow-hidden [touch-action:pan-y] lg:translate-x-0 lg:transition-none",
                 mobileSlideClass,
-                sidebarHeader && "lg:flex lg:min-h-0 lg:flex-1 lg:flex-col lg:overflow-hidden",
               )}
               onTouchCancel={() => {
                 mobileSwipeStartRef.current = null;
@@ -1232,7 +1345,7 @@ export function MomentBottomSheet({
               onTouchMove={handleMobileSwipeMove}
               onTouchStart={handleMobileSwipeStart}
             >
-              <div className={cn(sidebarHeader && "lg:min-h-0 lg:flex-1 lg:overflow-y-auto")}>
+              <div className="flex min-h-0 flex-1 flex-col">
                 <MomentSheetSlide
                   key={activeMoment.id}
                   canManage={canManage}
@@ -1246,28 +1359,27 @@ export function MomentBottomSheet({
                 />
               </div>
               {sidebarHeader && momentNavigator ? (
-                <div className="hidden border-t border-black/5 bg-white px-8 py-5 lg:block lg:shrink-0">
+                <div className="hidden border-t-2 border-[var(--line)] bg-[var(--surface)] px-8 py-4 lg:block lg:shrink-0">
                   {momentNavigator}
                 </div>
               ) : null}
               <Button
                 aria-label="Close moment"
-                className="absolute right-5 top-5 z-30 hidden h-10 w-10 bg-white/95 shadow-[0_10px_24px_rgba(15,23,42,0.1)] hover:bg-[var(--paper)] lg:inline-flex"
+                className="absolute right-5 top-5 z-30 hidden h-10 w-10 bg-[var(--surface)] lg:inline-flex"
                 data-swipe-exempt
                 onClick={onClose}
                 size="icon"
                 type="button"
-                variant="secondary"
+                variant="outline"
               >
-                <X className="h-4 w-4" />
-                <span className="sr-only">Close moment</span>
+                <X aria-hidden className="h-4 w-4" />
               </Button>
               {!activeMomentReady ? (
-                <div className="pointer-events-none absolute inset-0 z-20 flex items-start justify-center bg-white/95 pt-28 lg:items-center lg:pt-0">
-                  <div className="flex items-center gap-2 rounded-full bg-[var(--paper)] px-4 py-2 text-sm text-slate-600">
-                    <LoaderCircle className="h-4 w-4 animate-spin" />
-                    Loading moment...
-                  </div>
+                <div className="pointer-events-none absolute inset-0 z-20 flex items-start justify-center bg-[var(--surface)] pt-28 lg:items-center lg:pt-0">
+                  <p className="flex items-center gap-2 text-sm font-bold text-[var(--ink-soft)]" role="status">
+                    <LoaderCircle aria-hidden className="h-4 w-4 animate-spin" />
+                    Loading moment…
+                  </p>
                 </div>
               ) : null}
             </div>

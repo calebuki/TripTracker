@@ -5,6 +5,7 @@ import Map, {
   Layer,
   Marker,
   Source,
+  type LayerProps,
   type MapRef,
 } from "react-map-gl/maplibre";
 import maplibregl from "maplibre-gl";
@@ -13,62 +14,31 @@ import { MomentMarker } from "@/components/moment-marker";
 import { publicEnv } from "@/lib/env";
 import {
   buildMomentMarkerGroups,
-  buildTrailGeoJson,
+  buildTrail,
   getMapBounds,
   getMapCenter,
   hasCoordinates,
   type MomentMarkerGroup,
 } from "@/lib/map";
+import { getMomentTimeColor } from "@/lib/time-of-day";
 import { cn } from "@/lib/utils";
 import type { LocationDraft, Moment, Trip } from "@/types/crumbs";
 
-const routeGlowLayer = {
-  id: "crumbs-route-glow",
+type LineLayerPaint = NonNullable<Extract<LayerProps, { type: "line" }>["paint"]>;
+
+// An ink edge keeps the yellow daytime stretches readable on a light basemap.
+const routeCasingLayer: LayerProps = {
+  id: "crumbs-route-casing",
   type: "line",
   layout: {
     "line-join": "round",
     "line-cap": "round",
   },
   paint: {
-    "line-color": "#fff8ea",
-    "line-width": 10,
-    "line-opacity": 0.95,
+    "line-color": "#15161c",
+    "line-width": ["interpolate", ["linear"], ["zoom"], 10, 7, 16, 11],
   },
-} as const;
-
-const routeLineLayer = {
-  id: "crumbs-route",
-  type: "line",
-  layout: {
-    "line-join": "round",
-    "line-cap": "round",
-  },
-  paint: {
-    "line-color": "#273244",
-    "line-width": 4,
-    "line-opacity": 0.88,
-  },
-} as const;
-
-const routeDirectionLayer = {
-  id: "crumbs-route-direction",
-  type: "symbol",
-  layout: {
-    "symbol-placement": "line",
-    "symbol-spacing": 120,
-    "text-field": ">",
-    "text-size": 15,
-    "text-keep-upright": false,
-    "text-allow-overlap": true,
-    "text-ignore-placement": true,
-  },
-  paint: {
-    "text-color": "#fff8ea",
-    "text-halo-color": "#273244",
-    "text-halo-width": 1.2,
-    "text-opacity": 0.95,
-  },
-} as const;
+};
 
 interface TripMapProps {
   trip: Trip;
@@ -197,7 +167,23 @@ export function TripMap({
   const [momentGroups, setMomentGroups] = useState<MomentMarkerGroup[]>([]);
   const center = useMemo(() => getMapCenter(trip, moments), [trip, moments]);
   const bounds = useMemo(() => getMapBounds(moments), [moments]);
-  const trail = useMemo(() => buildTrailGeoJson(moments), [moments]);
+  const trail = useMemo(() => buildTrail(moments, trip.timezone), [moments, trip.timezone]);
+  const routeLineLayer = useMemo<LayerProps>(
+    () => ({
+      id: "crumbs-route",
+      type: "line",
+      layout: {
+        "line-join": "round",
+        "line-cap": "round",
+      },
+      paint: {
+        "line-width": ["interpolate", ["linear"], ["zoom"], 10, 4, 16, 7],
+        "line-gradient": (trail.gradient ??
+          "#15161c") as unknown as LineLayerPaint["line-gradient"],
+      },
+    }),
+    [trail.gradient],
+  );
 
   const publishMomentGroups = useCallback(
     (nextGroups: MomentMarkerGroup[]) => {
@@ -292,7 +278,7 @@ export function TripMap({
   return (
     <div
       className={cn(
-        "overflow-hidden rounded-[24px] border border-black/5 bg-[#dfe7ef]",
+        "overflow-hidden rounded-2xl border-2 border-[var(--line)] bg-[var(--paper-strong)]",
         heightClassName,
         className,
       )}
@@ -328,10 +314,9 @@ export function TripMap({
           recomputeMomentGroups();
         }}
       >
-        <Source data={trail} id="crumbs-route-source" type="geojson">
-          <Layer {...routeGlowLayer} />
+        <Source data={trail.data} id="crumbs-route-source" lineMetrics type="geojson">
+          <Layer {...routeCasingLayer} />
           <Layer {...routeLineLayer} />
-          <Layer {...routeDirectionLayer} />
         </Source>
 
         {momentGroups.map((group) => {
@@ -347,6 +332,7 @@ export function TripMap({
               longitude={group.longitude}
             >
               <MomentMarker
+                color={getMomentTimeColor(activeMoment, trip.timezone)}
                 moment={activeMoment}
                 onClick={() => onSelectMoment?.(activeMoment.id)}
                 order={group.startOrder}
@@ -366,8 +352,8 @@ export function TripMap({
             latitude={draftLocation.latitude}
             longitude={draftLocation.longitude}
           >
-            <div className="flex h-12 w-12 items-center justify-center rounded-full border-4 border-white bg-[var(--accent)] shadow-[0_18px_45px_rgba(15,23,42,0.16)]">
-              <div className="h-4 w-4 rounded-full bg-[var(--ink)]" />
+            <div className="crumbs-map-pin grid h-11 w-11 place-items-center rounded-full border-[6px] border-[#15161c] bg-white">
+              <div className="h-3 w-3 rounded-full bg-[var(--route-tomato)]" />
             </div>
           </Marker>
         ) : null}

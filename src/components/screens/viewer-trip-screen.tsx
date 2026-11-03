@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Lock } from "lucide-react";
 
-import { CrumbsBrand } from "@/components/crumbs-brand";
+import { CenteredPage } from "@/components/centered-page";
 import { LoadingShell } from "@/components/loading-shell";
 import { TripExperience } from "@/components/trip-experience";
 import { Button } from "@/components/ui/button";
@@ -70,7 +70,7 @@ export function ViewerTripScreen({ shareSlug }: ViewerTripScreenProps) {
 
   if (!record) {
     return (
-      <ViewerGate>
+      <CenteredPage>
         <h1 className="font-display text-5xl">Trip not found</h1>
         <p className="mt-3 text-lg font-medium text-[var(--ink-soft)]">
           {error ?? "The link may have changed, or the trip was removed."}
@@ -83,7 +83,7 @@ export function ViewerTripScreen({ shareSlug }: ViewerTripScreenProps) {
             <Link href="/">Enter a different code</Link>
           </Button>
         </div>
-      </ViewerGate>
+      </CenteredPage>
     );
   }
 
@@ -91,7 +91,7 @@ export function ViewerTripScreen({ shareSlug }: ViewerTripScreenProps) {
     const trip = record.trip;
 
     return (
-      <ViewerGate>
+      <CenteredPage>
         <p className="flex items-center gap-2 text-[15px] font-bold text-[var(--ink-soft)]">
           <Lock aria-hidden className="h-4 w-4" />
           Passcode required
@@ -141,7 +141,7 @@ export function ViewerTripScreen({ shareSlug }: ViewerTripScreenProps) {
             Open trip
           </Button>
         </form>
-      </ViewerGate>
+      </CenteredPage>
     );
   }
 
@@ -153,20 +153,5 @@ export function ViewerTripScreen({ shareSlug }: ViewerTripScreenProps) {
       onRefresh={refresh}
       uniqueViewerCount={uniqueViewerCount}
     />
-  );
-}
-
-function ViewerGate({ children }: { children: React.ReactNode }) {
-  return (
-    <main className="flex min-h-dvh flex-col bg-[var(--paper)] px-4 pb-12 pt-5 sm:px-8">
-      <nav aria-label="Main navigation" className="mx-auto w-full max-w-6xl">
-        <Link aria-label="Crumbs home" className="inline-flex" href="/">
-          <CrumbsBrand />
-        </Link>
-      </nav>
-      <div className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center pt-12">
-        {children}
-      </div>
-    </main>
   );
 }

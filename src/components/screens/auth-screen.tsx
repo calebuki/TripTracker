@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { CircleAlert, Eye, EyeOff, LoaderCircle } from "lucide-react";
 import { toast } from "sonner";
 
-import { CrumbsBrand } from "@/components/crumbs-brand";
+import { CenteredPage } from "@/components/centered-page";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -65,7 +65,7 @@ export function AuthScreen() {
 
   if (isDemoMode && !previewForm) {
     return (
-      <AuthLayout>
+      <CenteredPage>
         <h1 className="font-display text-5xl">Demo mode</h1>
         <p className="mt-3 text-lg font-medium text-[var(--ink-soft)]">
           Supabase isn&apos;t configured, so there&apos;s nothing to sign in to.
@@ -79,13 +79,13 @@ export function AuthScreen() {
             <Link href="/t/paris-maymester-private">Open the sample trip</Link>
           </Button>
         </div>
-      </AuthLayout>
+      </CenteredPage>
     );
   }
 
   if (isCheckingSignIn) {
     return (
-      <AuthLayout>
+      <CenteredPage>
         <h1 className="font-display text-5xl">Checking your sign-in</h1>
         <p
           className="mt-4 flex items-center gap-3 text-lg font-medium text-[var(--ink-soft)]"
@@ -94,12 +94,12 @@ export function AuthScreen() {
           <LoaderCircle aria-hidden className="h-5 w-5 animate-spin text-[var(--ink)]" />
           {error ?? "One moment…"}
         </p>
-      </AuthLayout>
+      </CenteredPage>
     );
   }
 
   return (
-    <AuthLayout>
+    <CenteredPage>
       <h1 className="font-display text-5xl">Sign in</h1>
       <p className="mt-3 text-lg font-medium text-[var(--ink-soft)]">
         For travelers posting a trip. Following someone?{" "}
@@ -201,21 +201,6 @@ export function AuthScreen() {
           )}
         </Button>
       </form>
-    </AuthLayout>
-  );
-}
-
-function AuthLayout({ children }: { children: React.ReactNode }) {
-  return (
-    <main className="flex min-h-dvh flex-col bg-[var(--paper)] px-4 pb-12 pt-5 sm:px-8">
-      <nav aria-label="Main navigation" className="mx-auto w-full max-w-6xl">
-        <Link aria-label="Crumbs home" className="inline-flex" href="/">
-          <CrumbsBrand />
-        </Link>
-      </nav>
-      <div className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center pt-12">
-        {children}
-      </div>
-    </main>
+    </CenteredPage>
   );
 }

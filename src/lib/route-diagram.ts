@@ -1,11 +1,18 @@
 import {
   getMomentTimestamp,
+  getTripDayIndex,
   getTripDayKey,
   sortMomentsChronologically,
 } from "@/lib/time";
+import {
+  formatMomentLocalTime,
+  getMomentTimeColor,
+  getTimeGradientStops,
+  type TimeGradientStop,
+} from "@/lib/time-of-day";
 import type { Moment } from "@/types/crumbs";
 
-export const routeColors = [
+const tripColors = [
   "var(--route-tomato)",
   "var(--route-cobalt)",
   "var(--route-jade)",
@@ -16,12 +23,7 @@ export const routeColors = [
   "var(--route-plum)",
 ] as const;
 
-export function getRouteColor(index: number) {
-  const count = routeColors.length;
-  return routeColors[((index % count) + count) % count];
-}
-
-// A trip keeps the same line colour everywhere it is listed.
+// A trip keeps the same marker colour everywhere it is listed.
 export function getRouteColorForKey(key: string) {
   let hash = 0;
 
@@ -29,7 +31,7 @@ export function getRouteColorForKey(key: string) {
     hash = (hash * 31 + character.charCodeAt(0)) | 0;
   }
 
-  return getRouteColor(Math.abs(hash));
+  return tripColors[Math.abs(hash) % tripColors.length];
 }
 
 export interface RouteStation {
@@ -41,25 +43,29 @@ export interface RouteStation {
   dayIndex: number;
   isDayStart: boolean;
   isLast: boolean;
+  // Time-of-day colour, matching the map.
   color: string;
-  // 0–1 position along its day's leg, used to time the station's entrance.
-  legProgress: number;
+  timeLabel: string;
+  // Position along the line, used to time the station's entrance.
+  order: number;
 }
 
-export interface RouteLeg {
-  dayIndex: number;
-  color: string;
+// The stretch of line between two neighbouring stations.
+export interface RouteSegment {
+  index: number;
   d: string;
+  from: Point;
+  to: Point;
   // Every corner of the drawn line, so labels can steer around it.
   points: Point[];
+  stops: TimeGradientStop[];
 }
 
 export interface RouteDiagramLayout {
   width: number;
   height: number;
-  legs: RouteLeg[];
+  segments: RouteSegment[];
   stations: RouteStation[];
-  dayCount: number;
   path: string;
 }
 
@@ -74,6 +80,8 @@ interface RouteDiagramOptions {
   padding?: number;
   minGap?: number;
   maxStations?: number;
+  // When given, days are numbered from the trip's start, as on the trip page.
+  startDate?: string;
 }
 
 function round(value: number) {
@@ -124,24 +132,6 @@ function octilinearSegment(from: Point, to: Point, arrivedFrom: Direction | null
   };
 }
 
-function octilinearPath(stops: Point[]) {
-  const corners: Point[] = [stops[0]];
-  let direction: Direction | null = null;
-
-  for (let index = 1; index < stops.length; index += 1) {
-    const segment = octilinearSegment(stops[index - 1], stops[index], direction);
-    corners.push(...segment.points);
-    direction = segment.direction;
-  }
-
-  return {
-    d: corners
-      .map((point, index) => `${index === 0 ? "M" : " L"}${pointString(point)}`)
-      .join(""),
-    points: corners.map((point) => ({ x: round(point.x), y: round(point.y) })),
-  };
-}
-
 function median(values: number[]) {
   const sorted = [...values].sort((left, right) => left - right);
   const middle = Math.floor(sorted.length / 2);
@@ -164,13 +154,14 @@ export function buildRouteDiagram(
     padding = 24,
     minGap = 28,
     maxStations = 14,
+    startDate,
   }: RouteDiagramOptions,
 ): RouteDiagramLayout {
   const located = sortMomentsChronologically(moments).filter(
     (moment): moment is Moment & { latitude: number; longitude: number } =>
       moment.latitude !== null && moment.longitude !== null,
   );
-  const empty = { width, height, legs: [], stations: [], dayCount: 0, path: "" };
+  const empty = { width, height, segments: [], stations: [], path: "" };
 
   if (located.length === 0) {
     return empty;
@@ -206,13 +197,16 @@ export function buildRouteDiagram(
 
   const dayKeys: string[] = [];
   const placed = located.map((moment, index) => {
-    const dayKey = getTripDayKey(getMomentTimestamp(moment), timezone) ?? "";
-    let dayIndex = dayKeys.indexOf(dayKey);
+    const timestamp = getMomentTimestamp(moment);
+    const dayKey = getTripDayKey(timestamp, timezone) ?? "";
 
-    if (dayIndex === -1) {
+    if (!dayKeys.includes(dayKey)) {
       dayKeys.push(dayKey);
-      dayIndex = dayKeys.length - 1;
     }
+
+    const dayIndex = startDate
+      ? getTripDayIndex(timestamp, timezone, startDate)
+      : dayKeys.indexOf(dayKey);
 
     // Every stop shares one spot: lay them out left to right instead.
     const point = isPointLike
@@ -262,55 +256,51 @@ export function buildRouteDiagram(
     stationsSource = kept.filter((_, index) => required.has(index));
   }
 
-  const legs: RouteLeg[] = [];
-  const stations: RouteStation[] = [];
-  let previousEnd: Point | null = null;
+  const segments: RouteSegment[] = [];
+  let direction: Direction | null = null;
 
-  for (let dayIndex = 0; dayIndex < dayKeys.length; dayIndex += 1) {
-    const dayStops = stationsSource.filter((entry) => entry.dayIndex === dayIndex);
+  for (let index = 1; index < stationsSource.length; index += 1) {
+    const from = stationsSource[index - 1];
+    const to = stationsSource[index];
+    const segment = octilinearSegment(from, to, direction);
+    const corners = [from, ...segment.points];
 
-    if (dayStops.length === 0) {
-      continue;
-    }
-
-    const legPoints: Point[] = previousEnd ? [previousEnd, ...dayStops] : dayStops;
-    const color = getRouteColor(dayIndex);
-    const offset = previousEnd ? 1 : 0;
-
-    if (legPoints.length > 1) {
-      legs.push({ dayIndex, color, ...octilinearPath(legPoints) });
-    }
-
-    dayStops.forEach((entry, index) => {
-      const moment = entry.moment;
-      stations.push({
-        id: moment.id,
-        x: round(entry.x),
-        y: round(entry.y),
-        label: moment.placeName,
-        caption: moment.caption ?? moment.thoughtText,
-        dayIndex,
-        isDayStart: index === 0 && dayIndex > 0,
-        isLast: false,
-        color,
-        legProgress:
-          legPoints.length > 1 ? (index + offset) / (legPoints.length - 1) : 0,
-      });
+    direction = segment.direction;
+    segments.push({
+      index: index - 1,
+      d: corners
+        .map((point, cornerIndex) => `${cornerIndex === 0 ? "M" : " L"}${pointString(point)}`)
+        .join(""),
+      from: { x: round(from.x), y: round(from.y) },
+      to: { x: round(to.x), y: round(to.y) },
+      points: corners.map((point) => ({ x: round(point.x), y: round(point.y) })),
+      stops: getTimeGradientStops(
+        getMomentTimestamp(from.moment),
+        getMomentTimestamp(to.moment),
+        timezone,
+      ),
     });
-
-    previousEnd = dayStops[dayStops.length - 1];
   }
 
-  if (stations.length > 0) {
-    stations[stations.length - 1].isLast = true;
-  }
+  const stations: RouteStation[] = stationsSource.map((entry, index) => ({
+    id: entry.moment.id,
+    x: round(entry.x),
+    y: round(entry.y),
+    label: entry.moment.placeName,
+    caption: entry.moment.caption ?? entry.moment.thoughtText,
+    dayIndex: entry.dayIndex,
+    isDayStart: index > 0 && entry.dayIndex !== stationsSource[index - 1].dayIndex,
+    isLast: index === stationsSource.length - 1,
+    color: getMomentTimeColor(entry.moment, timezone),
+    timeLabel: formatMomentLocalTime(entry.moment, timezone),
+    order: index,
+  }));
 
   return {
     width,
     height,
-    legs,
+    segments,
     stations,
-    dayCount: dayKeys.length,
-    path: legs.map((leg) => leg.d).join(" "),
+    path: segments.map((segment) => segment.d).join(" "),
   };
 }
