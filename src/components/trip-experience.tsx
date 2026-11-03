@@ -8,6 +8,7 @@ import { toast } from "sonner";
 
 import { TripThemeContext } from "@/components/trip-theme-provider";
 import { useConfirmDelete } from "@/components/confirm-action-dialog";
+import { TimeOfDayLegend } from "@/components/time-of-day-legend";
 import { AddMomentButton } from "@/components/add-moment-button";
 import { DaySelector } from "@/components/day-selector";
 import { EmptyDayState } from "@/components/empty-day-state";
@@ -16,6 +17,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useTravelerHomeTarget } from "@/hooks/use-traveler-home-target";
 import { useCrumbsAuth } from "@/hooks/use-crumbs-auth";
+import { useScrollFade } from "@/hooks/use-scroll-fade";
 import {
   applyLocationPrivacy,
   hasCoordinates,
@@ -124,6 +126,7 @@ export function TripExperience({
     useState(shouldAutoOpenCapture);
   const [markerGroups, setMarkerGroups] = useState<MomentMarkerGroup[]>([]);
   const [offMapMomentsOpen, setOffMapMomentsOpen] = useState(false);
+  const offMapListFadeRef = useScrollFade<HTMLUListElement>();
   const filteredMoments = useMemo(
     () => filterMomentsByDay(displayMoments, record.trip.timezone, dayFilter),
     [dayFilter, displayMoments, record.trip.timezone],
@@ -180,11 +183,11 @@ export function TripExperience({
 
   const dayHeadline =
     dayFilter.kind === "all"
-      ? "All recorded days"
+      ? "All days"
       : dayFilter.kind === "today"
-        ? "Today's trail"
+        ? "Today"
         : dayFilter.kind === "yesterday"
-          ? "Yesterday's trail"
+          ? "Yesterday"
           : dayFilter.value
             ? formatTripDayLabel(dayFilter.value, record.trip.timezone)
             : "Trip map";
@@ -249,51 +252,61 @@ export function TripExperience({
     }
   }
 
-  const tripSidebarHeader = (
-    <div className="crumbs-trip-header border-b border-black/5 px-6 pb-6 pt-8 sm:px-8">
-      <div className="flex items-start gap-3 lg:mx-auto lg:max-w-[34rem]">
-        <Link
-          aria-label="Back to Crumbs home"
-          className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[var(--paper)] text-[var(--ink)] transition hover:bg-[#f6efdf]"
-          href="/"
-          title="Back to Crumbs home"
+  const tripMeta = (
+    <>
+      <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-[15px] font-semibold text-[var(--ink-soft)]">
+        <span>{dayHeadline}</span>
+        <span
+          aria-label={`Crumb code ${record.trip.shareCode}`}
+          className="rounded-md border-2 border-[var(--ink)] px-1.5 text-sm font-extrabold leading-5 tracking-[0.12em] text-[var(--ink)]"
         >
-          <ChevronLeft className="h-4 w-4" />
-        </Link>
-        <div className="min-w-0 flex-1">
-          <div className="flex min-w-0 flex-wrap items-center gap-2">
-            <h1 className="min-w-0 font-display text-4xl leading-[0.95] tracking-tight text-[var(--ink)] xl:text-5xl">
-              {record.trip.title}
-            </h1>
-            {isDemoMode ? <Badge variant="accent">Demo mode</Badge> : null}
-          </div>
-          <div className="mt-2 flex flex-wrap items-center gap-2">
-            <p className="text-sm leading-6 text-slate-600">{dayHeadline}</p>
-            <Badge className="font-mono uppercase tracking-[0.12em]" variant="subtle">
-              {record.trip.shareCode}
-            </Badge>
-            {uniqueViewerCount !== null ? (
-              <Badge className="gap-1.5" variant="subtle">
-                <Eye aria-hidden className="h-3.5 w-3.5" />
-                {uniqueViewerCount}{" "}
-                {uniqueViewerCount === 1 ? "viewer" : "viewers"}
-              </Badge>
-            ) : null}
-          </div>
-          {postingLockedToActiveTrip ? (
-            <p className="mt-2 text-sm leading-6 text-slate-600">
-              This past trip is view-only for new moments while {activeOwnerTrip?.title ?? "your active trip"} is running.
-            </p>
-          ) : null}
-        </div>
-        {role === "owner" ? (
-          <Button asChild className="shrink-0" size="icon" variant="secondary">
-            <Link href="/profile">
-              <User className="h-4 w-4" />
-              <span className="sr-only">Open profile</span>
-            </Link>
-          </Button>
+          {record.trip.shareCode}
+        </span>
+        {uniqueViewerCount !== null ? (
+          <span className="tabular inline-flex items-center gap-1.5">
+            <Eye aria-hidden className="h-4 w-4" />
+            {uniqueViewerCount} {uniqueViewerCount === 1 ? "viewer" : "viewers"}
+          </span>
         ) : null}
+        {isDemoMode ? <Badge variant="accent">Demo</Badge> : null}
+      </div>
+      {postingLockedToActiveTrip ? (
+        <p className="mt-2 text-sm font-medium text-[var(--ink-soft)]">
+          Read-only while {activeOwnerTrip?.title ?? "your current trip"} is running.
+        </p>
+      ) : null}
+    </>
+  );
+
+  const backLink = (
+    <Button asChild className="shrink-0 bg-[var(--surface)]" size="icon" variant="outline">
+      <Link aria-label="Back to Crumbs home" href="/" title="Back to Crumbs home">
+        <ChevronLeft aria-hidden className="h-5 w-5" />
+      </Link>
+    </Button>
+  );
+
+  const profileLink =
+    role === "owner" ? (
+      <Button asChild className="shrink-0 bg-[var(--surface)]" size="icon" variant="outline">
+        <Link aria-label="Open profile" href="/profile" title="Open profile">
+          <User aria-hidden className="h-5 w-5" />
+        </Link>
+      </Button>
+    ) : null;
+
+  const tripSidebarHeader = (
+    <div className="crumbs-trip-header px-6 pb-5 pt-6 sm:px-8">
+      <div className="flex items-start gap-3 lg:mx-auto lg:max-w-[34rem]">
+        {backLink}
+        <div className="min-w-0 flex-1">
+          <h1 className="font-display text-4xl leading-none text-[var(--ink)] xl:text-5xl">
+            {record.trip.title}
+          </h1>
+          {tripMeta}
+          <TimeOfDayLegend className="mt-4" />
+        </div>
+        {profileLink}
       </div>
     </div>
   );
@@ -306,7 +319,7 @@ export function TripExperience({
         style={getTripThemeStyle(record.trip.theme)}
       >
         <div className="h-full w-full">
-          <div className="relative h-full w-full overflow-hidden bg-white">
+          <div className="relative h-full w-full overflow-hidden bg-[var(--surface)]">
             <TripMap
               trip={record.trip}
               moments={mapMoments}
@@ -314,74 +327,25 @@ export function TripExperience({
               onSelectMoment={selectSpotMoment}
               onMomentGroupsChange={setMarkerGroups}
               heightClassName="h-[100dvh] min-h-[100dvh]"
-              className="rounded-none border-0 lg:absolute lg:inset-y-0 lg:right-0 lg:left-[clamp(24rem,34vw,38rem)] lg:rounded-none lg:border-l"
+              className="rounded-none border-0 lg:absolute lg:inset-y-0 lg:right-0 lg:left-[clamp(24rem,34vw,38rem)] lg:rounded-none"
             />
 
             <div className="pointer-events-none absolute inset-0">
               <div className="pointer-events-auto absolute inset-x-0 top-0 p-3 sm:p-4 lg:hidden">
                 <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-2 sm:gap-3">
-                  <Link
-                    aria-label="Back to Crumbs home"
-                    className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-black/5 bg-white/92 text-[var(--ink)] shadow-[0_14px_40px_rgba(15,23,42,0.12)] backdrop-blur-sm transition hover:bg-white"
-                    href="/"
-                    title="Back to Crumbs home"
-                  >
-                    <ChevronLeft className="h-4 w-4" />
-                  </Link>
-
-                  <div className="crumbs-map-title min-w-0 rounded-[28px] border border-black/5 bg-white/92 px-4 py-3 shadow-[0_14px_40px_rgba(15,23,42,0.12)] backdrop-blur-sm sm:max-w-2xl">
-                    <div className="flex min-w-0 flex-wrap items-center gap-2">
-                      <h1 className="min-w-0 font-display text-[1.45rem] leading-tight tracking-tight text-[var(--ink)] sm:text-[2.2rem]">
-                        {record.trip.title}
-                      </h1>
-                      {isDemoMode ? <Badge variant="accent">Demo mode</Badge> : null}
-                    </div>
-                    <div className="mt-2 flex flex-wrap items-center gap-2">
-                      <p className="text-sm leading-6 text-slate-600">
-                        {dayHeadline}
-                      </p>
-                      <Badge
-                        className="font-mono uppercase tracking-[0.12em]"
-                        variant="subtle"
-                      >
-                        {record.trip.shareCode}
-                      </Badge>
-                      {uniqueViewerCount !== null ? (
-                        <Badge className="gap-1.5" variant="subtle">
-                          <Eye aria-hidden className="h-3.5 w-3.5" />
-                          {uniqueViewerCount}{" "}
-                          {uniqueViewerCount === 1 ? "viewer" : "viewers"}
-                        </Badge>
-                      ) : null}
-                    </div>
-                    {postingLockedToActiveTrip ? (
-                      <p className="mt-2 text-sm leading-6 text-slate-600">
-                        This past trip is view-only for new moments while{" "}
-                        {activeOwnerTrip?.title ?? "your active trip"} is running.
-                      </p>
-                    ) : null}
+                  {backLink}
+                  <div className="min-w-0 rounded-2xl border-2 border-[var(--ink)] bg-[var(--surface)] px-4 py-3 sm:max-w-2xl">
+                    <h1 className="font-display text-[1.6rem] leading-none text-[var(--ink)] sm:text-[2.2rem]">
+                      {record.trip.title}
+                    </h1>
+                    {tripMeta}
                   </div>
-
-                  {role === "owner" ? (
-                    <Button
-                      asChild
-                      className="bg-white/92 shadow-[0_14px_40px_rgba(15,23,42,0.12)] backdrop-blur-sm"
-                      size="icon"
-                      variant="secondary"
-                    >
-                      <Link href="/profile">
-                        <User className="h-4 w-4" />
-                        <span className="sr-only">Open profile</span>
-                      </Link>
-                    </Button>
-                  ) : (
-                    <div aria-hidden className="h-11 w-11" />
-                  )}
+                  {profileLink ?? <div aria-hidden className="h-11 w-11" />}
                 </div>
               </div>
 
               {filteredMoments.length === 0 ? (
-                <div className="pointer-events-auto absolute inset-x-4 top-1/2 -translate-y-1/2">
+                <div className="pointer-events-auto absolute inset-x-4 top-1/2 -translate-y-1/2 lg:left-[calc(clamp(24rem,34vw,38rem)+1rem)]">
                   <EmptyDayState
                     label={
                       dayFilter.kind === "all"
@@ -397,54 +361,56 @@ export function TripExperience({
               ) : null}
 
               {offMapMoments.length > 0 ? (
-                <div className="crumbs-off-map pointer-events-auto absolute left-3 top-28 z-20 w-[min(92vw,320px)] rounded-[28px] border border-black/5 bg-white/92 shadow-[0_18px_50px_rgba(15,23,42,0.14)] backdrop-blur-sm sm:left-4 sm:top-32">
+                <div className="pointer-events-auto absolute left-3 top-32 z-20 w-[min(92vw,320px)] overflow-hidden rounded-2xl border-2 border-[var(--ink)] bg-[var(--surface)] sm:left-4 sm:top-36 lg:left-[calc(clamp(24rem,34vw,38rem)+1rem)] lg:top-4">
                   <button
                     aria-controls="off-map-moments-list"
                     aria-expanded={offMapMomentsOpen}
-                    className="flex w-full items-center gap-3 rounded-[28px] p-4 text-left transition hover:bg-white"
+                    className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-[var(--paper-strong)]"
                     onClick={() => setOffMapMomentsOpen((open) => !open)}
                     type="button"
                   >
                     <span className="min-w-0 flex-1">
-                      <span className="block text-sm font-medium text-[var(--ink)]">
-                        Saved off the map
+                      <span className="block font-bold text-[var(--ink)]">
+                        Not on the map
                       </span>
-                      <span className="mt-1 block text-sm text-slate-600">
+                      <span className="tabular block text-sm font-medium text-[var(--ink-soft)]">
                         {offMapMoments.length}{" "}
-                        {offMapMoments.length === 1 ? "moment" : "moments"} without
+                        {offMapMoments.length === 1 ? "moment" : "moments"} without a
                         location
                       </span>
                     </span>
                     <ChevronDown
                       aria-hidden
-                      className={`h-5 w-5 shrink-0 text-slate-500 transition-transform ${
+                      className={`h-5 w-5 shrink-0 text-[var(--ink)] transition-transform duration-200 ${
                         offMapMomentsOpen ? "rotate-180" : ""
                       }`}
                     />
                   </button>
                   {offMapMomentsOpen ? (
-                    <div
-                      className="max-h-[min(50dvh,24rem)] space-y-2 overflow-y-auto border-t border-black/5 px-4 pb-4 pt-3"
+                    <ul
+                      className="no-scrollbar scroll-fade max-h-[min(50dvh,24rem)] divide-y-2 divide-[var(--line)] overflow-y-auto border-t-2 border-[var(--line)]"
                       id="off-map-moments-list"
+                      ref={offMapListFadeRef}
                     >
                       {offMapMoments.map((moment) => (
-                        <button
-                          key={moment.id}
-                          className="w-full rounded-[22px] bg-[var(--paper)] px-3 py-2 text-left transition hover:bg-[#f6efdf]"
-                          onClick={() => selectSpotMoment(moment.id)}
-                          type="button"
-                        >
-                          <p className="text-sm font-medium text-[var(--ink)]">
-                            {moment.caption ?? moment.thoughtText ?? "Untitled moment"}
-                          </p>
-                          <p className="mt-1 line-clamp-2 text-sm text-slate-600">
-                            {moment.type === "photo"
-                              ? "Saved without a location."
-                              : moment.thoughtText}
-                          </p>
-                        </button>
+                        <li key={moment.id}>
+                          <button
+                            className="w-full px-4 py-3 text-left transition-colors hover:bg-[var(--paper-strong)]"
+                            onClick={() => selectSpotMoment(moment.id)}
+                            type="button"
+                          >
+                            <p className="font-semibold text-[var(--ink)]">
+                              {moment.caption ?? moment.thoughtText ?? "Untitled moment"}
+                            </p>
+                            {moment.type === "thought" && moment.caption ? (
+                              <p className="mt-0.5 line-clamp-2 text-sm text-[var(--ink-soft)]">
+                                {moment.thoughtText}
+                              </p>
+                            ) : null}
+                          </button>
+                        </li>
                       ))}
-                    </div>
+                    </ul>
                   ) : null}
                 </div>
               ) : null}
@@ -461,16 +427,15 @@ export function TripExperience({
 
               {filteredMoments.length > 0 ? (
                 <Button
-                  aria-label="View all moments"
-                  className="pointer-events-auto absolute right-3 top-1/2 z-20 h-12 w-12 -translate-y-1/2 border border-black/5 bg-white/92 shadow-[0_18px_50px_rgba(15,23,42,0.16)] backdrop-blur-sm hover:bg-white sm:right-4"
+                  aria-label="Browse moments in order"
+                  className="pointer-events-auto absolute right-3 top-1/2 z-20 h-12 w-12 -translate-y-1/2 bg-[var(--surface)] sm:right-4"
                   onClick={openTimelineMoments}
                   size="icon"
-                  title="View all moments"
+                  title="Browse moments in order"
                   type="button"
-                  variant="secondary"
+                  variant="outline"
                 >
-                  <Images className="h-5 w-5" />
-                  <span className="sr-only">View all moments</span>
+                  <Images aria-hidden className="h-5 w-5" />
                 </Button>
               ) : null}
 
@@ -485,8 +450,8 @@ export function TripExperience({
                 fullscreenMoments={filteredMoments}
                 sidebarHeader={tripSidebarHeader}
                 sidebarEmptyState={
-                  <p className="text-center font-display text-2xl text-slate-500">
-                    Select a moment
+                  <p className="max-w-64 text-center text-lg font-semibold text-[var(--ink-soft)]">
+                    Pick a stop on the map to open its photo or note.
                   </p>
                 }
                 selectedMomentId={activeSelectedMomentId}

@@ -12,7 +12,8 @@ import { Button } from "@/components/ui/button";
 import { useCrumbsAuth } from "@/hooks/use-crumbs-auth";
 import { useDevPreview } from "@/hooks/use-dev-preview";
 import { getDemoTripRecord } from "@/lib/demo-data";
-import { buildRouteDiagram, getRouteColor } from "@/lib/route-diagram";
+import { TimeOfDayLegend } from "@/components/time-of-day-legend";
+import { buildRouteDiagram } from "@/lib/route-diagram";
 
 export function LandingScreen() {
   const { user, loading, isDemoMode } = useCrumbsAuth();
@@ -44,8 +45,9 @@ export function WelcomeScreen() {
       buildRouteDiagram(sample.moments, sample.trip.timezone, {
         width: 560,
         height: 470,
-        padding: 36,
+        padding: 52,
         minGap: 30,
+        startDate: sample.trip.startDate,
       }),
     [sample],
   );
@@ -55,8 +57,9 @@ export function WelcomeScreen() {
       buildRouteDiagram(sample.moments, sample.trip.timezone, {
         width: 360,
         height: 330,
-        padding: 20,
+        padding: 28,
         minGap: 24,
+        startDate: sample.trip.startDate,
       }),
     [sample],
   );
@@ -135,7 +138,8 @@ export function WelcomeScreen() {
               {activeStation ? (
                 <div className="crumbs-station-note" key={activeStation.id}>
                   <p className="text-sm font-bold text-[var(--ink-soft)]">
-                    Day {activeStation.dayIndex + 1} · {activeStation.label}
+                    Day {activeStation.dayIndex + 1} · {activeStation.timeLabel} ·{" "}
+                    {activeStation.label}
                   </p>
                   <p className="mt-1 text-lg font-semibold leading-snug">
                     {activeStation.caption}
@@ -144,19 +148,11 @@ export function WelcomeScreen() {
               ) : null}
             </div>
             <div className="shrink-0">
-              <p className="text-sm font-bold">Sample trip</p>
-              <ul className="mt-2 flex gap-4 text-sm font-semibold text-[var(--ink-soft)]">
-                {Array.from({ length: layout.dayCount }, (_, dayIndex) => (
-                  <li className="flex items-center gap-2" key={dayIndex}>
-                    <span
-                      aria-hidden
-                      className="h-2 w-6 rounded-full"
-                      style={{ background: getRouteColor(dayIndex) }}
-                    />
-                    Day {dayIndex + 1}
-                  </li>
-                ))}
-              </ul>
+              <p className="mb-3 text-sm font-semibold text-[var(--ink-soft)]">
+                Sample trip, {new Set(layout.stations.map((station) => station.dayIndex)).size}{" "}
+                days in {sample.trip.coverLocationName?.split(",")[0] ?? "Paris"}
+              </p>
+              <TimeOfDayLegend />
             </div>
           </figcaption>
         </figure>

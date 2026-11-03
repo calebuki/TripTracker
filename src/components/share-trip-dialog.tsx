@@ -103,13 +103,13 @@ function ShareTripDialogBody({
       </DialogHeader>
 
       <div className="space-y-5">
-        <div className="rounded-[28px] border border-black/5 bg-[var(--paper)] p-4">
+        <div className="rounded-xl border-2 border-[var(--line)] bg-[var(--paper)] p-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <p className="text-sm font-medium text-[var(--ink)]">
                 Private share link
               </p>
-              <p className="mt-1 text-sm text-slate-600">{shareUrl}</p>
+              <p className="mt-1 text-sm text-[var(--ink-soft)]">{shareUrl}</p>
             </div>
             <Button
               size="sm"
@@ -130,14 +130,14 @@ function ShareTripDialogBody({
           </div>
         </div>
 
-        <div className="rounded-[28px] border border-black/5 bg-white p-4">
+        <div className="rounded-xl border-2 border-[var(--line)] bg-[var(--surface)] p-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <p className="text-sm font-medium text-[var(--ink)]">Crumb code</p>
-              <p className="mt-1 font-mono text-2xl tracking-[0.32em] text-[var(--ink)]">
+              <p className="mt-1 text-2xl font-extrabold tracking-[0.2em] text-[var(--ink)]">
                 {trip.shareCode}
               </p>
-              <p className="mt-1 text-sm text-slate-600">
+              <p className="mt-1 text-sm text-[var(--ink-soft)]">
                 A short code anyone can type on the Crumbs home page.
               </p>
             </div>
@@ -162,7 +162,7 @@ function ShareTripDialogBody({
 
         <div className="space-y-3">
           <div className="flex items-center gap-2">
-            <LockKeyhole className="h-4 w-4 text-slate-500" />
+            <LockKeyhole className="h-4 w-4 text-[var(--ink-soft)]" />
             <p className="text-sm font-medium text-[var(--ink)]">
               Viewer passcode
             </p>
@@ -180,7 +180,7 @@ function ShareTripDialogBody({
             }
             value={passcode}
           />
-          <p className="text-xs leading-5 text-slate-500">
+          <p className="text-xs leading-5 text-[var(--ink-soft)]">
             This is a light privacy layer for shared trips, not a hardened
             security system.
           </p>
@@ -196,10 +196,10 @@ function ShareTripDialogBody({
               return (
                 <button
                   key={mode.value}
-                  className={`rounded-[24px] border px-4 py-3 text-left transition ${
+                  className={`rounded-xl border px-4 py-3 text-left transition ${
                     active
-                      ? "border-transparent bg-[var(--accent-soft)] shadow-[0_12px_28px_rgba(15,23,42,0.08)]"
-                      : "border-black/6 bg-white hover:border-black/10 hover:bg-[var(--paper)]"
+                      ? "border-[var(--ink)] bg-[var(--accent-soft)]"
+                      : "border-[var(--line)] bg-[var(--surface)] hover:bg-[var(--paper)]"
                   }`}
                   onClick={() => setLocationPrivacyMode(mode.value)}
                   type="button"
@@ -207,7 +207,7 @@ function ShareTripDialogBody({
                   <p className="text-sm font-medium text-[var(--ink)]">
                     {mode.label}
                   </p>
-                  <p className="mt-1 text-sm text-slate-600">
+                  <p className="mt-1 text-sm text-[var(--ink-soft)]">
                     {mode.description}
                   </p>
                 </button>
@@ -215,7 +215,7 @@ function ShareTripDialogBody({
             })}
           </div>
           {locationPrivacyMode === "delayed" ? (
-            <div className="rounded-[24px] border border-black/5 bg-[var(--paper)] p-4">
+            <div className="rounded-xl border-2 border-[var(--line)] bg-[var(--paper)] p-4">
               <label
                 className="text-sm font-medium text-[var(--ink)]"
                 htmlFor="share-delay-hours"
@@ -234,9 +234,9 @@ function ShareTripDialogBody({
                   type="number"
                   value={publishDelayHours}
                 />
-                <span className="text-sm text-slate-600">hours</span>
+                <span className="text-sm text-[var(--ink-soft)]">hours</span>
               </div>
-              <p className="mt-2 text-sm text-slate-600">
+              <p className="mt-2 text-sm text-[var(--ink-soft)]">
                 Viewers will see each new moment after this delay, and it will
                 publish at the exact saved location.
               </p>

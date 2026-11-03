@@ -115,7 +115,7 @@ function MediaPreview({
 
 function getMomentLabel(moment: Moment) {
   if (moment.type !== "photo") {
-    return "Thought";
+    return "Note";
   }
 
   return isMomentVideo(moment) ? "Video" : "Photo";
@@ -465,15 +465,15 @@ export function PhotoUploader({
         <section className="space-y-4" aria-label="Bulk upload draft">
           <div className="flex items-start justify-between gap-4">
             <div>
-              <p className="text-sm font-medium text-[var(--ink)]">Review your photos</p>
+              <p className="font-bold text-[var(--ink)]">Review your photos</p>
             </div>
-            <span className="shrink-0 text-sm font-medium text-slate-600">
+            <span className="tabular shrink-0 text-sm font-bold text-[var(--ink-soft)]">
               {draftIndex + 1} of {draftUploads.length}
             </span>
           </div>
 
           <div
-            className="relative overflow-hidden rounded-[28px] bg-slate-100"
+            className="relative overflow-hidden rounded-xl bg-[var(--paper-strong)]"
             onTouchEnd={(event) => {
               if (swipeStartX.current === null) return;
               const distance = event.changedTouches[0].clientX - swipeStartX.current;
@@ -497,11 +497,11 @@ export function PhotoUploader({
             {draftIndex > 0 ? (
               <Button
                 aria-label="Previous photo"
-                className="absolute left-3 top-1/2 -translate-y-1/2 rounded-full bg-white/90 shadow-sm"
+                className="absolute left-3 top-1/2 -translate-y-1/2 bg-[var(--surface)]"
                 onClick={() => setDraftIndex((current) => current - 1)}
                 size="icon"
                 type="button"
-                variant="secondary"
+                variant="outline"
               >
                 <ChevronLeft className="h-5 w-5" />
               </Button>
@@ -509,23 +509,23 @@ export function PhotoUploader({
             {draftIndex < draftUploads.length - 1 ? (
               <Button
                 aria-label="Next photo"
-                className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full bg-white/90 shadow-sm"
+                className="absolute right-3 top-1/2 -translate-y-1/2 bg-[var(--surface)]"
                 onClick={() => setDraftIndex((current) => current + 1)}
                 size="icon"
                 type="button"
-                variant="secondary"
+                variant="outline"
               >
                 <ChevronRight className="h-5 w-5" />
               </Button>
             ) : null}
           </div>
 
-          <div className="flex gap-2 overflow-x-auto pb-1" aria-label="Choose a photo">
+          <div className="no-scrollbar flex gap-2 overflow-x-auto p-1" aria-label="Choose a photo">
             {draftUploads.map((upload, index) => (
               <button
                 aria-label={`Photo ${index + 1}`}
-                className={`shrink-0 overflow-hidden rounded-xl ring-offset-2 transition ${
-                  index === draftIndex ? "ring-2 ring-[var(--ink)]" : "opacity-60"
+                className={`shrink-0 overflow-hidden rounded-lg outline-offset-2 transition-opacity ${
+                  index === draftIndex ? "outline-3 outline-[var(--ink)]" : "opacity-60 hover:opacity-100"
                 }`}
                 key={upload.previewUrl}
                 onClick={() => setDraftIndex(index)}
@@ -533,7 +533,7 @@ export function PhotoUploader({
               >
                 <MediaPreview
                   alt=""
-                  className="h-14 w-14 bg-slate-100 object-contain"
+                  className="h-14 w-14 bg-[var(--paper-strong)] object-contain"
                   fileType={upload.file.type}
                   src={upload.previewUrl}
                 />
@@ -542,7 +542,7 @@ export function PhotoUploader({
           </div>
 
           <div className="space-y-2">
-            <label className="text-sm font-medium text-[var(--ink)]" htmlFor="bulk-photo-caption">
+            <label className="text-sm font-bold text-[var(--ink)]" htmlFor="bulk-photo-caption">
               Caption (optional)
             </label>
             <Textarea
@@ -567,24 +567,24 @@ export function PhotoUploader({
       <div className={libraryOnly ? "grid gap-3" : "grid gap-3 sm:grid-cols-2"}>
         {!libraryOnly ? (
           <Button
-            className="h-14 rounded-full"
+            className="h-14"
             disabled={isBusy}
             onClick={() => captureInputRef.current?.click()}
             type="button"
           >
-            <Camera className="h-5 w-5" />
-            {preparingOrigin === "camera" ? "Saving..." : "Snap photo"}
+            <Camera aria-hidden className="h-5 w-5" />
+            {preparingOrigin === "camera" ? "Saving…" : "Take photo"}
           </Button>
         ) : null}
         <Button
-          className="h-14 rounded-full"
+          className="h-14"
           disabled={isBusy}
           onClick={() => libraryInputRef.current?.click()}
           type="button"
-          variant={libraryOnly ? "default" : "secondary"}
+          variant={libraryOnly ? "default" : "outline"}
         >
-          <Images className="h-5 w-5" />
-          {preparingOrigin === "library" ? "Opening..." : "Open library"}
+          <Images aria-hidden className="h-5 w-5" />
+          {preparingOrigin === "library" ? "Opening…" : "Choose from library"}
         </Button>
       </div>
         </>
@@ -592,24 +592,24 @@ export function PhotoUploader({
 
       {pendingUploads.length > 0 ? (
         <div className="space-y-3">
-          <p className="text-sm font-medium text-[var(--ink)]">Saving now</p>
+          <p className="font-bold text-[var(--ink)]">Uploading</p>
           <div className="grid gap-3 sm:grid-cols-2">
             {pendingUploads.map((upload) => (
               <Card
                 key={upload.id}
-                className="overflow-hidden rounded-[26px] border-black/5 p-0"
+                className="overflow-hidden p-0"
               >
                 <div className="grid gap-4 p-4 sm:grid-cols-[100px_1fr]">
                   <MediaPreview
                     alt={upload.fileName}
-                    className="h-24 w-full rounded-[18px] bg-slate-100 object-cover"
+                    className="h-24 w-full rounded-lg bg-[var(--paper-strong)] object-cover"
                     fileType={upload.fileType}
                     src={upload.previewUrl}
                   />
                   <div className="flex items-center justify-between gap-3">
                     <div>
                       <div className="flex flex-wrap items-center gap-2">
-                        <p className="line-clamp-1 text-sm font-medium text-[var(--ink)]">
+                        <p className="line-clamp-1 text-sm font-bold text-[var(--ink)]">
                           {upload.fileName}
                         </p>
                         {isVideoMimeType(upload.fileType) ? (
@@ -619,11 +619,11 @@ export function PhotoUploader({
                           </Badge>
                         ) : null}
                       </div>
-                      <p className="mt-1 text-sm text-slate-600">
-                        Uploading this moment now.
+                      <p className="mt-1 text-sm font-medium text-[var(--ink-soft)]">
+                        Uploading…
                       </p>
                     </div>
-                    <LoaderCircle className="h-4 w-4 animate-spin text-slate-500" />
+                    <LoaderCircle className="h-4 w-4 animate-spin text-[var(--ink-soft)]" />
                   </div>
                 </div>
               </Card>
@@ -636,10 +636,9 @@ export function PhotoUploader({
         <div className="space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <p className="text-sm font-medium text-[var(--ink)]">Recently added</p>
-              <p className="text-sm text-slate-600">
-                Moments are saved right away. You can fine-tune location now and
-                edit titles or descriptions later from the map.
+              <p className="font-bold text-[var(--ink)]">Just added</p>
+              <p className="text-[15px] font-medium text-[var(--ink-soft)]">
+                These are saved. Fix a location now, or add titles later from the map.
               </p>
             </div>
             <Button onClick={onClose} type="button" variant="ghost">
@@ -656,12 +655,12 @@ export function PhotoUploader({
               return (
                 <Card
                   key={entry.id}
-                  className="overflow-hidden rounded-[28px] border-black/5 p-0"
+                  className="overflow-hidden p-0"
                 >
                   <div className="grid gap-4 p-4 sm:grid-cols-[140px_1fr]">
                     <MediaPreview
                       alt={entry.moment.caption ?? "Trip media moment"}
-                      className="h-36 w-full rounded-[22px] bg-slate-100 object-cover"
+                      className="h-36 w-full rounded-lg bg-[var(--paper-strong)] object-cover"
                       fileType={entry.fileType}
                       src={entry.previewUrl}
                     />
@@ -677,16 +676,16 @@ export function PhotoUploader({
                                   : "Pinned manually"
                               : "Saved without location"}
                           </Badge>
-                          <Badge variant="subtle">{getMomentLabel(entry.moment)}</Badge>
-                          {entry.moment.placeName ? (
-                            <Badge variant="subtle">{entry.moment.placeName}</Badge>
-                          ) : null}
+                          <span className="text-sm font-bold text-[var(--ink-soft)]">
+                            {getMomentLabel(entry.moment)}
+                            {entry.moment.placeName ? ` · ${entry.moment.placeName}` : ""}
+                          </span>
                         </div>
-                        <p className="text-sm text-slate-600">
+                        <p className="text-sm font-medium text-[var(--ink-soft)]">
                           {entry.metadataError ??
                             (hasLocation
-                              ? "Ready on the map. Tap the marker later to add a title or description."
-                              : "Add a map point now, or leave it for later from the trip view.")}
+                              ? "On the map. Tap its stop later to add a title."
+                              : "No location yet. Add one now or later from the map.")}
                         </p>
                       </div>
 
@@ -725,11 +724,8 @@ export function PhotoUploader({
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-[var(--ink)]">
+              <p className="font-bold text-[var(--ink)]">
                 Tap the map to place this moment
-              </p>
-              <p className="text-sm text-slate-600">
-                Choose the exact spot for this upload, then keep posting.
               </p>
             </div>
             <Button

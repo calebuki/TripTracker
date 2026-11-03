@@ -42,7 +42,7 @@ const DialogContent = React.forwardRef<
         {...theme}
         ref={ref}
         className={cn(
-          "crumbs-dialog fixed inset-x-0 bottom-0 z-50 max-h-[calc(100dvh-0.75rem)] overflow-y-auto overscroll-contain rounded-t-[20px] bg-[var(--surface)] px-6 pb-[calc(env(safe-area-inset-bottom)+1.5rem)] pt-6 scroll-pb-32 sm:left-1/2 sm:top-1/2 sm:bottom-auto sm:w-full sm:max-h-[min(90vh,760px)] sm:max-w-2xl sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-[20px] sm:px-6 sm:pb-6 sm:pt-6",
+          "crumbs-dialog fixed inset-x-0 bottom-0 z-50 no-scrollbar max-h-[calc(100dvh-0.75rem)] overflow-y-auto overscroll-contain rounded-t-[20px] bg-[var(--surface)] px-6 pb-[calc(env(safe-area-inset-bottom)+1.5rem)] pt-6 scroll-pb-32 sm:left-1/2 sm:top-1/2 sm:bottom-auto sm:w-full sm:max-h-[min(90vh,760px)] sm:max-w-2xl sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-[20px] sm:px-6 sm:pb-6 sm:pt-6",
           className,
         )}
         {...props}

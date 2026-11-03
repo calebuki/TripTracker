@@ -53,6 +53,31 @@
   letter-spacing: -0.02em;
 }
 
+/* Scroll areas inside the trip view never show a bar; edges fade instead. */
+@utility no-scrollbar {
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+.scroll-fade[data-fade="bottom"] {
+  mask-image: linear-gradient(to bottom, #000 calc(100% - 36px), transparent);
+}
+.scroll-fade[data-fade="top"] {
+  mask-image: linear-gradient(to top, #000 calc(100% - 36px), transparent);
+}
+.scroll-fade[data-fade="both"] {
+  mask-image: linear-gradient(
+    to bottom,
+    transparent,
+    #000 36px,
+    #000 calc(100% - 36px),
+    transparent
+  );
+}
+
 * {
   box-sizing: border-box;
 }
@@ -104,30 +129,8 @@ button {
   font-variant-numeric: tabular-nums;
 }
 
-/* Screens that have not been redesigned yet still use stock Tailwind colours. */
-[data-trip-theme="blush"] [class*="bg-white"] {
-  background-color: var(--surface);
-}
-[data-trip-theme="blush"] [class*="border-black"] {
-  border-color: color-mix(in srgb, var(--ink) 14%, transparent);
-}
-[data-trip-theme="blush"] [class*="text-slate-"] {
-  color: var(--ink-soft);
-}
 [data-trip-theme="midnight"] {
   color-scheme: dark;
-}
-[data-trip-theme="midnight"] [class*="bg-white"] {
-  background-color: var(--surface);
-}
-[data-trip-theme="midnight"] [class*="border-black"] {
-  border-color: color-mix(in srgb, var(--ink) 16%, transparent);
-}
-[data-trip-theme="midnight"] [class*="text-slate-"] {
-  color: var(--ink-soft);
-}
-[data-trip-theme="midnight"] [class*="hover:bg-white"]:hover {
-  background-color: var(--paper-strong);
 }
 [data-trip-theme="midnight"] .crumbs-menu-item[data-destructive] {
   color: #ff9b91;
@@ -277,6 +280,11 @@ button {
 .crumbs-popover {
   max-height: var(--radix-popper-available-height);
   overflow-y: auto;
+  scrollbar-width: none;
+}
+.crumbs-menu::-webkit-scrollbar,
+.crumbs-popover::-webkit-scrollbar {
+  display: none;
 }
 .crumbs-menu {
   transform-origin: var(--radix-dropdown-menu-content-transform-origin);
@@ -323,7 +331,7 @@ button {
   animation: crumbs-arrive 220ms var(--ease-out);
 }
 
-/* Trip screens (redesigned in the next pass; kept flat and on-palette). */
+/* Trip screen */
 .crumbs-day-dock {
   border: 2px solid var(--ink);
   background: var(--surface);
@@ -332,13 +340,6 @@ button {
 .crumbs-trip-header {
   background: var(--surface);
   border-bottom: 2px solid var(--line);
-}
-.crumbs-moment-panel {
-  background: var(--surface);
-  border-color: var(--line);
-}
-.crumbs-off-map [aria-expanded="true"] {
-  background: var(--paper-strong);
 }
 #off-map-moments-list {
   animation: crumbs-arrive 200ms var(--ease-out);
@@ -351,6 +352,34 @@ button {
 }
 .crumbs-add-moment:hover svg {
   rotate: 90deg;
+}
+
+/* Map stations. They sit on the basemap, so they use fixed ink and white. */
+.crumbs-marker {
+  filter: drop-shadow(0 3px 4px rgb(0 0 0 / 0.28));
+  transition: scale 180ms var(--ease-out);
+  animation: crumbs-pop 260ms var(--ease-out) both;
+}
+.crumbs-marker[data-selected="true"] {
+  scale: 1.14;
+}
+.crumbs-marker[data-selected="true"]::after {
+  content: "";
+  position: absolute;
+  inset: -6px;
+  border-radius: 50%;
+  border: 3px solid #15161c;
+  pointer-events: none;
+}
+.crumbs-map-pin {
+  filter: drop-shadow(0 3px 4px rgb(0 0 0 / 0.28));
+  animation: crumbs-pin-drop 320ms var(--ease-out) both;
+}
+@keyframes crumbs-pin-drop {
+  from {
+    opacity: 0;
+    translate: 0 -18px;
+  }
 }
 
 [data-sonner-toast] {
@@ -656,6 +685,12 @@ a:hover > .crumbs-wordmark .crumbs-wordmark-stop {
 @keyframes crumbs-shuttle {
   to {
     left: calc(100% - 17px);
+  }
+}
+
+@media (hover: hover) {
+  .crumbs-marker:hover:not([data-selected="true"]) {
+    scale: 1.07;
   }
 }
 

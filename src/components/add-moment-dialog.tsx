@@ -61,8 +61,8 @@ export function AddMomentDialog({
         ) : (
           <Tabs defaultValue="photo" key={open ? "open" : "closed"}>
             <TabsList>
-              <TabsTrigger value="photo">Media</TabsTrigger>
-              <TabsTrigger value="thought">Write Thought</TabsTrigger>
+              <TabsTrigger value="photo">Photo or video</TabsTrigger>
+              <TabsTrigger value="thought">Note</TabsTrigger>
             </TabsList>
             <TabsContent value="photo">
               <PhotoUploader

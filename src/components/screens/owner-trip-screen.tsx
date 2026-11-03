@@ -3,10 +3,10 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 
+import { CenteredPage } from "@/components/centered-page";
 import { LoadingShell } from "@/components/loading-shell";
 import { TripExperience } from "@/components/trip-experience";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useTripRecord } from "@/hooks/use-trip-record";
 import { useTripViewerCount } from "@/hooks/use-trip-viewer-count";
 
@@ -55,21 +55,20 @@ export function OwnerTripScreen({
 
   if (!record) {
     return (
-      <main className="crumbs-page flex min-h-screen items-center justify-center bg-[var(--paper)] px-4">
-        <Card className="w-full max-w-lg rounded-[34px]">
-          <CardHeader>
-            <CardTitle className="text-4xl">Trip not available</CardTitle>
-            <CardDescription>
-              {error ?? "We couldn't load this dashboard."}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button asChild>
-              <Link href="/trips/new">Create a new trip</Link>
-            </Button>
-          </CardContent>
-        </Card>
-      </main>
+      <CenteredPage>
+        <h1 className="font-display text-5xl">Trip not available</h1>
+        <p className="mt-3 text-lg font-medium text-[var(--ink-soft)]">
+          {error ?? "Crumbs couldn't load this trip."}
+        </p>
+        <div className="mt-8 flex flex-wrap gap-3">
+          <Button onClick={() => void refresh()} type="button">
+            Try again
+          </Button>
+          <Button asChild variant="outline">
+            <Link href="/">Back to your trips</Link>
+          </Button>
+        </div>
+      </CenteredPage>
     );
   }
 
