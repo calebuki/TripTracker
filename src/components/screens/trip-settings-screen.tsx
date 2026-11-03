@@ -103,7 +103,7 @@ export function TripSettingsScreen({ tripId }: TripSettingsScreenProps) {
             <p className="text-sm uppercase tracking-[0.18em] text-slate-500">
               Trip settings
             </p>
-            <h1 className="font-serif text-5xl tracking-tight text-[var(--ink)]">
+            <h1 className="font-display text-5xl tracking-tight text-[var(--ink)]">
               {record.trip.title}
             </h1>
           </div>

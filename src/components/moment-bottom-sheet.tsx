@@ -544,7 +544,7 @@ function MomentSheetSlide({
 
             <div className="order-1 space-y-2">
               <div className="flex flex-wrap items-center gap-3">
-                <p className="font-serif text-3xl leading-tight tracking-tight text-[var(--ink)] sm:text-4xl">
+                <p className="font-display text-3xl leading-tight tracking-tight text-[var(--ink)] sm:text-4xl">
                   {momentTitle}
                 </p>
                 {canManage && onEdit ? (

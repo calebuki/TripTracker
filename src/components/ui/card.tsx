@@ -9,7 +9,7 @@ export function Card({
   return (
     <div
       className={cn(
-        "crumbs-card rounded-[28px] border border-[var(--line)] bg-[var(--surface)] shadow-[0_8px_0_rgba(74,53,31,0.025),0_18px_50px_rgba(74,53,31,0.06)]",
+        "crumbs-card rounded-2xl border-2 border-[var(--line)] bg-[var(--surface)]",
         className,
       )}
       {...props}
@@ -30,7 +30,7 @@ export function CardTitle({
 }: React.ComponentProps<"h3">) {
   return (
     <h3
-      className={cn("font-serif text-2xl tracking-tight text-[var(--ink)]", className)}
+      className={cn("font-display text-2xl text-[var(--ink)]", className)}
       {...props}
     />
   );
@@ -41,7 +41,7 @@ export function CardDescription({
   ...props
 }: React.ComponentProps<"p">) {
   return (
-    <p className={cn("text-sm leading-6 text-slate-600", className)} {...props} />
+    <p className={cn("text-[15px] leading-6 text-[var(--ink-soft)]", className)} {...props} />
   );
 }
 

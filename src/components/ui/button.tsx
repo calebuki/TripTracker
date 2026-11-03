@@ -7,28 +7,27 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-  "crumbs-button inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-full text-sm font-medium transition-all disabled:pointer-events-none disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-transparent",
+  "crumbs-button inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-full text-[15px] font-bold disabled:pointer-events-none disabled:opacity-50",
   {
     variants: {
       variant: {
         default:
-          "bg-[var(--terracotta)] px-4 py-2.5 text-white shadow-[0_5px_0_var(--terracotta-shadow),0_10px_24px_rgba(170,70,30,0.15)] hover:bg-[var(--terracotta-hover)]",
+          "bg-[var(--ink)] px-5 text-[var(--surface)] hover:bg-[color-mix(in_srgb,var(--ink)_82%,var(--surface))]",
         secondary:
-          "bg-[var(--sea-soft)] px-4 py-2.5 text-[var(--sea-ink)] shadow-[inset_0_0_0_1px_rgba(15,23,42,0.08)] hover:bg-[var(--paper)]",
-        ghost:
-          "px-3 py-2 text-[var(--ink)] hover:bg-white/70",
+          "bg-[var(--paper-strong)] px-5 text-[var(--ink)] hover:bg-[color-mix(in_srgb,var(--paper-strong)_88%,var(--ink))]",
+        ghost: "px-3 text-[var(--ink)] hover:bg-[var(--paper-strong)]",
         outline:
-          "bg-transparent px-4 py-2.5 text-[var(--ink)] shadow-[inset_0_0_0_1px_rgba(15,23,42,0.12)] hover:bg-white/70",
+          "border-2 border-[var(--ink)] bg-transparent px-5 text-[var(--ink)] hover:bg-[var(--paper-strong)]",
         soft:
-          "bg-[var(--accent-soft)] px-4 py-2.5 text-[var(--ink)] hover:bg-[var(--accent)]/70",
+          "bg-[var(--accent-soft)] px-5 text-[var(--ink)] hover:bg-[color-mix(in_srgb,var(--accent-soft)_70%,var(--accent))]",
         danger:
-          "bg-[#7f1d1d] px-4 py-2.5 text-white hover:bg-[#6b1a1a]",
+          "bg-[var(--danger)] px-5 text-white hover:bg-[color-mix(in_srgb,var(--danger)_85%,black)]",
       },
       size: {
         default: "h-11",
-        sm: "h-9 px-3 text-sm",
-        lg: "h-12 px-5 text-base",
-        icon: "h-11 w-11 rounded-full",
+        sm: "h-9 px-3.5 text-sm",
+        lg: "h-13 px-6 text-base",
+        icon: "h-11 w-11 px-0",
       },
     },
     defaultVariants: {

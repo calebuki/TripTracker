@@ -1,38 +1,43 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { KeyRound, LoaderCircle } from "lucide-react";
+import { CircleAlert, Eye, EyeOff, LoaderCircle } from "lucide-react";
 import { toast } from "sonner";
 
 import { CrumbsBrand } from "@/components/crumbs-brand";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { useCrumbsAuth } from "@/hooks/use-crumbs-auth";
+import { useDevPreview } from "@/hooks/use-dev-preview";
 import { getTripRepository } from "@/lib/repositories";
 
 export function AuthScreen() {
   const { user, loading: authLoading, isDemoMode, processingCallback, error: authError, retry } =
     useCrumbsAuth();
+  const previewForm = useDevPreview("form");
   const router = useRouter();
-  const isCheckingSignIn = Boolean(processingCallback || authLoading);
+  const isCheckingSignIn = Boolean(processingCallback || authLoading) && !previewForm;
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
   const [signingIn, setSigningIn] = useState(false);
   const [signInError, setSignInError] = useState<string | null>(null);
   const error = authError ?? signInError;
 
-  async function handleSignIn() {
+  async function handleSignIn(event?: FormEvent<HTMLFormElement>) {
+    event?.preventDefault();
+
     if (!email.trim()) {
-      toast.error("Enter an email address first.");
+      setSignInError("Enter your email address.");
       return;
     }
 
     if (!password) {
-      toast.error("Enter your password first.");
+      setSignInError("Enter your password.");
       return;
     }
 
@@ -48,130 +53,169 @@ export function AuthScreen() {
       toast.success("Signed in.");
       router.replace("/");
     } catch (passwordSignInError) {
-      const message =
+      setSignInError(
         passwordSignInError instanceof Error
           ? passwordSignInError.message
-          : "Crumbs could not sign you in.";
-
-      setSignInError(message);
-      toast.error(message);
+          : "Crumbs couldn't sign you in.",
+      );
     } finally {
       setSigningIn(false);
     }
   }
 
-  if (isDemoMode) {
+  if (isDemoMode && !previewForm) {
     return (
-      <main className="crumbs-page flex min-h-screen items-center justify-center bg-[var(--paper)] px-4">
-        <Card className="w-full max-w-xl rounded-[34px]">
-          <CardHeader>
-            <Link href="/" aria-label="Crumbs home" className="mb-5 inline-flex"><CrumbsBrand /></Link>
-            <CardTitle className="text-4xl">Demo mode is already open</CardTitle>
-            <CardDescription>
-              Crumbs can run without Supabase while you shape the experience.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="flex flex-wrap gap-3">
-            <Button asChild>
-              <Link href="/trips/new">Create a demo trip</Link>
-            </Button>
-            <Button asChild variant="secondary">
-              <Link href="/t/paris-maymester-private">View the sample trip</Link>
-            </Button>
-          </CardContent>
-        </Card>
-      </main>
+      <AuthLayout>
+        <h1 className="font-display text-5xl">Demo mode</h1>
+        <p className="mt-3 text-lg font-medium text-[var(--ink-soft)]">
+          Supabase isn&apos;t configured, so there&apos;s nothing to sign in to.
+          You can still try everything with sample data.
+        </p>
+        <div className="mt-8 flex flex-wrap gap-3">
+          <Button asChild>
+            <Link href="/trips/new">Create a demo trip</Link>
+          </Button>
+          <Button asChild variant="outline">
+            <Link href="/t/paris-maymester-private">Open the sample trip</Link>
+          </Button>
+        </div>
+      </AuthLayout>
+    );
+  }
+
+  if (isCheckingSignIn) {
+    return (
+      <AuthLayout>
+        <h1 className="font-display text-5xl">Checking your sign-in</h1>
+        <p
+          className="mt-4 flex items-center gap-3 text-lg font-medium text-[var(--ink-soft)]"
+          role="status"
+        >
+          <LoaderCircle aria-hidden className="h-5 w-5 animate-spin text-[var(--ink)]" />
+          {error ?? "One moment…"}
+        </p>
+      </AuthLayout>
     );
   }
 
   return (
-    <main className="crumbs-page flex min-h-screen items-center justify-center bg-[var(--paper)] px-4">
-      <Card className="w-full max-w-xl rounded-[34px]">
-        <CardHeader>
-            <Link href="/" aria-label="Crumbs home" className="mb-5 inline-flex"><CrumbsBrand /></Link>
-          <div className="inline-flex w-fit items-center gap-2 rounded-full bg-[var(--paper)] px-3 py-1 text-xs font-medium uppercase tracking-[0.16em] text-slate-500">
-            <KeyRound className="h-3.5 w-3.5" />
-            Password sign-in
-          </div>
-          <CardTitle className="text-4xl">
-            {isCheckingSignIn ? "Checking your sign-in" : "Traveler sign-in"}
-          </CardTitle>
-          {isCheckingSignIn ? null : (
-            <CardDescription>
-              Sign in with the email address and password for your traveler
-              account.
-            </CardDescription>
-          )}
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {isCheckingSignIn ? (
-            <div className="flex items-center gap-3 rounded-[24px] bg-[var(--paper)] px-4 py-4 text-sm text-slate-600">
-              <LoaderCircle className="h-4 w-4 animate-spin text-[var(--ink)]" />
-              {error ?? "Checking your sign-in..."}
-            </div>
-          ) : (
-            <>
-              {user ? (
-                <p className="rounded-[24px] bg-[var(--paper)] px-4 py-3 text-sm leading-6 text-slate-600">
-                  You&apos;re currently signed in as {user.email}. Enter another
-                  email below to switch accounts, or return home to follow a
-                  trip as a viewer.
-                </p>
-              ) : null}
-              {error ? (
-                <div className="flex flex-wrap items-center justify-between gap-3 rounded-[24px] border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-                  <p>{error}</p>
-                  <Button
-                    disabled={signingIn}
-                    onClick={() => {
-                      if (authError) {
-                        retry();
-                        return;
-                      }
+    <AuthLayout>
+      <h1 className="font-display text-5xl">Sign in</h1>
+      <p className="mt-3 text-lg font-medium text-[var(--ink-soft)]">
+        For travelers posting a trip. Following someone?{" "}
+        <Link
+          className="font-semibold text-[var(--ink)] underline decoration-[var(--route-tomato)] decoration-[3px] underline-offset-4 transition-colors hover:decoration-[var(--ink)]"
+          href="/"
+        >
+          Enter their code
+        </Link>{" "}
+        instead.
+      </p>
 
-                      void handleSignIn();
-                    }}
-                    size="sm"
-                    type="button"
-                    variant="secondary"
-                  >
-                    Retry
-                  </Button>
-                </div>
+      {user ? (
+        <p className="mt-6 text-[15px] font-medium text-[var(--ink-soft)]">
+          You&apos;re signed in as{" "}
+          <span className="font-bold text-[var(--ink)]">{user.email}</span>. Sign
+          in below to switch accounts.
+        </p>
+      ) : null}
+
+      <form className="mt-8 space-y-5" noValidate onSubmit={(event) => void handleSignIn(event)}>
+        <div className="space-y-2">
+          <Label htmlFor="auth-email">Email</Label>
+          <Input
+            aria-invalid={Boolean(error) && !email.trim()}
+            autoComplete="email"
+            id="auth-email"
+            onChange={(event) => setEmail(event.target.value)}
+            type="email"
+            value={email}
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="auth-password">Password</Label>
+          <div className="relative">
+            <Input
+              aria-invalid={Boolean(error) && !password}
+              autoComplete="current-password"
+              className="pr-14"
+              id="auth-password"
+              onChange={(event) => setPassword(event.target.value)}
+              type={showPassword ? "text" : "password"}
+              value={password}
+            />
+            <button
+              aria-label={showPassword ? "Hide password" : "Show password"}
+              aria-pressed={showPassword}
+              className="absolute right-1.5 top-1/2 grid h-9 w-9 -translate-y-1/2 place-items-center rounded-lg text-[var(--ink-soft)] transition-colors hover:bg-[var(--paper-strong)] hover:text-[var(--ink)]"
+              onClick={() => setShowPassword((current) => !current)}
+              type="button"
+            >
+              {showPassword ? (
+                <EyeOff aria-hidden className="h-5 w-5" />
+              ) : (
+                <Eye aria-hidden className="h-5 w-5" />
+              )}
+            </button>
+          </div>
+        </div>
+        <label className="flex w-fit cursor-pointer items-center gap-3 text-[15px] font-semibold">
+          <input
+            checked={rememberMe}
+            className="crumbs-check"
+            onChange={(event) => setRememberMe(event.target.checked)}
+            type="checkbox"
+          />
+          Keep me signed in on this device
+        </label>
+
+        {error ? (
+          <div
+            className="flex items-start gap-3 text-[15px] font-semibold text-[var(--ink)]"
+            role="alert"
+          >
+            <CircleAlert aria-hidden className="mt-0.5 h-5 w-5 shrink-0 text-[var(--danger)]" />
+            <div className="min-w-0 flex-1">
+              <p>{error}</p>
+              {authError ? (
+                <button
+                  className="mt-1 font-bold underline underline-offset-4"
+                  onClick={retry}
+                  type="button"
+                >
+                  Try again
+                </button>
               ) : null}
-              <Input
-                onChange={(event) => setEmail(event.target.value)}
-                placeholder="traveler@example.com"
-                type="email"
-                value={email}
-              />
-              <Input
-                autoComplete="current-password"
-                onChange={(event) => setPassword(event.target.value)}
-                placeholder="Password"
-                type="password"
-                value={password}
-              />
-              <label className="flex cursor-pointer items-center gap-2 px-1 text-sm text-slate-600">
-                <input
-                  checked={rememberMe}
-                  className="h-4 w-4 rounded border-slate-300 accent-[var(--ink)]"
-                  onChange={(event) => setRememberMe(event.target.checked)}
-                  type="checkbox"
-                />
-                Remember me on this device
-              </label>
-              <Button
-                className="w-full bg-[var(--ink)] text-white hover:bg-[var(--ink-strong)]"
-                disabled={signingIn}
-                onClick={() => void handleSignIn()}
-              >
-                {signingIn ? "Signing in..." : "Sign in"}
-              </Button>
+            </div>
+          </div>
+        ) : null}
+
+        <Button className="w-full" disabled={signingIn} size="lg" type="submit">
+          {signingIn ? (
+            <>
+              <LoaderCircle aria-hidden className="h-4 w-4 animate-spin" />
+              Signing in…
             </>
+          ) : (
+            "Sign in"
           )}
-        </CardContent>
-      </Card>
+        </Button>
+      </form>
+    </AuthLayout>
+  );
+}
+
+function AuthLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <main className="flex min-h-dvh flex-col bg-[var(--paper)] px-4 pb-12 pt-5 sm:px-8">
+      <nav aria-label="Main navigation" className="mx-auto w-full max-w-6xl">
+        <Link aria-label="Crumbs home" className="inline-flex" href="/">
+          <CrumbsBrand />
+        </Link>
+      </nav>
+      <div className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center pt-12">
+        {children}
+      </div>
     </main>
   );
 }

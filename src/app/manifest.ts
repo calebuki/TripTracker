@@ -5,13 +5,14 @@ export default function manifest(): MetadataRoute.Manifest {
     id: "/",
     name: "Crumbs",
     short_name: "Crumbs",
-    description: "Follow a private trail of crumbs from the moments that made the trip.",
+    description:
+      "Post your trip as a map of photos and notes. Friends follow along with a 5-character code.",
     start_url: "/",
     scope: "/",
     display: "standalone",
     orientation: "portrait",
-    background_color: "#f6f1e8",
-    theme_color: "#f6f1e8",
+    background_color: "#f4f4f0",
+    theme_color: "#f4f4f0",
     icons: [
       {
         src: "/icon.png",
