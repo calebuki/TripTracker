@@ -4,7 +4,8 @@ Crumbs is drawn like a transit diagram. A trip is a line, every moment is a stat
 
 ## Rules
 
-- **Decoration comes from data.** Route diagrams are built from real moment coordinates (`src/lib/route-diagram.ts`). Don't add illustrations, stamps, or icon tiles that carry no information.
+- **Decoration comes from data.** Route diagrams are built from real moment coordinates (`src/lib/route-diagram.ts`). Apart from the landscape backdrop below, don't add illustrations, stamps, or icon tiles that carry no information.
+- **One backdrop.** The landscape illustration (`public/art/landscape.webp`, the `landscape-backdrop` utility) runs along the bottom of the dashboard, landing and sign-in pages. Those pages take its warm paper (`#f7eee5`) and keep room at the bottom so content never sits on the hills. The trip map and settings screens don't use it.
 - **No kicker labels** above headings, and no tagline triads. Headings say what the section is ("Current trip", "Past trips").
 - **Copy is plain.** Controls name their action ("Follow trip", "Stop following"). Errors name the problem and the fix.
 - **No cards inside cards.** Lists are rows separated by 2px hairlines. Only one thing on a screen gets a card (e.g. the current trip).
