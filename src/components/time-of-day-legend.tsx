@@ -4,12 +4,9 @@ import { cn } from "@/lib/utils";
 export function TimeOfDayLegend({ className }: { className?: string }) {
   return (
     <div className={cn("w-full max-w-60", className)}>
-      <p className="text-sm font-bold text-[var(--ink)]">
-        Line colour is the local time
-      </p>
       <div
         aria-hidden
-        className="mt-2 h-2.5 rounded-full border-2 border-[var(--ink)]"
+        className="h-2.5 rounded-full border-2 border-[var(--ink)]"
         style={{ background: timeOfDayCssGradient }}
       />
       <div
@@ -23,8 +20,8 @@ export function TimeOfDayLegend({ className }: { className?: string }) {
         <span>12am</span>
       </div>
       <p className="sr-only">
-        Blue for night, orange at sunrise, yellow through the day, red at sunset
-        and purple at dusk.
+        Trail colour shows the local time: blue for night, orange at sunrise,
+        yellow through the day, red at sunset and purple at dusk.
       </p>
     </div>
   );
